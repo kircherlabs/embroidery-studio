@@ -30,6 +30,7 @@ jobs:
           STUDIO_PID=$!
           trap 'kill "$STUDIO_PID"' EXIT
           node tests/browser.mjs
+          node tests/svg-browser.mjs
       - run: node scripts/build.mjs
       - uses: actions/upload-pages-artifact@v3
         if: github.event_name != 'pull_request'

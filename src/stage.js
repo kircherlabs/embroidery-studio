@@ -1,5 +1,6 @@
 import { objectBounds, pointsOf, translate, MACHINES } from "./model.js";
 import { inside, distance } from "./engine.js";
+import { movementSegments } from "./preview.js";
 export class Stage {
   constructor(canvas, state, actions) {
     this.canvas = canvas;
@@ -198,14 +199,12 @@ export class Stage {
             ? Math.min(s.cursor, events.length)
             : events.length;
       let batchColor = null,
-        batchPhase = null,
-        prev = { x: 0, y: 0 };
+        batchPhase = null;
       ctx.lineCap = "round";
       ctx.lineJoin = "round";
       ctx.lineWidth = 0.19;
       ctx.beginPath();
-      for (let i = 0; i < end; i++) {
-        const e = events[i];
+      for (const { from: prev, event: e } of movementSegments(events, end)) {
         if (e.cmd === "stitch" && (s.showUnderlay || e.phase !== "underlay")) {
           if (e.color !== batchColor || e.phase !== batchPhase) {
             ctx.stroke();
@@ -218,26 +217,39 @@ export class Stage {
           ctx.moveTo(prev.x, prev.y);
           ctx.lineTo(e.x, e.y);
         }
-        prev = e;
       }
       ctx.stroke();
       ctx.globalAlpha = 1;
       if (s.showJumps) {
         ctx.setLineDash([1, 0.7]);
         ctx.lineWidth = 0.9 / scale;
-        ctx.strokeStyle = "#b55346";
+        ctx.strokeStyle = "#467fa5";
         ctx.beginPath();
-        prev = { x: 0, y: 0 };
-        for (let i = 0; i < end; i++) {
-          const e = events[i];
+        for (const { from: prev, event: e } of movementSegments(events, end)) {
           if (e.cmd === "jump") {
             ctx.moveTo(prev.x, prev.y);
             ctx.lineTo(e.x, e.y);
           }
-          prev = e;
         }
         ctx.stroke();
         ctx.setLineDash([]);
+      }
+      if (s.showEvents) {
+        for (let i = 0; i < end; i++) {
+          const e = events[i];
+          if (e.cmd !== "trim" && e.cmd !== "color") continue;
+          ctx.lineWidth = 1 / scale;
+          ctx.strokeStyle = e.cmd === "trim" ? "#be6e33" : e.color;
+          ctx.beginPath();
+          const r = 2.5 / scale;
+          if (e.cmd === "trim") {
+            ctx.moveTo(e.x - r, e.y - r);
+            ctx.lineTo(e.x + r, e.y + r);
+            ctx.moveTo(e.x - r, e.y + r);
+            ctx.lineTo(e.x + r, e.y - r);
+          } else ctx.arc(e.x, e.y, r * 1.5, 0, Math.PI * 2);
+          ctx.stroke();
+        }
       }
       if (s.mode === "preview" && end > 0) {
         const e = events[end - 1];
@@ -245,7 +257,14 @@ export class Stage {
         ctx.arc(e.x, e.y, 4 / scale, 0, Math.PI * 2);
         ctx.fillStyle = "#fff4d7";
         ctx.fill();
-        ctx.strokeStyle = "#263c2a";
+        ctx.strokeStyle =
+          e.cmd === "trim"
+            ? "#be6e33"
+            : e.cmd === "jump"
+              ? "#467fa5"
+              : e.cmd === "color"
+                ? e.color
+                : "#263c2a";
         ctx.lineWidth = 1.5 / scale;
         ctx.stroke();
         ctx.beginPath();

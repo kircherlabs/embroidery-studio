@@ -186,6 +186,20 @@ export function validateProject(p) {
     throw Error("Unsupported or invalid studio project.");
   if (typeof p.name !== "string" || p.name.length > 200)
     throw Error("Invalid project name.");
+  if (p.planning) {
+    if (
+      typeof p.planning !== "object" ||
+      ["optimizeColors", "skipSvgOutlines"].some(
+        (k) =>
+          p.planning[k] !== undefined && typeof p.planning[k] !== "boolean",
+      ) ||
+      (p.planning.smallDetail !== undefined &&
+        (!Number.isFinite(p.planning.smallDetail) ||
+          p.planning.smallDetail < 0 ||
+          p.planning.smallDetail > 2))
+    )
+      throw Error("Invalid digitizing settings.");
+  }
   let total = 0;
   for (const o of p.objects) {
     if (

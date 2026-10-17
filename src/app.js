@@ -13,6 +13,7 @@ import {
 import { analyze } from "./engine.js";
 import { importSVG, rasterObjects, lettering } from "./importers.js";
 import { Stage } from "./stage.js";
+import { planningOptions } from "./planning.js";
 const $ = (id) => document.getElementById(id),
   esc = (s) =>
     String(s).replace(
@@ -38,6 +39,7 @@ const state = {
   showStitches: true,
   showJumps: false,
   showUnderlay: true,
+  showEvents: false,
   space: false,
   manualIndex: 0,
 };
@@ -145,6 +147,7 @@ worker.onmessage = ({ data }) => {
   renderStats();
   renderTimeline();
   renderPlayback();
+  markSourceRows();
   stage.render();
   $("status").textContent =
     `Ready · ${fmt(data.stats.stitches)} stitches · ${num(data.stats.bounds.width)} × ${num(data.stats.bounds.height)} mm`;
@@ -266,6 +269,10 @@ function addObjects(objects) {
   );
 }
 function renderPanels() {
+  const planning = planningOptions(state.project);
+  $("optimize-colors").checked = planning.optimizeColors;
+  $("skip-outlines").checked = planning.skipSvgOutlines;
+  $("small-detail").value = planning.smallDetail;
   if (document.activeElement !== $("project-name"))
     $("project-name").value = state.project.name;
   $("machine").value = state.project.machine;
@@ -285,6 +292,21 @@ function renderPanels() {
   for (const id of ["move-up", "move-down", "duplicate", "delete"])
     $(id).disabled = !selected();
   renderProperties();
+  markSourceRows();
+}
+function markSourceRows() {
+  if (!state.plan || machinePlan) return;
+  const active = new Set(
+    state.plan.events.filter((e) => e.cmd === "stitch").map((e) => e.objectId),
+  );
+  document.querySelectorAll(".object-row").forEach((row) => {
+    const id = row.querySelector("[data-select]")?.dataset.select,
+      sourceOnly = !active.has(id);
+    row.classList.toggle("source-only", sourceOnly);
+    row.title = sourceOnly
+      ? "Source artwork retained. This object currently produces no sewing stitches; check digitizing settings or its geometry."
+      : "";
+  });
 }
 function field(label, id, value, unit = "", min = "", max = "", step = ".1") {
   return `<label class="field"><span class="field-title">${label}<small>${unit}</small></span><input id="${id}" type="number" value="${num(value, 2)}" min="${min}" max="${max}" step="${step}"></label>`;
@@ -449,7 +471,7 @@ function highlightManual() {
 function renderStats() {
   const stats = state.plan?.stats;
   $("stats").innerHTML = stats
-    ? `<div><strong>${fmt(stats.stitches)}</strong><span>Stitches</span></div><div><strong>${stats.colors}</strong><span>Color blocks</span></div><div><strong>${num(stats.minutes, 0)} <small>min</small></strong><span>Estimated machine time</span></div><div><strong>${num(stats.thread)} <small>m</small></strong><span>Top thread path</span></div>`
+    ? `<div><strong>${fmt(stats.stitches)}</strong><span>Sewing stitches</span></div><div><strong>${stats.colors}</strong><span>Color blocks · ${stats.uniqueColors} threads</span></div><div><strong>${stats.manualChanges}</strong><span>Manual thread changes</span></div><div><strong>${fmt(stats.jumps)}</strong><span>Jumps · ${fmt(stats.trims)} trims</span></div><div><strong>${num(stats.minutes, 0)} <small>min</small></strong><span>Estimated machine time</span></div><div><strong>${num(stats.thread)} <small>m</small></strong><span>Top thread path</span></div>`
     : '<p class="property-note">No stitch sequence</p>';
   $("fit-status").textContent = stats
     ? stats.fits
@@ -484,7 +506,32 @@ function renderTimeline() {
   );
   $("timeline").max = ev.length;
   $("timeline").value = state.cursor;
+  const stats = state.plan?.stats;
+  $("sequence-metrics").textContent = stats
+    ? `${stats.colors} color blocks · ${stats.manualChanges} manual changes · ${fmt(stats.jumps)} jumps${stats.sourceColorBlocks !== undefined ? ` · source order: ${stats.sourceColorBlocks} blocks` : ""}`
+    : "";
+  drawCommandTrack();
 }
+function drawCommandTrack() {
+  const canvas = $("command-track"),
+    width = canvas.clientWidth;
+  if (!width) return;
+  canvas.width = Math.round(width * (devicePixelRatio || 1));
+  canvas.height = 12 * (devicePixelRatio || 1);
+  const ctx = canvas.getContext("2d"),
+    events = state.plan?.events || [];
+  ctx.scale(devicePixelRatio || 1, devicePixelRatio || 1);
+  for (const cmd of ["jump", "trim", "color"]) {
+    ctx.fillStyle =
+      cmd === "jump" ? "#82aacf" : cmd === "trim" ? "#e7b784" : "#eff2df";
+    const h = cmd === "jump" ? 3 : cmd === "trim" ? 7 : 12;
+    events.forEach((e, i) => {
+      if (e.cmd === cmd)
+        ctx.fillRect((i / (events.length || 1)) * width, 12 - h, 1, h);
+    });
+  }
+}
+new ResizeObserver(drawCommandTrack).observe($("command-track"));
 function renderPlayback() {
   const ev = state.plan?.events || [];
   state.cursor = Math.max(0, Math.min(ev.length, Math.floor(state.cursor)));
@@ -492,7 +539,7 @@ function renderPlayback() {
   $("stitch-counter").textContent = `${fmt(state.cursor)} / ${fmt(ev.length)}`;
   const e = ev[state.cursor - 1];
   $("command-readout").textContent = e
-    ? `${e.cmd.toUpperCase()} · X ${num(e.x)}  Y ${num(e.y)}${e.phase === "underlay" ? " · UNDERLAY" : ""}`
+    ? `${e.cmd.toUpperCase()} · X ${num(e.x)}  Y ${num(e.y)}${e.phase === "underlay" ? " · UNDERLAY" : e.phase === "anchor" ? " · NEEDLE ANCHOR" : ""}`
     : "Sequence start";
   $("play").textContent = playing ? "Ⅱ" : "▶";
   $("play").setAttribute(
@@ -939,11 +986,37 @@ for (const [id, key] of [
   ["show-stitches", "showStitches"],
   ["show-jumps", "showJumps"],
   ["show-underlay", "showUnderlay"],
+  ["show-events", "showEvents"],
 ])
   $(id).onchange = (e) => {
     state[key] = e.target.checked;
     stage.render();
   };
+for (const [id, key] of [
+  ["optimize-colors", "optimizeColors"],
+  ["skip-outlines", "skipSvgOutlines"],
+])
+  $(id).onchange = (e) =>
+    mutate(() => {
+      state.project.planning = {
+        ...planningOptions(state.project),
+        [key]: e.target.checked,
+      };
+    });
+$("small-detail").onchange = (e) => {
+  const n = Number(e.target.value);
+  if (!Number.isFinite(n) || n < 0 || n > 2) {
+    toast("Choose an island threshold between 0 and 2 mm.");
+    renderPanels();
+    return;
+  }
+  mutate(() => {
+    state.project.planning = {
+      ...planningOptions(state.project),
+      smallDetail: n,
+    };
+  });
+};
 $("timeline").oninput = (e) => scrub(Number(e.target.value));
 $("play").onclick = togglePlay;
 $("rewind").onclick = () => scrub(0);

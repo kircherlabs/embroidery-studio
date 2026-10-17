@@ -78,8 +78,10 @@ npm install --no-save playwright@1.56.1
 npx playwright install chromium
 node tests/browser.mjs
 node tests/svg-browser.mjs
+node tests/digitizing-browser.mjs
 # Include the actual CDN/WASM export/import path:
 TEST_MACHINE=1 node tests/browser.mjs
+TEST_MACHINE=1 node tests/digitizing-browser.mjs
 ```
 
 On PowerShell, use `$env:TEST_MACHINE='1'` before the test command.
@@ -106,6 +108,15 @@ All runtime asset URLs are relative, including worker/codec paths, so the studio
 works under the repository subpath `/embroidery-studio/`.
 
 ## Privacy, formats and present limitations
+
+Open **Objects → Digitizing & sequence** to control safe color grouping, matching
+SVG outline suppression and small-island handling. These settings change derived
+stitches; the artwork remains editable. The list shows artwork layer order, while
+the preview timeline shows generated sewing order. Small holes are preserved.
+Use **Events** and **Jumps** to inspect trim/color markers and travel. The summary
+shows color blocks, estimated manual thread changes, jumps and trims. See
+[digitizing practices and limits](docs/DIGITIZING.md) for the measured root causes,
+algorithm choices and format behavior.
 
 Artwork and stitch conversion stay on your device. Autosave uses localStorage;
 save a project file for a portable backup. Core editing loads from this site.

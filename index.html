@@ -55,6 +55,7 @@
           ↷</button
         ><span class="divider"></span
         ><span class="local-badge"><i></i> Local workspace</span
+        ><button id="context-help" aria-pressed="false">Explain</button
         ><button id="help" aria-label="Help and shortcuts">?</button>
       </div>
     </nav>
@@ -64,7 +65,12 @@
           <h2>Objects</h2>
           <span id="object-count" class="count"></span>
         </div>
-        <div class="sequence-label">ARTWORK HIERARCHY <span>↑</span></div>
+        <div
+          class="sequence-label"
+          data-help="Artwork hierarchy and paint layers, from bottom to top. Drag siblings by their grips to change layers and set manual sewing order. The bottom sewing strip can then be adjusted independently."
+        >
+          ARTWORK &amp; LAYERS <span>↑</span>
+        </div>
         <div
           class="tree-tools"
           role="toolbar"
@@ -137,8 +143,8 @@
             mm</label
           >
           <p>
-            Each object is completed before the next. Disable grouping to use
-            layer order, or pin individual objects in properties. Set islands to
+            Automatic order preserves overlapping construction. Dragging sets
+            manual order; use Automatic below to optimize again. Set islands to
             0 to keep every detail.
           </p>
         </details>
@@ -170,113 +176,114 @@
             ⌫
           </button>
         </div>
-        <div class="machine-card">
-          <span class="eyebrow">YOUR MACHINE</span
-          ><label for="machine">Machine & hoop</label
-          ><select id="machine"></select>
-          <div class="hoop-spec">
-            <span class="hoop-icon">▢</span>
-            <div>
-              <strong id="hoop-size"></strong
-              ><span>Embroidery field · millimeters</span>
-            </div>
-          </div>
-          <p id="fit-status"></p>
-        </div>
         <div class="privacy-note">◇ Your artwork stays on this device.</div>
       </aside>
       <section class="stage-shell" aria-label="Design workspace">
-        <div class="stage-top">
-          <div>
-            <span class="eyebrow" id="stage-kicker">DESIGN WORKSPACE</span
-            ><span id="stage-hint"
-              >Select an object to refine its stitches</span
-            >
+        <details class="machine-card workspace-machine">
+          <summary id="machine-panel">
+            <span class="machine-title">Machine &amp; hoop</span
+            ><strong id="machine-summary"></strong><span id="hoop-size"></span
+            ><span id="fit-status"></span>
+          </summary>
+          <div class="machine-settings">
+            <label for="machine">Machine profile</label
+            ><select id="machine"></select
+            ><span>Changing the hoop does not resize artwork.</span>
           </div>
-          <span class="unit-label">mm</span>
-        </div>
-        <div class="drawing-tools" role="toolbar" aria-label="Drawing tools">
-          <button
-            data-tool="select"
-            title="Select / move (V)"
-            aria-label="Select and move"
-            class="active"
-          >
-            ↖
-          </button>
-          <button
-            data-tool="node"
-            title="Edit nodes (N)"
-            aria-label="Edit vector nodes"
-          >
-            ◇</button
-          ><span></span>
-          <button
-            data-tool="polygon"
-            title="Fill polygon (P)"
-            aria-label="Draw fill polygon"
-          >
-            ⬡
-          </button>
-          <button
-            data-tool="run"
-            title="Running stitch path (R)"
-            aria-label="Draw running stitch path"
-          >
-            ⌁
-          </button>
-          <button
-            data-tool="satin"
-            title="Satin centerline (S)"
-            aria-label="Draw satin centerline"
-          >
-            ≋
-          </button>
-          <button
-            data-tool="rect"
-            title="Rectangle"
-            aria-label="Draw rectangle"
-          >
-            □
-          </button>
-          <button
-            data-tool="ellipse"
-            title="Ellipse (E)"
-            aria-label="Draw ellipse"
-          >
-            ○
-          </button>
-          <button
-            id="text-tool"
-            title="Lettering (T)"
-            aria-label="Add lettering"
-          >
-            T
-          </button>
-          <button
-            data-tool="manual"
-            title="Place individual stitches"
-            aria-label="Place manual stitches"
-          >
-            ⁙</button
-          ><span></span>
-          <button
-            data-tool="pan"
-            title="Pan (H) or hold Space"
-            aria-label="Pan canvas"
-          >
-            ✥
-          </button>
-        </div>
-        <canvas
-          id="stage"
-          tabindex="0"
-          aria-label="Embroidery design canvas. Use drawing tools, click to place nodes, Enter to finish, Escape to cancel."
-        ></canvas>
-        <div id="draw-actions" hidden>
-          <span id="draw-message"></span
-          ><button id="finish-draw" class="primary">Finish path ↵</button
-          ><button id="cancel-draw">Cancel</button>
+        </details>
+        <div class="canvas-area">
+          <div class="stage-top">
+            <div>
+              <span class="eyebrow" id="stage-kicker">DESIGN WORKSPACE</span
+              ><span id="stage-hint"
+                >Select an object to refine its stitches</span
+              >
+            </div>
+            <span class="unit-label">mm</span>
+          </div>
+          <div class="drawing-tools" role="toolbar" aria-label="Drawing tools">
+            <button
+              data-tool="select"
+              title="Select / move (V)"
+              aria-label="Select and move"
+              class="active"
+            >
+              ↖
+            </button>
+            <button
+              data-tool="node"
+              title="Edit nodes (N)"
+              aria-label="Edit vector nodes"
+            >
+              ◇</button
+            ><span></span>
+            <button
+              data-tool="polygon"
+              title="Fill polygon (P)"
+              aria-label="Draw fill polygon"
+            >
+              ⬡
+            </button>
+            <button
+              data-tool="run"
+              title="Running stitch path (R)"
+              aria-label="Draw running stitch path"
+            >
+              ⌁
+            </button>
+            <button
+              data-tool="satin"
+              title="Satin centerline (S)"
+              aria-label="Draw satin centerline"
+            >
+              ≋
+            </button>
+            <button
+              data-tool="rect"
+              title="Rectangle"
+              aria-label="Draw rectangle"
+            >
+              □
+            </button>
+            <button
+              data-tool="ellipse"
+              title="Ellipse (E)"
+              aria-label="Draw ellipse"
+            >
+              ○
+            </button>
+            <button
+              id="text-tool"
+              title="Lettering (T)"
+              aria-label="Add lettering"
+            >
+              T
+            </button>
+            <button
+              data-tool="manual"
+              title="Place individual stitches"
+              aria-label="Place manual stitches"
+            >
+              ⁙</button
+            ><span></span>
+            <button
+              data-tool="pan"
+              title="Pan (H) or hold Space"
+              aria-label="Pan canvas"
+            >
+              ✥
+            </button>
+          </div>
+          <canvas
+            id="stage"
+            tabindex="0"
+            aria-label="Embroidery design canvas. Use drawing tools, click to place nodes, Enter to finish, Escape to cancel."
+          ></canvas>
+          <div id="draw-actions" hidden>
+            <span id="draw-message"></span
+            ><button id="finish-draw" class="primary">Finish path ↵</button
+            ><button id="cancel-draw">Cancel</button>
+          </div>
         </div>
         <div class="canvas-controls">
           <label
@@ -293,12 +300,14 @@
             title="Show only selected source objects / operation; export is unchanged"
             ><input type="checkbox" id="preview-selection" />Focus
             stitches</label
-          ><button id="zoom-out" aria-label="Zoom out">−</button
-          ><button id="zoom-fit">Fit</button
-          ><button id="zoom-in" aria-label="Zoom in">+</button
-          ><span id="zoom-value">100%</span>
+          ><span class="zoom-controls"
+            ><button id="zoom-out" aria-label="Zoom out">−</button
+            ><button id="zoom-fit">Fit</button
+            ><button id="zoom-in" aria-label="Zoom in">+</button
+            ><span id="zoom-value">100%</span></span
+          >
         </div>
-        <section class="simulator" aria-label="Stitch simulator">
+        <section id="simulator" class="simulator" aria-label="Stitch simulator">
           <div class="sim-header">
             <div>
               <span class="eyebrow">STITCH SEQUENCE</span
@@ -307,9 +316,25 @@
             <span id="command-readout">Ready to stitch</span>
           </div>
           <div class="sequence-metrics" id="sequence-metrics"></div>
-          <details class="object-sequence">
-            <summary>Object sewing order</summary>
-            <div id="sewing-order"></div>
+          <details class="object-sequence" open>
+            <summary>
+              Object sewing order <span id="order-badge">Automatic</span>
+            </summary>
+            <div class="order-controls">
+              <label for="order-mode">Sewing order</label
+              ><select id="order-mode">
+                <option value="auto">Automatic</option>
+                <option value="manual">Manual</option></select
+              ><span id="order-relationship"></span>
+            </div>
+            <div
+              id="sewing-order"
+              aria-label="Complete objects in actual sewing order"
+            ></div>
+            <details id="operation-sequence" hidden>
+              <summary>Operation steps</summary>
+              <div id="operation-order"></div>
+            </details>
           </details>
           <div
             class="timeline-colors"
@@ -382,7 +407,7 @@
     <footer class="status-bar">
       <span id="status">Ready</span
       ><span
-        >40 wt thread presets <i>·</i> v0.2 <i>·</i>
+        >40 wt thread presets <i>·</i> v0.2.1 <i>·</i>
         <a
           href="https://github.com/kircherlabs/embroidery-studio"
           target="_blank"

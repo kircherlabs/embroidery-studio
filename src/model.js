@@ -140,16 +140,18 @@ export function demo() {
     ),
   );
   for (let i = 0; i < 7; i++) {
+    // Spaced petals permit safe yellow/red batching. The original wider,
+    // overlapping petals required alternating threads to preserve layering.
     const a = (i / 7) * Math.PI * 2;
     objects.push(
       object(
         `Petal ${i + 1}`,
         [
           ellipse(
-            Math.cos(a) * 11,
-            -19 + Math.sin(a) * 11,
-            10,
-            5,
+            Math.cos(a) * 14,
+            -19 + Math.sin(a) * 14,
+            9,
+            4,
             (i / 7) * 360,
           ),
         ],
@@ -198,6 +200,20 @@ export function validateProject(p) {
   )
     throw Error("Invalid artwork group membership.");
   const all = [...(p.groups || []), ...p.objects];
+  if (p.sequencing !== undefined) {
+    const s = p.sequencing,
+      ids = new Set(p.objects.map((o) => o?.id));
+    if (
+      !s ||
+      !["auto", "manual"].includes(s.mode) ||
+      !["tree", "sequence"].includes(s.origin) ||
+      !Array.isArray(s.order) ||
+      s.order.length > 1000 ||
+      new Set(s.order).size !== s.order.length ||
+      s.order.some((id) => typeof id !== "string" || !ids.has(id))
+    )
+      throw Error("Invalid manual sewing order.");
+  }
   if (new Set(all.map((n) => n?.id)).size !== all.length)
     throw Error("Duplicate artwork identifiers.");
   for (const n of all) {

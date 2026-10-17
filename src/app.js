@@ -31,9 +31,21 @@ import {
   copySelection,
   pasteSelection,
   reorder,
+  moveInTree,
   alignSelection,
 } from "./hierarchy.js";
 import { renderInspector } from "./inspector.js";
+import {
+  isManualOrder,
+  sewingIds,
+  normalizeSewingOrder,
+  useTreeOrder,
+  moveSewingObjects,
+} from "./sequencing.js";
+import { installReordering } from "./reorder-ui.js";
+import { installHelp } from "./help.js";
+const icon = (name) =>
+  `<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${{ eye: '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>', hidden: '<path d="m3 3 18 18M9.5 5.3A12 12 0 0 1 12 5c6.5 0 10 7 10 7a18 18 0 0 1-3.1 3.7M6 6.4A20 20 0 0 0 2 12s3.5 7 10 7a12 12 0 0 0 5.4-1.3M10 10a3 3 0 0 0 4 4"/>', lock: '<rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>', unlock: '<rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 7.5-2"/>', grip: '<path d="M9 5h.01M15 5h.01M9 12h.01M15 12h.01M9 19h.01M15 19h.01" stroke-width="3"/>' }[name]}</svg>`;
 const $ = (id) => document.getElementById(id),
   esc = (s) =>
     String(s).replace(
@@ -115,6 +127,7 @@ function selected() {
   return state.project.objects.find((o) => o.id === state.selection);
 }
 function record(before) {
+  normalizeSewingOrder(state.project);
   if (before === JSON.stringify(state.project)) {
     renderPanels();
     stage.render();
@@ -336,6 +349,12 @@ function addObjects(objects) {
   );
 }
 function renderPanels() {
+  const focused = document.activeElement?.closest("#object-list button"),
+    focusKey =
+      focused &&
+      ["select", "check", "visibility", "lock", "expand"].find(
+        (key) => focused.dataset[key],
+      );
   // Selecting another SVG (including import or timeline selection) leaves the
   // previous focus scope, so newly selected artwork cannot remain invisible.
   if (
@@ -356,6 +375,7 @@ function renderPanels() {
     $("project-name").value = state.project.name;
   $("machine").value = state.project.machine;
   const m = MACHINES[state.project.machine];
+  $("machine-summary").textContent = m.name;
   $("hoop-size").textContent = `${m.width} × ${m.height} mm`;
   $("object-count").textContent = state.project.objects.length;
   const selectedIds = new Set(selectionIds(state)),
@@ -363,10 +383,12 @@ function renderPanels() {
   const row = (
     o,
     depth,
-  ) => `<div role="treeitem" aria-level="${depth + 2}" aria-selected="${selectedIds.has(o.id)}" ${o.kind ? `aria-expanded="${!state.collapsed.has(o.id)}"` : ""} class="object-row ${o.kind ? "group-row" : ""} ${selectedIds.has(o.id) ? "selected" : affected.has(o.id) ? "affected" : ""} ${!isVisible(state.project, o) ? "hidden" : ""}" style="--depth:${depth}">
+  ) => `<div data-reorder-id="${esc(o.id)}" role="treeitem" aria-level="${depth + 2}" aria-selected="${selectedIds.has(o.id)}" ${o.kind ? `aria-expanded="${!state.collapsed.has(o.id)}"` : ""} class="object-row ${o.kind ? "group-row" : ""} ${selectedIds.has(o.id) ? "selected" : affected.has(o.id) ? "affected" : ""} ${!isVisible(state.project, o) ? "hidden" : ""} ${isLocked(state.project, o) ? "locked" : ""}" style="--depth:${Math.min(depth, 5)}">
+    <button class="drag-grip" data-tree-grip aria-label="Reorder ${esc(o.name)}">${icon("grip")}</button>
+    <button class="selection-check" data-check="${esc(o.id)}" aria-label="Select ${esc(o.name)}" aria-pressed="${selectedIds.has(o.id) ? "true" : affected.has(o.id) ? "mixed" : "false"}"><span>${selectedIds.has(o.id) ? "✓" : affected.has(o.id) ? "−" : ""}</span></button>
     ${o.kind ? `<button class="tree-toggle" data-expand="${esc(o.id)}" aria-label="${state.collapsed.has(o.id) ? "Expand" : "Collapse"} ${esc(o.name)}">${state.collapsed.has(o.id) ? "▸" : "▾"}</button>` : '<span class="tree-toggle"></span>'}
     <button class="object-select" data-select="${esc(o.id)}"><span class="swatch ${o.kind ? "group-icon" : ""}" style="background:${o.color || "transparent"}">${o.kind ? (o.kind === "svg" ? "▧" : "▱") : ""}</span><span class="object-text"><span class="object-title">${esc(o.name)}</span><span class="object-type">${o.kind ? `${leaves(state.project, [o.id]).length} regions · ${o.kind === "svg" ? "Imported SVG" : "Group"}` : o.operations ? `${o.operations.length} operations` : o.svgLabel ? esc(o.svgLabel) : o.type === "fill" ? "Tatami fill" : o.type === "satin" ? "Satin column" : o.type === "manual" ? "Manual stitches" : "Running stitch"}</span></span></button>
-    <button class="tree-lock" data-lock="${esc(o.id)}" aria-label="${o.locked ? "Unlock" : "Lock"} ${esc(o.name)}">${isLocked(state.project, o) ? "▪" : "▫"}</button><button class="visibility" data-visibility="${esc(o.id)}" aria-label="${o.visible === false ? "Show" : "Hide"} ${esc(o.name)}">${o.visible === false ? "○" : "◉"}</button></div>`;
+    <button class="tree-lock" data-lock="${esc(o.id)}" aria-label="${o.locked ? "Unlock" : "Lock"} ${esc(o.name)}" aria-pressed="${isLocked(state.project, o)}">${icon(isLocked(state.project, o) ? "lock" : "unlock")}</button><button class="visibility" data-visibility="${esc(o.id)}" aria-label="${o.visible === false ? "Show" : "Hide"} ${esc(o.name)}" aria-pressed="${!isVisible(state.project, o)}">${icon(isVisible(state.project, o) ? "eye" : "hidden")}</button></div>`;
   $("object-list").setAttribute("role", "tree");
   $("object-list").setAttribute("aria-multiselectable", "true");
   $("object-list").innerHTML =
@@ -387,6 +409,25 @@ function renderPanels() {
     $(id).disabled = !selectedLeaves(state, { editable: true }).length;
   renderProperties();
   markSourceRows();
+  renderOrderMode();
+  if (focusKey)
+    [...$("object-list").querySelectorAll(`[data-${focusKey}]`)]
+      .find((el) => el.dataset[focusKey] === focused.dataset[focusKey])
+      ?.focus({ preventScroll: true });
+}
+function renderOrderMode() {
+  const manual = isManualOrder(state.project);
+  $("order-mode").value = manual ? "manual" : "auto";
+  $("order-mode").disabled = machinePlan;
+  $("order-badge").textContent = manual ? "Manual" : "Automatic";
+  $("order-relationship").textContent = machinePlan
+    ? "Decoded file · return to Design to reorder"
+    : manual
+      ? state.project.sequencing.origin === "tree"
+        ? "Linked to tree layers"
+        : "Independent of tree layers"
+      : "Safe color & travel optimization";
+  $("optimize-colors").disabled = manual;
 }
 function markSourceRows() {
   if (!state.plan || machinePlan) return;
@@ -397,9 +438,10 @@ function markSourceRows() {
     const id = row.querySelector("[data-select]")?.dataset.select,
       sourceOnly = !leaves(state.project, [id]).some((o) => active.has(o.id));
     row.classList.toggle("source-only", sourceOnly);
-    row.title = sourceOnly
-      ? "Source artwork retained. This object currently produces no sewing stitches; check digitizing settings or its geometry."
-      : "";
+    if (sourceOnly)
+      row.dataset.help =
+        "Source artwork retained. This object currently produces no sewing stitches; check digitizing settings or its geometry.";
+    else delete row.dataset.help;
   });
 }
 function field(label, id, value, unit = "", min = "", max = "", step = ".1") {
@@ -548,6 +590,8 @@ function renderStats() {
   }
 }
 function renderTimeline() {
+  const focusedObject =
+    document.activeElement?.closest(".sewing-object")?.dataset.reorderId;
   const ev = state.plan?.events || [];
   let groups = [];
   ev.forEach((e, i) => {
@@ -572,7 +616,7 @@ function renderTimeline() {
   $("timeline").value = state.cursor;
   const stats = state.plan?.stats;
   $("sequence-metrics").textContent = stats
-    ? `${stats.colors} color blocks · ${stats.manualChanges} manual changes · ${fmt(stats.jumps)} jumps${stats.stops ? ` · ${stats.stops} stops` : ""}${stats.sourceColorBlocks !== undefined ? ` · source order: ${stats.sourceColorBlocks} blocks` : ""}`
+    ? `${stats.colors} color blocks · ${stats.manualChanges} manual changes · ${fmt(stats.jumps)} jumps${stats.stops ? ` · ${stats.stops} stops` : ""}${!isManualOrder(state.project) && stats.sourceColorBlocks !== undefined ? ` · layer order: ${stats.sourceColorBlocks} blocks` : ""}`
     : "";
   drawCommandTrack();
   const names = new Map(state.project.objects.map((o) => [o.id, o.name])),
@@ -592,17 +636,36 @@ function renderTimeline() {
         color: e.color,
       });
   });
-  $("sewing-order").innerHTML = runs.length
-    ? runs
+  const objects = [];
+  for (const r of runs) {
+    if (objects.at(-1)?.id !== r.id) objects.push({ ...r, steps: [] });
+    objects.at(-1).steps.push(r);
+  }
+  $("sewing-order").innerHTML = objects.length
+    ? objects
         .map(
           (r, i) =>
-            `<button data-object-step="${r.start}" style="border-left-color:${r.color}">${i + 1}. ${esc(names.get(r.id) || "Object")}${r.name ? ` · ${esc(r.name)}` : ""}</button>`,
+            `<div class="sewing-object" data-reorder-id="${esc(r.id)}" style="--thread:${r.color}"><button class="drag-grip" data-sew-grip aria-label="Reorder ${esc(names.get(r.id) || "Object")}">${icon("grip")}</button><button data-object-step="${r.start}"><strong>${i + 1}. ${esc(names.get(r.id) || "Object")}</strong><small>${r.steps.length > 1 ? `${r.steps.length} ordered steps` : r.name ? esc(r.name) : "Complete object"}</small></button><span class="object-color-key">${[...new Set(r.steps.map((s) => s.color))].map((c) => `<i style="background:${c}"></i>`).join("")}</span></div>`,
         )
         .join("")
     : '<span class="property-note">Machine files do not retain source object boundaries.</span>';
-  $("sewing-order")
+  $("operation-sequence").hidden = !objects.some((o) => o.steps.length > 1);
+  $("operation-order").innerHTML = runs
+    .filter((r) => r.operationId)
+    .map(
+      (r) =>
+        `<button data-object-step="${r.start}" style="border-left:3px solid ${r.color}" data-help="Inspect this operation's first machine command. Reorder its complete object with the grip above; edit step order in object properties.">${esc(names.get(r.id))} · ${esc(r.name)}</button>`,
+    )
+    .join("");
+  $("simulator")
     .querySelectorAll("[data-object-step]")
     .forEach((el) => (el.onclick = () => scrub(Number(el.dataset.objectStep))));
+  renderOrderMode();
+  if (focusedObject)
+    [...$("sewing-order").querySelectorAll(".sewing-object")]
+      .find((el) => el.dataset.reorderId === focusedObject)
+      ?.querySelector("[data-sew-grip]")
+      ?.focus({ preventScroll: true });
 }
 function drawCommandTrack() {
   const canvas = $("command-track"),
@@ -1014,7 +1077,9 @@ $("machine").onchange = (e) => {
   stage.fit();
 };
 $("object-list").onclick = (e) => {
-  const selectEl = e.target.closest("[data-select]"),
+  const check = e.target.closest("[data-check]"),
+    row = e.target.closest(".object-row"),
+    selectEl = e.target.closest("[data-select]"),
     visibility = e.target.closest("[data-visibility]"),
     expand = e.target.closest("[data-expand]"),
     lock = e.target.closest("[data-lock]");
@@ -1031,17 +1096,24 @@ $("object-list").onclick = (e) => {
     mutate(() => (o.locked = !o.locked));
     return;
   }
-  if (selectEl) {
-    select(selectEl.dataset.select, {
-      toggle: e.shiftKey || e.ctrlKey || e.metaKey,
-    });
-    if (innerWidth <= 680) $("layers-panel").classList.remove("open");
-  }
-  if (visibility)
+  if (visibility) {
     mutate(() => {
       const o = nodeById(state.project, visibility.dataset.visibility);
       o.visible = o.visible === false;
     });
+    return;
+  }
+  if (e.target.closest("[data-tree-grip]")) return;
+  if (selectEl || row || check) {
+    select(
+      check?.dataset.check || selectEl?.dataset.select || row.dataset.reorderId,
+      {
+        toggle: Boolean(check) || e.shiftKey || e.ctrlKey || e.metaKey,
+      },
+    );
+    if (innerWidth <= 680 && !check && !e.shiftKey && !e.ctrlKey && !e.metaKey)
+      $("layers-panel").classList.remove("open");
+  }
 };
 $("object-list").onkeydown = (e) => {
   const button = e.target.closest("[data-select]");
@@ -1141,8 +1213,86 @@ for (const [id, dir] of [
     mutate(() => {
       if (!reorder(state.project, selectionIds(state), dir))
         toast("Select siblings to reorder them together.");
+      else useTreeOrder(state.project);
     });
   };
+const actualObjectOrder = () => [
+  ...new Set(
+    (state.plan?.events || []).filter((e) => e.objectId).map((e) => e.objectId),
+  ),
+];
+function commitTreeOrder(ids, target, after) {
+  let applied = false;
+  mutate(() => {
+    if (moveInTree(state.project, ids, target, after)) {
+      useTreeOrder(state.project);
+      applied = true;
+    }
+  });
+  toast(
+    applied
+      ? "Layers reordered · manual sewing order follows the tree."
+      : "Move siblings within the same group. Locked artwork and sequence pins stay in place.",
+  );
+  return applied;
+}
+function commitSewingOrder(ids, target, after) {
+  if (machinePlan || !state.plan) return false;
+  let applied = false;
+  mutate(() => {
+    applied = moveSewingObjects(
+      state.project,
+      ids,
+      target,
+      after,
+      actualObjectOrder(),
+    );
+  });
+  toast(
+    applied
+      ? "Manual sewing order updated · artwork layers unchanged."
+      : "No move made. Sequence pins cannot be moved or crossed.",
+  );
+  return applied;
+}
+installReordering($("object-list"), {
+  item: ".object-row",
+  handle: "[data-tree-grip]",
+  start: (id) => {
+    const ids = roots(state.project, selectionIds(state));
+    return ids.includes(id) ? ids : [id];
+  },
+  commit: commitTreeOrder,
+  announce: toast,
+});
+installReordering($("sewing-order"), {
+  item: ".sewing-object",
+  handle: "[data-sew-grip]",
+  horizontal: true,
+  start: (id) => (machinePlan || !state.plan ? [] : [id]),
+  commit: commitSewingOrder,
+  announce: toast,
+});
+$("order-mode").onchange = (e) =>
+  mutate(() => {
+    if (e.target.value === "auto") delete state.project.sequencing;
+    else
+      state.project.sequencing = {
+        mode: "manual",
+        origin: "sequence",
+        order: [
+          ...new Set([...actualObjectOrder(), ...sewingIds(state.project)]),
+        ],
+      };
+  });
+installHelp();
+const compactSequence = matchMedia("(max-height: 740px)");
+const collapseCompactSequence = () => {
+  if (compactSequence.matches)
+    document.querySelector(".object-sequence").open = false;
+};
+collapseCompactSequence();
+compactSequence.addEventListener("change", collapseCompactSequence);
 function editCommand(command) {
   if (command === "duplicates") {
     const ids =
@@ -1400,11 +1550,16 @@ $("toggle-inspector").onclick = () => {
 $("help").onclick = () =>
   ask(
     "Your embroidery workbench",
-    '<p><strong>Artwork tree:</strong> Imported SVGs contain their original regions and nested groups. Select a parent to edit the whole SVG; expand it to edit a child. Shift/Ctrl-click or drag a box to multiselect. Drag corner/edge handles to resize, or the round handle to rotate. Ctrl A selects all, Ctrl G groups, Ctrl Shift G ungroups, Ctrl D duplicates, and F fits selection. Locked artwork still sews; focus mode changes only the view.</p><p><strong>Operations:</strong> Add independent steps in the inspector. The appliqué recipe creates placement, stop, tackdown, stop and satin finishing steps on closed regions. Stops require operator action; test pauses and clearance on your machine.</p><p><strong>Draw:</strong> Use polygon for filled regions, running path for outlines, and satin for narrow columns. Click points, then press <kbd>Enter</kbd> or Finish path. Drag to create rectangles and ellipses.</p><p><strong>Edit:</strong> Select and drag objects. The node tool lets you move individual points; double-click an edge to insert a node. Use the properties panel for exact dimensions, angles and stitch settings. Automatic sequencing completes each object and batches compatible colors while preserving construction order. Disable grouping for exact layer order, or use Keep sequence position to pin an object.</p><p><strong>Simulate:</strong> Open Stitch preview. Play, step through, scrub, click a stitch, or click a color block. Command positions, underlay and jump paths are inspectable. Export replaces the preview with commands decoded from the saved file.</p><p><strong>Manual editing:</strong> Make a vector object’s stitches editable, then adjust needle points with the node tool or command index editor. Imported embroidery files are editable stitch blocks.</p><p><strong>Shortcuts:</strong> <kbd>V</kbd> select · <kbd>N</kbd> nodes · <kbd>P</kbd> fill · <kbd>R</kbd> run · <kbd>S</kbd> satin · <kbd>T</kbd> text · <kbd>E</kbd> ellipse · <kbd>H</kbd> pan · <kbd>Space</kbd> temporary pan / preview playback · <kbd>Ctrl Z</kbd> undo · <kbd>Ctrl Shift Z</kbd> redo · <kbd>Delete</kbd> selected object / vector node.</p><p>SVG import supports paths, basic shapes, transforms, holes and inline solid paints. Convert text to paths and expand clipping or effects first. Image digitizing is intended for flat artwork. Core editing works locally; machine conversion loads a pinned Python/WASM runtime from jsDelivr on first use. Thread colors are visual approximations.</p><p><a href="https://github.com/kircherlabs/embroidery-studio#readme" target="_blank" rel="noreferrer">Documentation & known limitations ↗</a></p>',
+    '<p><strong>Artwork tree:</strong> Imported SVGs contain their original regions and nested groups. Select a parent to edit the whole SVG; expand it to edit a child. Shift/Ctrl-click or drag a box to multiselect. Drag corner/edge handles to resize, or the round handle to rotate. Ctrl A selects all, Ctrl G groups, Ctrl Shift G ungroups, Ctrl D duplicates, and F fits selection. Locked artwork still sews; focus mode changes only the view.</p><p><strong>Operations:</strong> Add independent steps in the inspector. The appliqué recipe creates placement, stop, tackdown, stop and satin finishing steps on closed regions. Stops require operator action; test pauses and clearance on your machine.</p><p><strong>Draw:</strong> Use polygon for filled regions, running path for outlines, and satin for narrow columns. Click points, then press <kbd>Enter</kbd> or Finish path. Drag to create rectangles and ellipses.</p><p><strong>Edit:</strong> Select and drag objects. The node tool lets you move individual points; double-click an edge to insert a node. Use the properties panel for exact dimensions, angles and stitch settings. Automatic sequencing completes each object and batches compatible colors while preserving construction order. Drag grips in the artwork tree to change layers and set manual sewing order. Drag grips in Object sewing order to change sewing order only. Switch back to Automatic to resume optimization; Keep sequence position pins an object. Alt+arrow keys on a grip are the keyboard equivalent.</p><p><strong>Simulate:</strong> Open Stitch preview. Play, step through, scrub, click a stitch, or click a color block. Command positions, underlay and jump paths are inspectable. Export replaces the preview with commands decoded from the saved file.</p><p><strong>Manual editing:</strong> Make a vector object’s stitches editable, then adjust needle points with the node tool or command index editor. Imported embroidery files are editable stitch blocks.</p><p><strong>Shortcuts:</strong> <kbd>V</kbd> select · <kbd>N</kbd> nodes · <kbd>P</kbd> fill · <kbd>R</kbd> run · <kbd>S</kbd> satin · <kbd>T</kbd> text · <kbd>E</kbd> ellipse · <kbd>H</kbd> pan · <kbd>Space</kbd> temporary pan / preview playback · <kbd>Ctrl Z</kbd> undo · <kbd>Ctrl Shift Z</kbd> redo · <kbd>Delete</kbd> selected object / vector node.</p><p>SVG import supports paths, basic shapes, transforms, holes and inline solid paints. Convert text to paths and expand clipping or effects first. Image digitizing is intended for flat artwork. Core editing works locally; machine conversion loads a pinned Python/WASM runtime from jsDelivr on first use. Thread colors are visual approximations.</p><p><a href="https://github.com/kircherlabs/embroidery-studio#readme" target="_blank" rel="noreferrer">Documentation & known limitations ↗</a></p>',
     "Got it",
   );
 document.addEventListener("keydown", (e) => {
   if ($("dialog").open || /INPUT|SELECT|TEXTAREA/.test(e.target.tagName))
+    return;
+  if (
+    (e.code === "Space" || e.key === "Enter") &&
+    e.target.closest("button,summary,a")
+  )
     return;
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
     e.preventDefault();

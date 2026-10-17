@@ -1,6 +1,7 @@
 import { bounds, objectBounds } from "./model.js";
 import { isVisible, ancestors } from "./hierarchy.js";
 import { operationsOf, operationObject, isSewing } from "./operations.js";
+import { isManualOrder, sewingIds } from "./sequencing.js";
 import {
   clipping,
   fillPolygons,
@@ -261,6 +262,15 @@ function prepareArtwork(project) {
 }
 
 export function preparePlan(project) {
+  if (isManualOrder(project)) {
+    const byId = new Map(project.objects.map((o) => [o.id, o]));
+    project = {
+      ...project,
+      artworkReferences: project.objects.filter((o) => isVisible(project, o)),
+      objects: sewingIds(project).map((id) => byId.get(id)),
+      planning: { ...project.planning, optimizeColors: false },
+    };
+  }
   const objects = project.objects
     .filter((o) => isVisible(project, o))
     .map((o) => ({

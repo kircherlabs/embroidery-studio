@@ -99,8 +99,12 @@ try {
   await page.locator("#end").click();
   await page.keyboard.press("Escape");
   await page.locator("#toast.show").waitFor({ state: "hidden" });
-  await page.locator(".object-sequence summary").click();
-  assert.equal(await page.locator("#sewing-order button").count(), 11);
+  if (!(await page.locator(".object-sequence").evaluate((el) => el.open)))
+    await page.locator(".object-sequence > summary").click();
+  assert.equal(
+    await page.locator("#sewing-order [data-object-step]").count(),
+    11,
+  );
   await page.screenshot({ path: "test-results/travel-outline-preview.png" });
   await page.locator("#show-jumps").check();
   await page.locator("#show-events").check();

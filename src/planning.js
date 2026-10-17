@@ -159,13 +159,24 @@ export function preparePlan(project) {
     diagnostics.optimizationLimited
   )
     return { units, diagnostics, options };
-  const outgoing = units.map(() => []),
-    incoming = units.map(() => 0);
+  // Sequence whole source objects. A source may contain several disconnected
+  // regions, but its regions must not be interleaved with unrelated objects.
+  const byId = new Map();
+  for (const u of units) {
+    if (!byId.has(u.id)) byId.set(u.id, { ...u, units: [] });
+    byId.get(u.id).units.push(u);
+  }
+  const groups = [...byId.values()],
+    groupIndex = new Map(groups.map((g, i) => [g.id, i]));
+  const outgoing = groups.map(() => new Set()),
+    incoming = groups.map(() => 0);
   for (let i = 0; i < units.length; i++)
     for (let j = i + 1; j < units.length; j++) {
       const a = units[i],
         b = units[j];
-      let dependent = a.barrier || b.barrier;
+      if (a.id === b.id) continue;
+      let dependent =
+        a.barrier || b.barrier || a.sequenceLocked || b.sequenceLocked;
       // Include pull compensation and machine rounding in the painted footprint.
       // Touching differently colored edges still require their original layering.
       const margin =
@@ -189,8 +200,12 @@ export function preparePlan(project) {
         if (dependent) diagnostics.overlapPairs++;
       }
       if (dependent) {
-        outgoing[i].push(j);
-        incoming[j]++;
+        const gi = groupIndex.get(a.id),
+          gj = groupIndex.get(b.id);
+        if (!outgoing[gi].has(gj)) {
+          outgoing[gi].add(gj);
+          incoming[gj]++;
+        }
       }
     }
   const ready = new Set(incoming.flatMap((n, i) => (n ? [] : [i]))),
@@ -198,32 +213,40 @@ export function preparePlan(project) {
   let color = null,
     last = { x: 0, y: 0 };
   while (ready.size) {
-    let candidates = [...ready].filter((i) => units[i].color === color);
+    let candidates = [...ready].filter((i) => groups[i].color === color);
     if (!candidates.length) {
-      const colors = new Map();
-      for (const i of ready) {
-        const c = units[i].color;
-        colors.set(c, (colors.get(c) || 0) + 1);
-      }
-      color = [...colors].sort(
-        (a, b) =>
-          b[1] - a[1] ||
-          units[[...ready].find((i) => units[i].color === a[0])].index -
-            units[[...ready].find((i) => units[i].color === b[0])].index,
-      )[0][0];
-      candidates = [...ready].filter((i) => units[i].color === color);
+      const first = [...ready].sort(
+        (a, b) => groups[a].index - groups[b].index,
+      )[0];
+      color = groups[first].color;
+      candidates = [...ready].filter((i) => groups[i].color === color);
     }
-    const center = (i) => ({
-      x: (units[i].bounds.minX + units[i].bounds.maxX) / 2,
-      y: (units[i].bounds.minY + units[i].bounds.maxY) / 2,
-    });
+    const entry = (u) => {
+      const b = u.bounds;
+      return {
+        x: Math.max(b.minX, Math.min(last.x, b.maxX)),
+        y: Math.max(b.minY, Math.min(last.y, b.maxY)),
+      };
+    };
+    const nearest = (i) =>
+      groups[i].units
+        .map(entry)
+        .sort((a, b) => distance(last, a) - distance(last, b))[0];
     candidates.sort(
-      (a, b) => distance(last, center(a)) - distance(last, center(b)) || a - b,
+      (a, b) =>
+        distance(last, nearest(a)) - distance(last, nearest(b)) || a - b,
     );
     const i = candidates[0];
     ready.delete(i);
-    order.push(units[i]);
-    last = center(i);
+    const remaining = [...groups[i].units];
+    while (remaining.length) {
+      remaining.sort(
+        (a, b) => distance(last, entry(a)) - distance(last, entry(b)),
+      );
+      const u = remaining.shift();
+      order.push(u);
+      last = entry(u);
+    }
     for (const j of outgoing[i]) if (--incoming[j] === 0) ready.add(j);
   }
   // A heuristic may trade one future change for another. Never accept a result

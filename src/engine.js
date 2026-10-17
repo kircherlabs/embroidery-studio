@@ -1,6 +1,7 @@
 import { bounds, MACHINES } from "./model.js";
 import { inside, distance, safeConnector, simplifyPath } from "./geometry.js";
 import { preparePlan } from "./planning.js";
+import { routeFill } from "./fill-routing.js";
 export { inside, distance } from "./geometry.js";
 const rotate = (p, a) => ({
   x: p.x * Math.cos(a) - p.y * Math.sin(a),
@@ -122,14 +123,30 @@ export function fillRows(
         )
           if (x > x1 + 0.08) pts.push({ x, y });
         pts.push({ x: x2, y });
+        const inset = Math.min(0.2, (c.x - start) / 4);
+        pts.anchors = [
+          { x: start + inset, y },
+          { x: c.x - inset, y },
+        ];
+        pts.interval = [start, c.x];
+        pts.scanline = row;
         segments.push(pts);
       }
     }
     if (row % 2) {
       segments.reverse();
-      segments.forEach((s) => s.reverse());
+      segments.forEach((s) => {
+        s.reverse();
+        s.anchors.reverse();
+      });
     }
-    for (const s of segments) rows.push(s.map((p) => rotate(p, a)));
+    for (const s of segments) {
+      const r = s.map((p) => rotate(p, a));
+      r.anchors = s.anchors.map((p) => rotate(p, a));
+      r.scanline = s.scanline;
+      r.interval = s.interval;
+      rows.push(r);
+    }
   }
   return rows;
 }
@@ -150,33 +167,42 @@ export function satin(path, width, spacing, length) {
   }
   return subdivide(pts, length);
 }
-function pathsFor(o) {
+function pathsFor(o, from, to) {
   const paths = [];
   if (o.underlay) {
-    if (o.type === "fill")
-      for (const row of fillRows(
-        o.rings,
-        Math.max(2, o.spacing * 5),
-        o.angle + 90,
-        3,
-        0,
-        o.fillRule,
-      ))
-        paths.push({ p: row, phase: "underlay" });
-    else
+    if (o.type === "fill") {
+      const spacing = Math.max(2, o.spacing * 5),
+        stride = Math.ceil(spacing / Math.min(0.42, o.spacing));
+      paths.push(
+        ...routeFill(
+          fillRows(o.rings, spacing / stride, o.angle + 90, 3, 0, o.fillRule),
+          o,
+          from,
+          "underlay",
+          { stride },
+        ),
+      );
+    } else
       for (const ring of o.rings)
         paths.push({ p: resample(ring, 2.5, o.closed), phase: "underlay" });
   }
   if (o.type === "fill")
-    for (const row of fillRows(
-      o.rings,
-      o.spacing,
-      o.angle,
-      o.length,
-      o.compensation,
-      o.fillRule,
-    ))
-      paths.push({ p: row, phase: "top" });
+    paths.push(
+      ...routeFill(
+        fillRows(
+          o.rings,
+          o.spacing,
+          o.angle,
+          o.length,
+          o.compensation,
+          o.fillRule,
+        ),
+        o,
+        paths.at(-1)?.p.at(-1) || from,
+        "top",
+        { connectFrom: paths.length > 0, to },
+      ),
+    );
   if (o.type === "run")
     for (const ring of o.rings)
       paths.push({ p: resample(ring, o.length, o.closed), phase: "top" });
@@ -205,8 +231,16 @@ export function generate(project) {
     machine = MACHINES[project.machine];
   let last = { x: 0, y: 0 },
     lastColor = null,
+    activeRegion = null,
     threadTrimmed = true;
-  const emit = (cmd, p, color, objectId, phase = "top") => {
+  const emit = (
+    cmd,
+    p,
+    color,
+    objectId,
+    phase = "top",
+    regionId = activeRegion,
+  ) => {
     const e = {
       cmd,
       x: Math.round(p.x * 10) / 10,
@@ -214,6 +248,7 @@ export function generate(project) {
       color,
       objectId,
       phase,
+      regionId,
     };
     if (
       cmd === "stitch" &&
@@ -257,6 +292,7 @@ export function generate(project) {
         o.color,
         o.id,
         phase,
+        o.regionId,
       );
   };
   const lock = (path, o, phase) => {
@@ -276,6 +312,8 @@ export function generate(project) {
     if (threadTrimmed) return;
     const a = { ...last },
       b = events.at(-2);
+    // An outgoing lock belongs to the region that was sewn, not the next object.
+    o = { ...o, id: last.objectId, color: last.color, regionId: last.regionId };
     if (events.at(-1)?.cmd === "stitch" && b && distance(a, b) >= 0.3) {
       const d = distance(a, b),
         t = Math.min(0.5 / d, 1);
@@ -286,12 +324,21 @@ export function generate(project) {
   const trimAndLock = (o) => {
     if (threadTrimmed) return;
     lockEnd(o);
-    emit("trim", last, lastColor, o.id, "tie");
+    emit("trim", last, lastColor, last.objectId, "tie", last.regionId);
   };
   let previousObject = null;
-  for (const o of prepared.units) {
+  for (const [regionIndex, unit] of prepared.units.entries()) {
+    const o = { ...unit, regionId: `${unit.id}:${regionIndex}` };
+    activeRegion = o.regionId;
     if (o.type === "manual" && !o.commands.length) continue;
-    const paths = o.type === "manual" ? null : pathsFor(o);
+    const next = prepared.units[regionIndex + 1],
+      to = next
+        ? {
+            x: (next.bounds.minX + next.bounds.maxX) / 2,
+            y: (next.bounds.minY + next.bounds.maxY) / 2,
+          }
+        : null;
+    const paths = o.type === "manual" ? null : pathsFor(o, last, to);
     if (paths && !paths.length) continue;
     if (lastColor !== o.color) {
       if (lastColor !== null) {
@@ -321,21 +368,23 @@ export function generate(project) {
       continue;
     }
     let first = true;
-    for (const { p, phase } of paths) {
+    for (const { p, phase, continuous } of paths) {
       if (!p.length) continue;
       const d = distance(last, p[0]);
       // Only connect nearby rows when the complete connector lies inside the fill.
       const safe =
         o.type === "fill" &&
-        d < 2.2 &&
-        safeConnector(
-          last,
-          p[0],
-          o.rings,
-          o.polygon ? o.compensation + 0.02 : 0,
-          o.polygon ? o.rings.slice(1) : [],
-          o.fillRule,
-        );
+        !first &&
+        (continuous || d < 2.2) &&
+        (continuous ||
+          safeConnector(
+            last,
+            p[0],
+            o.rings,
+            o.polygon ? o.compensation + 0.02 : 0,
+            o.polygon ? o.rings.slice(1) : [],
+            o.fillRule,
+          ));
       if (first || !safe) {
         const trimmed = events.length && d > 3;
         if (trimmed) trimAndLock(o);
@@ -410,8 +459,19 @@ export function analyze(events, machine) {
     shortStitches = 0,
     zeroLength = 0,
     anchorStitches = 0,
+    travelStitches = 0,
+    jumpMoves = 0,
+    jumpDistance = 0,
     redundantStitches = 0,
-    prev = { x: 0, y: 0 };
+    prev = { x: 0, y: 0 },
+    sewn = null;
+  const jumpBreakdown = {
+    initial: 0,
+    betweenObjects: 0,
+    betweenRegions: 0,
+    withinRegions: 0,
+    unclassified: 0,
+  };
   for (const e of events) {
     const d = distance(prev, e);
     if (e.cmd === "stitch") {
@@ -420,6 +480,8 @@ export function analyze(events, machine) {
       maxLength = Math.max(maxLength, d);
       if (d < 0.3) shortStitches++;
       if (e.phase === "anchor") anchorStitches++;
+      if (e.phase === "travel" || e.phase === "underlay-travel")
+        travelStitches++;
       if (d === 0) {
         zeroLength++;
         if (
@@ -430,7 +492,22 @@ export function analyze(events, machine) {
           redundantStitches++;
       }
     }
-    if (e.cmd === "jump") jumps++;
+    if (e.cmd === "jump") {
+      jumps++;
+      jumpDistance += d;
+      if (d > 0) jumpMoves++;
+      const kind = !sewn
+        ? "initial"
+        : !e.objectId || !sewn.objectId
+          ? "unclassified"
+          : e.objectId !== sewn.objectId
+            ? "betweenObjects"
+            : e.regionId !== sewn.regionId
+              ? "betweenRegions"
+              : "withinRegions";
+      jumpBreakdown[kind]++;
+    }
+    if (e.cmd === "stitch") sewn = e;
     if (e.cmd === "trim") trims++;
     if (e.cmd === "color") changes++;
     if (e.cmd === "stitch" || e.cmd === "jump") prev = e;
@@ -454,6 +531,10 @@ export function analyze(events, machine) {
     shortStitches,
     zeroLength,
     anchorStitches,
+    travelStitches,
+    jumpBreakdown,
+    jumpMoves,
+    jumpDistance,
     redundantStitches,
     thread: stitchLength / 1000,
     bounds: b,

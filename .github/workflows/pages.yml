@@ -32,6 +32,7 @@ jobs:
           node tests/browser.mjs
           node tests/svg-browser.mjs
           node tests/digitizing-browser.mjs
+          node tests/travel-browser.mjs
       - run: node scripts/build.mjs
       - uses: actions/upload-pages-artifact@v3
         if: github.event_name != 'pull_request'

@@ -19,3 +19,15 @@ regressions verify geometry and rendering against the original SVG, as well as
 successful stitch generation and file-input import. Other synthetic cases cover
 degenerate/unsupported elements, mixed stroke closure, transform handling,
 resource cleanup and expected-versus-unexpected geometry exceptions.
+
+`picsvg-outline.svg` is the user's `picsvg_modified (6).svg`, copied byte-for-byte
+for the object travel regression. Do not reformat or simplify this fixture.
+
+- 25,461 bytes, 11 black fill objects.
+- SHA-256: `3d0cae6ce217addc0ab932a70eda680447349b655017fee3efb3c88d44fe9d78`
+- On commit `575694a`, default import produced 5,417 sewing penetrations,
+  694 jumps and 463 requested trims. The jumps comprise 683 within fills,
+  10 between objects and one initial positioning command.
+- The travel browser test checks every required top-fill needle position,
+  contiguous source objects, sequence pinning/undo and an optional real PES
+  round trip. No small-detail or duplicate-outline suppression is involved.

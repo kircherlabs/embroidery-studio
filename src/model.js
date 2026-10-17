@@ -207,6 +207,8 @@ export function validateProject(p) {
       typeof o.id !== "string" ||
       typeof o.name !== "string" ||
       !/^#[0-9a-f]{6}$/i.test(o.color) ||
+      (o.sequenceLocked !== undefined &&
+        typeof o.sequenceLocked !== "boolean") ||
       !["fill", "run", "satin", "manual"].includes(o.type)
     )
       throw Error("Invalid object.");

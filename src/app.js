@@ -355,6 +355,12 @@ function renderProperties() {
       .join(
         "",
       )}</select></label><div class="section-label">THREAD COLOR <span>40 WT</span></div><input id="thread-color" type="color" aria-label="Thread color" value="${o.color}"><div class="swatch-palette">${PALETTE.map((c) => `<button data-color="${c}" class="${c === o.color ? "active" : ""}" style="background:${c}" aria-label="Use thread ${c}"></button>`).join("")}</div>${o.type === "manual" ? "" : `<div class="section-label">STITCH SETTINGS</div><div class="two-col">${field("Row spacing", "spacing", o.spacing, "mm", 0.15, 5)}${field(o.type === "satin" ? "Column width" : "Stitch length", o.type === "satin" ? "satin-width" : "length", o.type === "satin" ? o.width : o.length, "mm", 0.3, 7)}</div>${o.type === "fill" ? field("Stitch direction", "angle", o.angle, "°", -360, 360, 1) : ""}${o.type !== "run" ? field("Pull compensation", "compensation", o.compensation, "mm", 0, 1) : ""}<label class="check"><input id="underlay" type="checkbox" ${o.underlay ? "checked" : ""}> Light underlay</label>${o.type !== "fill" ? `<label class="check"><input id="closed-path" type="checkbox" ${o.closed ? "checked" : ""}> Close path</label>` : ""}<p class="property-note">${o.type === "fill" ? "Smaller row spacing makes a denser fill. Underlay runs perpendicular at a wider spacing." : o.type === "satin" ? "The path is the centerline. Width controls the zigzag span; spacing controls the advance along the column." : "Running stitches follow the path. Row spacing applies when switching to fill or satin."}</p>`}<div class="section-label">POSITION & SIZE</div><div class="two-col">${field("Center X", "pos-x", (b.minX + b.maxX) / 2, "mm", -1000, 1000)}${field("Center Y", "pos-y", (b.minY + b.maxY) / 2, "mm", -1000, 1000)}${field("Width", "size-w", b.width, "mm", 0.1, 500)}${field("Height", "size-h", b.height, "mm", 0.1, 500)}</div>${field("Rotate by", "rotate", 0, "°", -360, 360, 1)}<p class="property-note">Origin is the hoop center. Width and height scale independently.</p>${o.type !== "manual" ? '<button id="convert-manual">Make stitches editable</button>' : manualEditor(o)}`;
+  $("properties").insertAdjacentHTML(
+    "afterbegin",
+    `<label class="check"><input id="sequence-locked" type="checkbox" ${o.sequenceLocked || o.type === "manual" ? "checked" : ""} ${o.type === "manual" ? "disabled" : ""}> Keep sequence position</label><p class="property-note">${o.type === "manual" ? "Manual stitch blocks always retain their position." : "Pin this object in layer order while other compatible colors are grouped."}</p>`,
+  );
+  $("sequence-locked").onchange = (e) =>
+    mutate(() => (o.sequenceLocked = e.target.checked));
   $("object-name").onchange = (e) =>
     mutate(() => (o.name = e.target.value.trim() || "Untitled object"));
   $("stitch-type").onchange = (e) => mutate(() => (o.type = e.target.value));
@@ -473,6 +479,17 @@ function renderStats() {
   $("stats").innerHTML = stats
     ? `<div><strong>${fmt(stats.stitches)}</strong><span>Sewing stitches</span></div><div><strong>${stats.colors}</strong><span>Color blocks · ${stats.uniqueColors} threads</span></div><div><strong>${stats.manualChanges}</strong><span>Manual thread changes</span></div><div><strong>${fmt(stats.jumps)}</strong><span>Jumps · ${fmt(stats.trims)} trims</span></div><div><strong>${num(stats.minutes, 0)} <small>min</small></strong><span>Estimated machine time</span></div><div><strong>${num(stats.thread)} <small>m</small></strong><span>Top thread path</span></div>`
     : '<p class="property-note">No stitch sequence</p>';
+  if (stats) {
+    const b = stats.jumpBreakdown;
+    const detail =
+      machinePlan || b.unclassified
+        ? `Decoded file: ${fmt(stats.jumps)} jump commands (${fmt(stats.jumpMoves)} moves), ${fmt(stats.trims)} encoded trim commands. Object origins are unavailable in machine files.`
+        : `Jump commands: ${b.initial} initial · ${b.betweenObjects} between objects · ${b.betweenRegions} between regions · ${b.withinRegions} within regions. ${fmt(stats.travelStitches)} running travel stitches stay inside fills. ${fmt(stats.jumps - stats.jumpMoves)} jumps have no positional movement.`;
+    $("stats").insertAdjacentHTML(
+      "beforeend",
+      `<p class="property-note travel-summary">${detail}</p>`,
+    );
+  }
   $("fit-status").textContent = stats
     ? stats.fits
       ? "✓ Design fits selected hoop"
@@ -511,6 +528,23 @@ function renderTimeline() {
     ? `${stats.colors} color blocks · ${stats.manualChanges} manual changes · ${fmt(stats.jumps)} jumps${stats.sourceColorBlocks !== undefined ? ` · source order: ${stats.sourceColorBlocks} blocks` : ""}`
     : "";
   drawCommandTrack();
+  const names = new Map(state.project.objects.map((o) => [o.id, o.name])),
+    runs = [];
+  ev.forEach((e, i) => {
+    if (e.cmd === "stitch" && e.objectId && runs.at(-1)?.id !== e.objectId)
+      runs.push({ id: e.objectId, start: i + 1, color: e.color });
+  });
+  $("sewing-order").innerHTML = runs.length
+    ? runs
+        .map(
+          (r, i) =>
+            `<button data-object-step="${r.start}" style="border-left-color:${r.color}">${i + 1}. ${esc(names.get(r.id) || "Object")}</button>`,
+        )
+        .join("")
+    : '<span class="property-note">Machine files do not retain source object boundaries.</span>';
+  $("sewing-order")
+    .querySelectorAll("[data-object-step]")
+    .forEach((el) => (el.onclick = () => scrub(Number(el.dataset.objectStep))));
 }
 function drawCommandTrack() {
   const canvas = $("command-track"),
@@ -539,7 +573,7 @@ function renderPlayback() {
   $("stitch-counter").textContent = `${fmt(state.cursor)} / ${fmt(ev.length)}`;
   const e = ev[state.cursor - 1];
   $("command-readout").textContent = e
-    ? `${e.cmd.toUpperCase()} · X ${num(e.x)}  Y ${num(e.y)}${e.phase === "underlay" ? " · UNDERLAY" : e.phase === "anchor" ? " · NEEDLE ANCHOR" : ""}`
+    ? `${e.cmd.toUpperCase()} · X ${num(e.x)}  Y ${num(e.y)}${e.phase?.startsWith("underlay") ? " · UNDERLAY" : e.phase === "anchor" ? " · NEEDLE ANCHOR" : e.phase === "travel" ? " · FILL TRAVEL" : ""}`
     : "Sequence start";
   $("play").textContent = playing ? "Ⅱ" : "▶";
   $("play").setAttribute(
@@ -1034,7 +1068,7 @@ $("toggle-inspector").onclick = () => {
 $("help").onclick = () =>
   ask(
     "Your embroidery workbench",
-    '<p><strong>Draw:</strong> Use polygon for filled regions, running path for outlines, and satin for narrow columns. Click points, then press <kbd>Enter</kbd> or Finish path. Drag to create rectangles and ellipses.</p><p><strong>Edit:</strong> Select and drag objects. The node tool lets you move individual points; double-click an edge to insert a node. Use the properties panel for exact dimensions, angles and stitch settings. Objects sew from top to bottom.</p><p><strong>Simulate:</strong> Open Stitch preview. Play, step through, scrub, click a stitch, or click a color block. Command positions, underlay and jump paths are inspectable. Export replaces the preview with commands decoded from the saved file.</p><p><strong>Manual editing:</strong> Make a vector object’s stitches editable, then adjust needle points with the node tool or command index editor. Imported embroidery files are editable stitch blocks.</p><p><strong>Shortcuts:</strong> <kbd>V</kbd> select · <kbd>N</kbd> nodes · <kbd>P</kbd> fill · <kbd>R</kbd> run · <kbd>S</kbd> satin · <kbd>T</kbd> text · <kbd>E</kbd> ellipse · <kbd>H</kbd> pan · <kbd>Space</kbd> temporary pan / preview playback · <kbd>Ctrl Z</kbd> undo · <kbd>Ctrl Shift Z</kbd> redo · <kbd>Delete</kbd> selected object / vector node.</p><p>SVG import supports paths, basic shapes, transforms, holes and inline solid paints. Convert text to paths and expand clipping or effects first. Image digitizing is intended for flat artwork. Core editing works locally; machine conversion loads a pinned Python/WASM runtime from jsDelivr on first use. Thread colors are visual approximations.</p><p><a href="https://github.com/kircherlabs/embroidery-studio#readme" target="_blank" rel="noreferrer">Documentation & known limitations ↗</a></p>',
+    '<p><strong>Draw:</strong> Use polygon for filled regions, running path for outlines, and satin for narrow columns. Click points, then press <kbd>Enter</kbd> or Finish path. Drag to create rectangles and ellipses.</p><p><strong>Edit:</strong> Select and drag objects. The node tool lets you move individual points; double-click an edge to insert a node. Use the properties panel for exact dimensions, angles and stitch settings. Automatic sequencing completes each object and batches compatible colors while preserving construction order. Disable grouping for exact layer order, or use Keep sequence position to pin an object.</p><p><strong>Simulate:</strong> Open Stitch preview. Play, step through, scrub, click a stitch, or click a color block. Command positions, underlay and jump paths are inspectable. Export replaces the preview with commands decoded from the saved file.</p><p><strong>Manual editing:</strong> Make a vector object’s stitches editable, then adjust needle points with the node tool or command index editor. Imported embroidery files are editable stitch blocks.</p><p><strong>Shortcuts:</strong> <kbd>V</kbd> select · <kbd>N</kbd> nodes · <kbd>P</kbd> fill · <kbd>R</kbd> run · <kbd>S</kbd> satin · <kbd>T</kbd> text · <kbd>E</kbd> ellipse · <kbd>H</kbd> pan · <kbd>Space</kbd> temporary pan / preview playback · <kbd>Ctrl Z</kbd> undo · <kbd>Ctrl Shift Z</kbd> redo · <kbd>Delete</kbd> selected object / vector node.</p><p>SVG import supports paths, basic shapes, transforms, holes and inline solid paints. Convert text to paths and expand clipping or effects first. Image digitizing is intended for flat artwork. Core editing works locally; machine conversion loads a pinned Python/WASM runtime from jsDelivr on first use. Thread colors are visual approximations.</p><p><a href="https://github.com/kircherlabs/embroidery-studio#readme" target="_blank" rel="noreferrer">Documentation & known limitations ↗</a></p>',
     "Got it",
   );
 document.addEventListener("keydown", (e) => {

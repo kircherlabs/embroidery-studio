@@ -8,14 +8,15 @@ blocks (69 single-needle thread changes), 35,782 stitches, 3,627 jumps and 1,702
 trims. Of the sewing commands, 8,589 had identical start/end machine coordinates.
 The timeline's 41,181 entries were **all commands**, not 41,181 sewing stitches.
 
-With default preparation, the browser regression produces 15 color blocks, 14
+Before the graph travel router (commit `575694a`), preparation produced 15 color blocks, 14
 manual changes, 13,868 penetrations (including 1,887 deliberate needle anchors),
 1,887 jumps and 880 requested trims. Its actual PES round trip preserves all
 13,868 penetrations in exactly the planned order; PES encodes 1,886 trim commands.
 For comparison, exporting the original pipeline produces 36,360 penetrations,
 4,954 jumps and 4,953 decoded trims. Counts can vary slightly with imported curve
 sampling, size, settings and format. The test report distinguishes planned versus
-decoded-file metrics rather than conflating them.
+decoded-file metrics rather than conflating them. The object travel regression
+below records the next routing improvement separately.
 
 The source contains thousands of tiny disconnected contours, including specks
 outside the main silhouette. They are not all generated travel errors. Each SVG
@@ -41,11 +42,14 @@ some already valid fill stitches. These inflated density and command counts.
    imports are recognized only by their generated SVG names plus coincident
    geometry. Unmatched stroke contours, different colors and intentional drawn
    running paths remain. Disabling the option restores the outlines.
-5. Build precedence edges for actual fill intersections, compensated adjacent
+5. Build object-level precedence edges for actual fill intersections, compensated adjacent
    boundaries (including machine rounding), and conservatively for stroke
    intersections/unknown geometry. Manual stitch blocks are barriers.
    A deterministic topological scheduler favors the active thread and nearby
-   compatible regions. It never accepts more color blocks than source order.
+   compatible objects, selecting new threads in first-available source order.
+   All regions of one source object remain contiguous. It never accepts more
+   color blocks than source order. Disable grouping for exact source sequence;
+   an individual sequence pin prevents other objects crossing that object's position.
    This is a bounded heuristic, not a claim of globally minimal thread changes.
    More than 2,000 regions falls back to source order with a diagnostic.
 6. Generate underlay and top fill per component. Underlay is omitted on very small
@@ -66,6 +70,60 @@ some already valid fill stitches. These inflated density and command counts.
    the needle through the fabric. Anchors are labeled in the preview and counted
    separately from redundant zero-distance commands. Separate manual blocks get
    a positioning jump.
+
+## Object and fill travel routing
+
+The unchanged 11-object `picsvg_modified (6).svg` reproduced the screenshot exactly:
+5,417 penetrations, 694 jumps and 463 requested trims. Only 10 jumps moved between
+objects; one positioned the hoop initially and 683 occurred within fills. The
+previous flat scanline order alternated between opposite sides of counters and
+concave shapes. A fixed 2.2 mm connector limit also broke sparse underlay rows,
+and compensated tips near hole boundaries often failed containment checks.
+Object ordering alone cannot solve those internal movements.
+
+The router builds a sparse graph of neighboring scanline spans with anchors
+inside the nominal material. Connections require exact contour-crossing checks;
+sloping thin spans need not overlap horizontally if their connector is valid.
+It follows unsewn adjacent spans, then uses Dijkstra routing to remaining spans
+through the connected material. Each top span is sewn once. Interior running
+travel and short retraces along compensated tips are real sewing commands.
+The router never bridges a counter or a disconnected island to avoid a jump.
+
+Underlay uses a finer travel mesh while sewing its fill rows at the requested
+wide spacing. Its running travel is subsequently covered by the top fill.
+Safe shortcuts remove unnecessary mesh vertices with a 2.8 mm path budget;
+machine-length subdivision still applies. This prevents replacing excessive
+trims with a dense line of tiny travel penetrations. Entry is chosen near the
+previous needle position. Bounded final-span lookahead favors the next region
+without adding more than 2 mm of internal travel solely for an exit preference.
+Unreachable graph components retain explicit jumps and appropriate locks/trims.
+
+The browser regression requires full top-fill needle-position coverage, no
+source omissions, no revisited objects, truthful command counts, reversible pins,
+and exact needle-order preservation through actual PES export. Run
+`TEST_MACHINE=1 node tests/travel-browser.mjs` for the real browser codec path.
+The report distinguishes generated trim requests from PEC-encoded trim commands.
+
+For this fixture the tested router produces 4,428 penetrations, 13 jumps and nine
+trim requests; actual PES decoding reports the same 4,428 penetrations and 13
+jumps, plus 12 encoded trims. It retains all 2,340 required top-fill positions.
+There are 10 between-object jumps, one initial move and two conservative internal
+breaks. The source geometry and all 11 objects remain unchanged. Running travel
+increases the sewn thread path (about 5.2 m versus 4.4 m), but removes hundreds of
+cuts, locks and new starts. Counts are not reduced by hiding commands or deleting
+detail. The old pipeline's actual PES contains 694 jumps and 693 encoded trims.
+A physical sew-out remains necessary to assess fabric and density.
+
+The original multicolor fixture also improves from the previous 1,887 jumps and
+880 trim requests to about 286 jumps and 135 requests, with 14 color blocks.
+Counts can vary slightly with browser curve sampling. The wildflower example
+uses 13 jumps rather than 87; 11 disjoint ovals require only 11 positioning jumps.
+
+Generated commands retain object and region provenance for the jump breakdown.
+Outgoing locks retain the previous region's identity. Machine files omit source
+boundaries, so decoded previews explicitly mark their origins unavailable rather
+than inferring that every jump is internal. Zero-distance positioning commands
+remain counted as commands, with actual positional moves reported separately.
 
 Overlapping fills are not globally subtracted: doing so without a controlled
 overlap allowance can create fabric gaps, break underlay support, or change the
@@ -101,6 +159,9 @@ interpret trim requests differently; a physical sew-out is still necessary.
   fills, counters and components as geometry rather than blindly joining paths.
 - [polygon-clipping](https://github.com/mfogel/polygon-clipping): boolean geometry
   implementation and documented ring rules. No Ink/Stitch code is copied.
+- [Ink/Stitch stitch path optimization](https://inkstitch.org/tutorials/routing/):
+  logical object order, registration, entry/exit choices and running connections
+  hidden in appropriate material. The graph router here is an original implementation.
 
 `tests/planning.test.mjs` checks layer dependencies, reversible options, tiny holes,
 long details, duplicate outlines, arc-length spacing, rounded coordinates, narrow

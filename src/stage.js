@@ -205,14 +205,17 @@ export class Stage {
       ctx.lineWidth = 0.19;
       ctx.beginPath();
       for (const { from: prev, event: e } of movementSegments(events, end)) {
-        if (e.cmd === "stitch" && (s.showUnderlay || e.phase !== "underlay")) {
+        if (
+          e.cmd === "stitch" &&
+          (s.showUnderlay || !e.phase?.startsWith("underlay"))
+        ) {
           if (e.color !== batchColor || e.phase !== batchPhase) {
             ctx.stroke();
             ctx.beginPath();
             batchColor = e.color;
             batchPhase = e.phase;
             ctx.strokeStyle = e.color;
-            ctx.globalAlpha = e.phase === "underlay" ? 0.4 : 0.92;
+            ctx.globalAlpha = e.phase?.startsWith("underlay") ? 0.4 : 0.92;
           }
           ctx.moveTo(prev.x, prev.y);
           ctx.lineTo(e.x, e.y);

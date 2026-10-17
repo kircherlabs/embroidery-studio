@@ -21,6 +21,14 @@ new exports and sew-out quality still need machine testing.
   centerlines, lettering/monograms, and direct needle-point placement.
 - Node editing, precise position/size/rotation, thread colors, object visibility,
   stitching order, duplication and deletion.
+- Imported SVG parents and nested groups in an expandable artwork tree;
+  project/group/region multiselection, grouping, locking, isolation and undo.
+- Shared canvas resize/rotation handles, proportional scaling, box selection,
+  bulk editing with mixed values, alignment/distribution, grid snapping and
+  touch zoom/pan.
+- Ordered operations sharing source geometry: placement, inset tackdown,
+  appliqué stops, satin borders, offset/basting outlines, bean and triple runs,
+  tatami stagger patterns, registration marks and configurable ties.
 - Running stitches, angled/staggered tatami fill, satin zigzags, light underlay,
   row spacing, stitch length and pull compensation.
 - Individual stitch/command editing, including jumps, trims and stops. Vector
@@ -39,8 +47,12 @@ new exports and sew-out quality still need machine testing.
 1. Open the studio. The wildflower example is ready to inspect and export.
 2. Use **Import / Open** for artwork, machine files or saved projects. Or choose a
    drawing tool. For paths, click points and press **Enter / Finish path**.
-3. Select an object. Adjust stitch settings, thread, dimensions and position in
-   the properties panel. Objects sew in list order, top to bottom.
+3. Select an imported SVG parent and drag its corner handles to resize it.
+   Expand the tree to edit regions. Shift-click to multiselect and bulk-edit
+   settings; mixed values stay blank until you apply a new value. Layer order
+   stays in the tree; actual optimized sewing order appears in the preview.
+   Add independent operations in the inspector, or use the appliqué recipe on
+   closed patch shapes. Read the [editing and operation guide](docs/EDITING.md).
 4. Open **Stitch preview**, scrub or play the sequence, and enable **Jumps** to
    inspect travel. Click a stitch or color block to inspect its position.
 5. Choose **Export → PES** for the SE700. The first conversion loads its local
@@ -83,10 +95,12 @@ node tests/browser.mjs
 node tests/svg-browser.mjs
 node tests/digitizing-browser.mjs
 node tests/travel-browser.mjs
+node tests/editor-browser.mjs
 # Include the actual CDN/WASM export/import path:
 TEST_MACHINE=1 node tests/browser.mjs
 TEST_MACHINE=1 node tests/digitizing-browser.mjs
 TEST_MACHINE=1 node tests/travel-browser.mjs
+TEST_MACHINE=1 node tests/editor-browser.mjs
 # Hardware-verified PES fixture through the actual browser/Pyodide exporter:
 node tests/pes-browser.mjs
 ```
@@ -157,6 +171,9 @@ and sew-out quality cannot be guaranteed by a screen preview.
 Small ES modules separate the project model, pure stitch engine, importers,
 canvas renderer, interface and machine codec. Both stitch generation and Python
 conversion run in workers. See [research and extension seams](docs/RESEARCH.md).
+The hierarchy references the original flat region array; ordered operations
+expand only after whole-object planning. Existing format-v1 projects remain
+readable. See [editing architecture and limits](docs/EDITING.md).
 
 MIT licensed. pyembroidery is vendored under MIT with its license. Pyodide loads
 unmodified under its own license. No Ink/Stitch GPL code is copied. See

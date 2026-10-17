@@ -30,6 +30,21 @@ No network access is required at runtime.
 Pinned npm tarball SHA-256:
 `23bdea671a65011107d91536881f527c8e2e6820f59e4bc1408a94d7cc11d5b7`.
 
+## Clipper
+
+`vendor/clipper.js` contains the original **clipper-lib 6.4.2** npm package
+(JavaScript implementation version 6.4.2.2), with a local CommonJS-to-ESM export
+adapter. Source: [junmer/clipper-lib](https://github.com/junmer/clipper-lib).
+Copyright Angus Johnson 2010–2017 and Timo; Boost Software License 1.0, retained
+in `vendor/clipper-LICENSE.txt`. Its embedded JSBN code is copyright Tom Wu
+2003–2005, with the full original notice in `vendor/jsbn-LICENSE.txt` (mirrored
+from [andyperlitch/jsbn](https://github.com/andyperlitch/jsbn/blob/master/LICENSE)).
+All original source copyright headers remain intact. Used for closed contour
+offsets; no runtime download or npm dependency is required.
+
+Pinned npm tarball SHA-256:
+`634d7d7627939bbe63405f8876c43ba4009b1fec7ef8de153b0bed28e42466ec`.
+
 ## Research references
 
 Ink/Stitch (GPL-3.0-or-later) and EmbroideryIO (MIT) were reviewed for architecture,

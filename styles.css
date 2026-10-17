@@ -1376,6 +1376,182 @@ dialog::backdrop {
 .object-row.source-only .swatch {
   border-style: dashed;
 }
+
+.tree-tools {
+  display: flex;
+  gap: 5px;
+  padding: 0 12px 8px;
+  flex-shrink: 0;
+}
+.tree-tools button {
+  flex: 1;
+  padding: 5px;
+  font-size: 10px;
+  min-height: 30px;
+}
+.edit-menu {
+  padding: 0 12px 6px;
+  display: block;
+}
+.edit-menu select {
+  width: 100%;
+  font-size: 11px;
+  padding: 7px;
+}
+.selection-status {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: #a4b39b;
+  font-size: 10px;
+  padding: 0 14px 8px;
+  min-height: 25px;
+}
+.selection-status button {
+  font-size: 10px;
+  padding: 3px 6px;
+}
+.project-tree {
+  width: 100%;
+  border: 0;
+  text-align: left;
+  background: transparent;
+  padding: 9px 12px;
+  font-size: 12px;
+  color: #dfe5d7;
+  border-radius: 5px;
+}
+.project-tree small {
+  float: right;
+  opacity: 0.6;
+  font-size: 9px;
+}
+.project-tree.selected {
+  background: #3b4b35;
+}
+.object-row {
+  padding-left: calc(4px + var(--depth, 0) * 12px);
+  gap: 1px;
+  min-height: 48px;
+}
+.object-row.affected:not(.selected) {
+  background: #91aa7330;
+  box-shadow: inset 2px 0 #90a977;
+}
+.object-row .object-select {
+  min-width: 0;
+  gap: 6px;
+}
+.object-row .tree-toggle,
+.object-row .tree-lock {
+  flex-shrink: 0;
+  width: 20px;
+  min-height: 28px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: 12px;
+  color: #b9c5a8;
+}
+.object-row .swatch.group-icon {
+  color: #e7b784;
+  text-align: center;
+  font-size: 19px;
+  box-shadow: none;
+  border: 0;
+}
+.group-row .object-title {
+  font-weight: 600;
+}
+.operation-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-bottom: 12px;
+}
+.operation-row {
+  display: flex;
+  gap: 2px;
+  align-items: center;
+  border: 1px solid #3c4a39;
+  border-radius: 5px;
+  padding: 4px;
+}
+.operation-row.active {
+  border-color: #e7b784;
+  background: #31402f;
+}
+.operation-row button {
+  font-size: 10px;
+  padding: 3px 4px;
+  min-height: 27px;
+}
+.operation-row [data-operation] {
+  flex: 1;
+  text-align: left;
+  min-width: 0;
+  border: 0;
+  background: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.operation-add {
+  display: flex;
+  gap: 5px;
+  margin: 8px 0;
+}
+.operation-add select {
+  min-width: 0;
+  flex: 1;
+  font-size: 11px;
+}
+.operation-add button {
+  font-size: 11px;
+}
+.advanced-settings {
+  border: 1px solid #3d4d39;
+  border-radius: 5px;
+  padding: 8px;
+  margin: 8px 0;
+  font-size: 11px;
+}
+.advanced-settings summary {
+  cursor: pointer;
+  color: #d5c19c;
+  margin-bottom: 8px;
+}
+.selection-summary {
+  font-size: 11px;
+  color: #aebe9f;
+  line-height: 1.6;
+  margin-top: 0;
+}
+.canvas-controls {
+  gap: 9px;
+  flex-wrap: wrap;
+  height: auto;
+  min-height: 39px;
+  padding-top: 5px;
+  padding-bottom: 5px;
+}
+@media (max-width: 680px) {
+  .canvas-controls label {
+    font-size: 9px;
+    gap: 3px;
+  }
+  .canvas-controls {
+    gap: 7px;
+  }
+  .tree-tools button {
+    min-height: 36px;
+  }
+  .operation-row button {
+    min-height: 34px;
+  }
+  .object-row {
+    min-height: 53px;
+  }
+}
 .travel-summary {
   grid-column: 1 / -1;
 }

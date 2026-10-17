@@ -12,6 +12,8 @@ import {
 } from "./helpers/pes-decoder.mjs";
 import { generate } from "../src/engine.js";
 import { demo } from "../src/model.js";
+import { object } from "../src/model.js";
+import { applique } from "../src/operations.js";
 mkdirSync(new URL("../test-results/", import.meta.url), { recursive: true });
 const python = process.env.PYTHON || "python",
   adapter = fileURLToPath(new URL("./pes-codec-adapter.py", import.meta.url));
@@ -183,6 +185,37 @@ test("negative short/long jumps and alternating color markers survive actual exp
 });
 test("multicolor generated objects match the independent PEC decoder and CSewSeg points", () => {
   check(generate(demo()).events);
+});
+
+test("applique stops survive the existing PES codec with complete independently decoded sewing geometry", () => {
+  const o = object(
+    "Patch",
+    [
+      [
+        { x: -10, y: -10 },
+        { x: 10, y: -10 },
+        { x: 10, y: 10 },
+        { x: -10, y: 10 },
+      ],
+    ],
+    { compensation: 0, underlay: false },
+  );
+  o.operations = applique(o);
+  const plan = generate({
+    version: 1,
+    name: "Applique",
+    machine: "se700",
+    objects: [o],
+  });
+  assert.equal(plan.stats.stops, 2);
+  const { result, dec } = check(plan.events);
+  assert.equal(result.preview.filter((e) => e.cmd === "stop").length, 2);
+  assert.equal(result.preview.filter((e) => e.cmd === "color").length, 0);
+  assert.equal(
+    dec.pec.events.filter((e) => e.type === "colorChange").length,
+    2,
+  );
+  assert(dec.pec.colorIndices.every((c) => c === dec.pec.colorIndices[0]));
 });
 test("a missing explicit initial jump still produces a proper Brother origin prefix", () => {
   check(rectangle(-10, -5, 20, 10).slice(1));

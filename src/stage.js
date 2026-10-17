@@ -1,6 +1,16 @@
-import { objectBounds, pointsOf, translate, MACHINES } from "./model.js";
+import { objectBounds, pointsOf, MACHINES } from "./model.js";
 import { inside, distance } from "./engine.js";
 import { movementSegments } from "./preview.js";
+import {
+  selectedLeaves,
+  selectionIds,
+  selectionBounds,
+  transformSelection,
+  isVisible,
+  isLocked,
+  ancestors,
+  within,
+} from "./hierarchy.js";
 export class Stage {
   constructor(canvas, state, actions) {
     this.canvas = canvas;
@@ -11,6 +21,7 @@ export class Stage {
     this.pan = { x: 0, y: 0 };
     this.draft = [];
     this.node = null;
+    this.pointers = new Map();
     this.dpr = devicePixelRatio || 1;
     new ResizeObserver(() => this.resize()).observe(canvas);
     canvas.addEventListener("pointerdown", (e) => this.down(e));
@@ -30,6 +41,14 @@ export class Stage {
         this.draft.pop();
         this.actions.finish();
       } else if (this.state.tool === "node") this.insertNode(this.toWorld(e));
+      else if (this.state.tool === "select") {
+        const hit = this.hit(this.toWorld(e));
+        if (hit) {
+          const id = this.canvasTarget(hit);
+          this.state.isolation = id;
+          this.actions.select(id);
+        }
+      }
     });
     canvas.addEventListener("contextmenu", (e) => e.preventDefault());
   }
@@ -67,6 +86,52 @@ export class Stage {
     this.pan = { x: 0, y: 0 };
     this.render();
   }
+  fitSelection() {
+    const selected = selectedLeaves(this.state);
+    if (!selected.length) {
+      this.fit();
+      return;
+    }
+    const b = selectionBounds(selected);
+    this.zoom = 1;
+    const base = this.scale;
+    this.zoom = Math.max(
+      0.3,
+      Math.min(
+        10,
+        Math.min(
+          (this.w - 140) / (b.width + 4),
+          (this.h - 100) / (b.height + 4),
+        ) / base,
+      ),
+    );
+    this.pan = {
+      x: -18 - ((b.minX + b.maxX) / 2) * this.scale,
+      y: -19 - ((b.minY + b.maxY) / 2) * this.scale,
+    };
+    this.render();
+  }
+  canvasTarget(o, direct = false) {
+    if (direct) return o.id;
+    const chain = [o, ...ancestors(this.state.project, o)];
+    const index = chain.findIndex((n) => n.id === this.state.isolation);
+    return (index > 0 ? chain[index - 1] : index === 0 ? o : chain.at(-1)).id;
+  }
+  handles(b) {
+    const x = (b.minX + b.maxX) / 2,
+      y = (b.minY + b.maxY) / 2;
+    return [
+      ["nw", b.minX, b.minY],
+      ["n", x, b.minY],
+      ["ne", b.maxX, b.minY],
+      ["e", b.maxX, y],
+      ["se", b.maxX, b.maxY],
+      ["s", x, b.maxY],
+      ["sw", b.minX, b.maxY],
+      ["w", b.minX, y],
+      ["rotate", x, b.minY - 22 / this.scale],
+    ].map(([id, x, y]) => ({ id, x, y }));
+  }
   zoomAt(f, x = this.w / 2, y = this.h / 2) {
     const old = this.scale,
       c = this.center;
@@ -95,6 +160,9 @@ export class Stage {
       scale = this.scale,
       c = this.center,
       m = MACHINES[s.project.machine];
+    const editing =
+      this.drag &&
+      ["move", "resize", "rotate", "node"].includes(this.drag.type);
     if (scale <= 0) return;
     ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
     ctx.clearRect(0, 0, this.w, this.h);
@@ -177,8 +245,11 @@ export class Stage {
         y + 3 / scale,
       );
     if (s.mode === "design")
-      for (const o of s.project.objects.filter((o) => o.visible !== false)) {
-        ctx.globalAlpha = s.showStitches ? 0.13 : 0.8;
+      for (const o of s.project.objects.filter((o) =>
+        isVisible(s.project, o),
+      )) {
+        if (s.isolation && !within(s.project, o, s.isolation)) continue;
+        ctx.globalAlpha = s.showStitches && !editing ? 0.13 : 0.8;
         ctx.fillStyle = o.color;
         ctx.strokeStyle = o.color;
         if (o.type === "fill") {
@@ -199,7 +270,21 @@ export class Stage {
             ? Math.min(s.cursor, events.length)
             : events.length;
       let batchColor = null,
-        batchPhase = null;
+        batchPhase = null,
+        batchAlpha = null;
+      const focus = new Set(selectedLeaves(s).map((o) => o.id));
+      const isolated = new Set(
+        s.project.objects
+          .filter((o) => !s.isolation || within(s.project, o, s.isolation))
+          .map((o) => o.id),
+      );
+      const included = (e) =>
+        !(editing && focus.has(e.objectId)) &&
+        (!s.isolation || !e.objectId || isolated.has(e.objectId)) &&
+        (!s.previewSelection ||
+          !focus.size ||
+          (focus.has(e.objectId) &&
+            (!s.activeOperationId || e.operationId === s.activeOperationId)));
       ctx.lineCap = "round";
       ctx.lineJoin = "round";
       ctx.lineWidth = 0.19;
@@ -207,15 +292,30 @@ export class Stage {
       for (const { from: prev, event: e } of movementSegments(events, end)) {
         if (
           e.cmd === "stitch" &&
+          included(e) &&
           (s.showUnderlay || !e.phase?.startsWith("underlay"))
         ) {
-          if (e.color !== batchColor || e.phase !== batchPhase) {
+          const alpha = e.phase?.startsWith("underlay")
+            ? 0.4
+            : focus.size &&
+                e.objectId &&
+                (!focus.has(e.objectId) ||
+                  (s.activeOperationId &&
+                    e.operationId !== s.activeOperationId))
+              ? 0.25
+              : 0.92;
+          if (
+            e.color !== batchColor ||
+            e.phase !== batchPhase ||
+            alpha !== batchAlpha
+          ) {
             ctx.stroke();
             ctx.beginPath();
             batchColor = e.color;
             batchPhase = e.phase;
             ctx.strokeStyle = e.color;
-            ctx.globalAlpha = e.phase?.startsWith("underlay") ? 0.4 : 0.92;
+            ctx.globalAlpha = alpha;
+            batchAlpha = alpha;
           }
           ctx.moveTo(prev.x, prev.y);
           ctx.lineTo(e.x, e.y);
@@ -229,7 +329,7 @@ export class Stage {
         ctx.strokeStyle = "#467fa5";
         ctx.beginPath();
         for (const { from: prev, event: e } of movementSegments(events, end)) {
-          if (e.cmd === "jump") {
+          if (e.cmd === "jump" && included(e)) {
             ctx.moveTo(prev.x, prev.y);
             ctx.lineTo(e.x, e.y);
           }
@@ -240,7 +340,8 @@ export class Stage {
       if (s.showEvents) {
         for (let i = 0; i < end; i++) {
           const e = events[i];
-          if (e.cmd !== "trim" && e.cmd !== "color") continue;
+          if (!["trim", "color", "stop"].includes(e.cmd) || !included(e))
+            continue;
           ctx.lineWidth = 1 / scale;
           ctx.strokeStyle = e.cmd === "trim" ? "#be6e33" : e.color;
           ctx.beginPath();
@@ -250,7 +351,8 @@ export class Stage {
             ctx.lineTo(e.x + r, e.y + r);
             ctx.moveTo(e.x - r, e.y + r);
             ctx.lineTo(e.x + r, e.y - r);
-          } else ctx.arc(e.x, e.y, r * 1.5, 0, Math.PI * 2);
+          } else if (e.cmd === "stop") ctx.rect(e.x - r, e.y - r, r * 2, r * 2);
+          else ctx.arc(e.x, e.y, r * 1.5, 0, Math.PI * 2);
           ctx.stroke();
         }
       }
@@ -278,15 +380,21 @@ export class Stage {
         ctx.stroke();
       }
     }
-    const selected = s.project.objects.find((o) => o.id === s.selection);
-    if (selected && s.mode === "design") {
-      const b = objectBounds(selected);
+    const selection = selectedLeaves(s, { editable: true }),
+      selected = selection.length === 1 ? selection[0] : null;
+    if (selection.length && s.mode === "design") {
+      const b = selectionBounds(selection);
       ctx.strokeStyle = "#395943";
       ctx.lineWidth = 1 / scale;
       ctx.setLineDash([4 / scale, 3 / scale]);
-      ctx.strokeRect(b.minX - 1, b.minY - 1, b.width + 2, b.height + 2);
+      ctx.strokeRect(b.minX, b.minY, b.width, b.height);
       ctx.setLineDash([]);
-      if (s.tool === "node") {
+      if (
+        s.tool === "node" &&
+        selected &&
+        selectionIds(s).length === 1 &&
+        s.selection === selected.id
+      ) {
         pointsOf(selected).forEach((p, i) => {
           ctx.fillStyle = this.node === i ? "#e7b784" : "#fcf7e6";
           ctx.strokeStyle = "#3a5941";
@@ -298,19 +406,16 @@ export class Stage {
         });
       } else {
         ctx.fillStyle = "#f8f1df";
-        for (const [x, y] of [
-          [b.minX - 1, b.minY - 1],
-          [b.maxX + 1, b.minY - 1],
-          [b.minX - 1, b.maxY + 1],
-          [b.maxX + 1, b.maxY + 1],
-        ]) {
-          ctx.fillRect(x - 2.5 / scale, y - 2.5 / scale, 5 / scale, 5 / scale);
-          ctx.strokeRect(
-            x - 2.5 / scale,
-            y - 2.5 / scale,
-            5 / scale,
-            5 / scale,
-          );
+        ctx.beginPath();
+        ctx.moveTo((b.minX + b.maxX) / 2, b.minY);
+        ctx.lineTo((b.minX + b.maxX) / 2, b.minY - 22 / scale);
+        ctx.stroke();
+        for (const { id, x, y } of this.handles(b)) {
+          ctx.beginPath();
+          if (id === "rotate") ctx.arc(x, y, 4 / scale, 0, Math.PI * 2);
+          else ctx.rect(x - 3.5 / scale, y - 3.5 / scale, 7 / scale, 7 / scale);
+          ctx.fill();
+          ctx.stroke();
         }
       }
     }
@@ -329,8 +434,8 @@ export class Stage {
         ctx.stroke();
       }
     }
-    if (this.shape) {
-      const { start: a, end: b } = this.shape;
+    if (this.shape || this.marquee) {
+      const { start: a, end: b } = this.shape || this.marquee;
       ctx.strokeStyle = "#345b3f";
       ctx.lineWidth = 1 / scale;
       ctx.setLineDash([3 / scale, 2 / scale]);
@@ -357,7 +462,13 @@ export class Stage {
   }
   hit(p) {
     return [...this.state.project.objects].reverse().find((o) => {
-      if (o.visible === false) return false;
+      if (
+        !isVisible(this.state.project, o) ||
+        isLocked(this.state.project, o) ||
+        (this.state.isolation &&
+          !within(this.state.project, o, this.state.isolation))
+      )
+        return false;
       const b = objectBounds(o),
         pad = (o.type === "satin" ? o.width / 2 : 0) + 4 / this.scale;
       if (
@@ -397,6 +508,25 @@ export class Stage {
     const s = this.state,
       p = this.toWorld(e);
     this.canvas.setPointerCapture(e.pointerId);
+    if (e.pointerType === "touch") {
+      this.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (this.pointers.size === 2) {
+        if (this.drag?.before)
+          this.state.project = JSON.parse(this.drag.before);
+        this.drag = null;
+        this.shape = null;
+        this.marquee = null;
+        this.actions.refresh();
+        const [a, b] = [...this.pointers.values()];
+        this.gesture = {
+          distance: distance(a, b),
+          center: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 },
+        };
+        this.render();
+        return;
+      }
+      if (this.pointers.size > 2) return;
+    }
     if (s.tool === "pan" || s.space || e.button === 1) {
       this.drag = {
         type: "pan",
@@ -435,7 +565,12 @@ export class Stage {
       return;
     }
     const selected = s.project.objects.find((o) => o.id === s.selection);
-    if (s.tool === "node" && selected) {
+    if (
+      s.tool === "node" &&
+      selected &&
+      !isLocked(s.project, selected) &&
+      selectionIds(s).length === 1
+    ) {
       const pts = pointsOf(selected);
       let index = pts.findIndex((q) => distance(p, q) < 7 / this.scale);
       if (index >= 0) {
@@ -452,21 +587,79 @@ export class Stage {
         return;
       }
     }
+    const selection = selectedLeaves(s, { editable: true });
+    if (s.tool === "select" && selection.length) {
+      const b = selectionBounds(selection),
+        handle = this.handles(b).find(
+          (h) =>
+            distance(p, h) < (e.pointerType === "touch" ? 13 : 8) / this.scale,
+        );
+      if (handle) {
+        this.drag = {
+          type: handle.id === "rotate" ? "rotate" : "resize",
+          handle,
+          b,
+          start: p,
+          before: JSON.stringify(s.project),
+          objects: selection,
+          original: structuredClone(selection),
+        };
+        return;
+      }
+    }
     const hit = this.hit(p);
     this.node = null;
-    this.actions.select(hit?.id || null);
-    if (hit)
+    if (hit) {
+      const id = this.canvasTarget(hit, e.altKey || e.ctrlKey || e.metaKey);
+      if (e.shiftKey || e.ctrlKey || e.metaKey)
+        this.actions.select(id, { toggle: true });
+      else if (!selectedLeaves(s).some((o) => o.id === hit.id))
+        this.actions.select(id);
+      const objects = selectedLeaves(s, { editable: true });
       this.drag = {
         type: "move",
-        o: hit,
+        objects,
+        original: structuredClone(objects),
+        b: selectionBounds(objects),
         start: p,
         last: p,
         before: JSON.stringify(s.project),
       };
+    } else
+      this.marquee = {
+        start: p,
+        end: p,
+        additive: e.shiftKey || e.ctrlKey || e.metaKey,
+        initial: selectionIds(s),
+        direct: e.altKey,
+      };
     this.render();
   }
   move(e) {
+    if (this.pointers.has(e.pointerId))
+      this.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (this.gesture && this.pointers.size === 2) {
+      const [a, b] = [...this.pointers.values()],
+        d = distance(a, b),
+        center = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 },
+        rect = this.canvas.getBoundingClientRect();
+      this.zoomAt(
+        d / (this.gesture.distance || d),
+        center.x - rect.left,
+        center.y - rect.top,
+      );
+      this.pan.x += center.x - this.gesture.center.x;
+      this.pan.y += center.y - this.gesture.center.y;
+      this.gesture = { distance: d, center };
+      this.render();
+      return;
+    }
     const p = this.toWorld(e);
+    if (this.marquee) {
+      this.marquee.end = p;
+      this.render();
+      return;
+    }
     if (this.shape) {
       this.shape.end = p;
       this.render();
@@ -477,8 +670,61 @@ export class Stage {
     if (d.type === "pan") {
       this.pan = { x: d.pan.x + e.clientX - d.x, y: d.pan.y + e.clientY - d.y };
     } else if (d.type === "move") {
-      translate(d.o, p.x - d.last.x, p.y - d.last.y);
-      d.last = p;
+      let dx = p.x - d.start.x,
+        dy = p.y - d.start.y;
+      if (this.state.snapGrid && !e.altKey) {
+        dx = Math.round(d.b.minX + dx) - d.b.minX;
+        dy = Math.round(d.b.minY + dy) - d.b.minY;
+      }
+      this.restoreGeometry(d);
+      transformSelection(d.objects, { dx, dy });
+    } else if (d.type === "resize" || d.type === "rotate") {
+      this.restoreGeometry(d);
+      if (d.type === "rotate") {
+        const center = {
+          x: (d.b.minX + d.b.maxX) / 2,
+          y: (d.b.minY + d.b.maxY) / 2,
+        };
+        let angle =
+          ((Math.atan2(p.y - center.y, p.x - center.x) -
+            Math.atan2(d.start.y - center.y, d.start.x - center.x)) *
+            180) /
+          Math.PI;
+        if (e.shiftKey) angle = Math.round(angle / 15) * 15;
+        transformSelection(d.objects, { angle, pivot: center });
+      } else {
+        const horizontal = /[we]/.test(d.handle.id),
+          vertical = /[ns]/.test(d.handle.id);
+        const pivot = {
+          x: d.handle.id.includes("w")
+            ? d.b.maxX
+            : d.handle.id.includes("e")
+              ? d.b.minX
+              : (d.b.minX + d.b.maxX) / 2,
+          y: d.handle.id.includes("n")
+            ? d.b.maxY
+            : d.handle.id.includes("s")
+              ? d.b.minY
+              : (d.b.minY + d.b.maxY) / 2,
+        };
+        const target =
+          this.state.snapGrid && !e.altKey
+            ? { x: Math.round(p.x), y: Math.round(p.y) }
+            : p;
+        let sx = horizontal
+            ? Math.max(0.02, (target.x - pivot.x) / (d.handle.x - pivot.x || 1))
+            : 1,
+          sy = vertical
+            ? Math.max(0.02, (target.y - pivot.y) / (d.handle.y - pivot.y || 1))
+            : 1;
+        if (
+          horizontal &&
+          vertical &&
+          (this.state.proportional !== false) !== !!e.shiftKey
+        )
+          sx = sy = Math.abs(sx - 1) > Math.abs(sy - 1) ? sx : sy;
+        transformSelection(d.objects, { sx, sy, pivot });
+      }
     } else if (d.type === "node") {
       const q = pointsOf(d.o)[d.index];
       q.x = Math.round((d.original.x + p.x - d.start.x) * 10) / 10;
@@ -487,6 +733,41 @@ export class Stage {
     this.render();
   }
   up(e) {
+    this.pointers.delete(e.pointerId);
+    if (this.gesture) {
+      this.gesture = null;
+      this.actions.refresh();
+      this.render();
+      return;
+    }
+    if (this.marquee) {
+      const m = this.marquee;
+      this.marquee = null;
+      const left = Math.min(m.start.x, m.end.x),
+        right = Math.max(m.start.x, m.end.x),
+        top = Math.min(m.start.y, m.end.y),
+        bottom = Math.max(m.start.y, m.end.y);
+      const ids =
+        distance(m.start, m.end) > 3 / this.scale
+          ? this.state.project.objects
+              .filter((o) => {
+                const b = objectBounds(o);
+                return (
+                  isVisible(this.state.project, o) &&
+                  !isLocked(this.state.project, o) &&
+                  (!this.state.isolation ||
+                    within(this.state.project, o, this.state.isolation)) &&
+                  b.minX >= left &&
+                  b.maxX <= right &&
+                  b.minY >= top &&
+                  b.maxY <= bottom
+                );
+              })
+              .map((o) => this.canvasTarget(o, m.direct))
+          : [];
+      this.actions.select(m.additive ? [...m.initial, ...ids] : ids);
+      this.render();
+    }
     if (this.shape) {
       const shape = this.shape;
       this.shape = null;
@@ -504,13 +785,17 @@ export class Stage {
     if (this.drag?.before) this.state.project = JSON.parse(this.drag.before);
     this.drag = null;
     this.shape = null;
+    this.marquee = null;
+    this.gesture = null;
+    this.pointers.clear();
+    this.actions.refresh();
     this.render();
   }
   insertNode(p) {
     const o = this.state.project.objects.find(
       (o) => o.id === this.state.selection,
     );
-    if (!o || o.type === "manual") return;
+    if (!o || o.type === "manual" || isLocked(this.state.project, o)) return;
     let best = 8 / this.scale,
       found = null;
     for (const r of o.rings)
@@ -537,5 +822,15 @@ export class Stage {
         }
       }
     if (found) this.actions.mutate(() => found.r.splice(found.i, 0, p));
+  }
+  restoreGeometry(d) {
+    d.objects.forEach((o, i) => {
+      const original = d.original[i];
+      if (o.type === "manual") o.commands = structuredClone(original.commands);
+      else o.rings = structuredClone(original.rings);
+      o.angle = original.angle;
+      if (original.operations)
+        o.operations = structuredClone(original.operations);
+    });
   }
 }

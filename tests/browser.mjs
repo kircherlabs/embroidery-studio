@@ -75,13 +75,11 @@ try {
   assert(lettering.rings.length >= 3);
   const svg =
     '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><g transform="translate(10,10)" fill="#b74b59"><path fill-rule="evenodd" d="M0 0H80V80H0Z M20 20H60V60H20Z"/></g><script>window.injected=true</script></svg>';
-  await page
-    .locator("#file-input")
-    .setInputFiles({
-      name: "hole.svg",
-      mimeType: "image/svg+xml",
-      buffer: Buffer.from(svg),
-    });
+  await page.locator("#file-input").setInputFiles({
+    name: "hole.svg",
+    mimeType: "image/svg+xml",
+    buffer: Buffer.from(svg),
+  });
   await page.waitForFunction(
     (n) =>
       window.studio.getPlan() &&
@@ -94,6 +92,8 @@ try {
   );
   assert.equal(imported.rings.length, 2);
   assert.equal(imported.color, "#b74b59");
+  // SVG import selects its parent; its original region remains independently editable.
+  await page.locator(`[data-select="${imported.id}"]`).click();
   await page.locator("#convert-manual").click();
   await page.waitForFunction(
     () =>

@@ -2,6 +2,7 @@ import { bounds, MACHINES } from "./model.js";
 import { inside, distance, safeConnector, simplifyPath } from "./geometry.js";
 import { preparePlan } from "./planning.js";
 import { routeFill } from "./fill-routing.js";
+import { duplicateArtwork } from "./artwork-diagnostics.js";
 export { inside, distance } from "./geometry.js";
 const rotate = (p, a) => ({
   x: p.x * Math.cos(a) - p.y * Math.sin(a),
@@ -67,6 +68,7 @@ export function fillRows(
   length,
   compensation = 0,
   rule = "evenodd",
+  pattern = "quarter",
 ) {
   if (!rings.length) return [];
   const a = (angle * Math.PI) / 180,
@@ -115,7 +117,12 @@ export function fillRows(
               cuts[cutIndex + 1] ? (cuts[cutIndex + 1].x - c.x) / 3 : Infinity,
             ),
           pts = [{ x: x1, y }],
-          phase = ((row % 4) * length) / 4;
+          phase =
+            pattern === "aligned"
+              ? 0
+              : pattern === "half"
+                ? ((row % 2) * length) / 2
+                : ((row % 4) * length) / 4;
         for (
           let x = Math.ceil((x1 - phase) / length) * length + phase;
           x < x2 - 0.08;
@@ -150,14 +157,22 @@ export function fillRows(
   }
   return rows;
 }
-export function satin(path, width, spacing, length) {
-  const center = resample(path, spacing / 2);
+export function satin(path, width, spacing, length, closed = false) {
+  const center = resample(path, spacing / 2, closed);
+  if (closed && center.length > 1 && distance(center[0], center.at(-1)) < 1e-9)
+    center.pop();
   if (center.length < 2) return [];
   const pts = [];
   for (let i = 0; i < center.length; i++) {
     const p = center[i],
-      a = center[Math.max(0, i - 1)],
-      b = center[Math.min(center.length - 1, i + 1)],
+      a =
+        center[
+          closed ? (i + center.length - 1) % center.length : Math.max(0, i - 1)
+        ],
+      b =
+        center[
+          closed ? (i + 1) % center.length : Math.min(center.length - 1, i + 1)
+        ],
       d = distance(a, b) || 1,
       sign = i % 2 ? 1 : -1;
     pts.push({
@@ -165,7 +180,7 @@ export function satin(path, width, spacing, length) {
       y: p.y + ((((b.x - a.x) / d) * width) / 2) * sign,
     });
   }
-  return subdivide(pts, length);
+  return subdivide(closed ? [...pts, pts[0]] : pts, length);
 }
 function pathsFor(o, from, to) {
   const paths = [];
@@ -196,6 +211,7 @@ function pathsFor(o, from, to) {
           o.length,
           o.compensation,
           o.fillRule,
+          o.pattern,
         ),
         o,
         paths.at(-1)?.p.at(-1) || from,
@@ -204,8 +220,14 @@ function pathsFor(o, from, to) {
       ),
     );
   if (o.type === "run")
-    for (const ring of o.rings)
-      paths.push({ p: resample(ring, o.length, o.closed), phase: "top" });
+    for (const ring of o.rings) {
+      let p = resample(ring, o.length, o.closed);
+      if (o.runStyle === "bean")
+        p = p.flatMap((q, i) => (i ? [q, p[i - 1], q] : [q]));
+      else if (o.runStyle === "triple")
+        p = [...p, ...p.slice(0, -1).reverse(), ...p.slice(1)];
+      paths.push({ p, phase: o.technique || "top" });
+    }
   if (o.type === "satin")
     for (const ring of o.rings)
       paths.push({
@@ -214,6 +236,7 @@ function pathsFor(o, from, to) {
           o.width + o.compensation * 2,
           o.spacing,
           7,
+          o.closed,
         ),
         phase: "top",
       });
@@ -232,6 +255,9 @@ export function generate(project) {
   let last = { x: 0, y: 0 },
     lastColor = null,
     activeRegion = null,
+    activeOperation = null,
+    activeOperationName = null,
+    activeUnit = null,
     threadTrimmed = true;
   const emit = (
     cmd,
@@ -240,6 +266,7 @@ export function generate(project) {
     objectId,
     phase = "top",
     regionId = activeRegion,
+    operationId = activeOperation,
   ) => {
     const e = {
       cmd,
@@ -249,6 +276,12 @@ export function generate(project) {
       objectId,
       phase,
       regionId,
+      operationId,
+      operationName:
+        operationId === activeOperation
+          ? activeOperationName
+          : last.operationName,
+      tieOff: activeUnit?.tieOff !== false,
     };
     if (
       cmd === "stitch" &&
@@ -293,6 +326,7 @@ export function generate(project) {
         o.id,
         phase,
         o.regionId,
+        o.operationId,
       );
   };
   const lock = (path, o, phase) => {
@@ -309,11 +343,17 @@ export function generate(project) {
     sew(a, o, phase);
   };
   const lockEnd = (o) => {
-    if (threadTrimmed) return;
+    if (threadTrimmed || last.tieOff === false) return;
     const a = { ...last },
       b = events.at(-2);
     // An outgoing lock belongs to the region that was sewn, not the next object.
-    o = { ...o, id: last.objectId, color: last.color, regionId: last.regionId };
+    o = {
+      ...o,
+      id: last.objectId,
+      color: last.color,
+      regionId: last.regionId,
+      operationId: last.operationId,
+    };
     if (events.at(-1)?.cmd === "stitch" && b && distance(a, b) >= 0.3) {
       const d = distance(a, b),
         t = Math.min(0.5 / d, 1);
@@ -324,12 +364,29 @@ export function generate(project) {
   const trimAndLock = (o) => {
     if (threadTrimmed) return;
     lockEnd(o);
-    emit("trim", last, lastColor, last.objectId, "tie", last.regionId);
+    emit(
+      "trim",
+      last,
+      lastColor,
+      last.objectId,
+      "tie",
+      last.regionId,
+      last.operationId,
+    );
   };
   let previousObject = null;
   for (const [regionIndex, unit] of prepared.units.entries()) {
     const o = { ...unit, regionId: `${unit.id}:${regionIndex}` };
     activeRegion = o.regionId;
+    activeOperation = o.operationId || null;
+    activeOperationName = o.operationName || null;
+    activeUnit = o;
+    if (o.type === "command") {
+      if (o.command === "trim") lockEnd(previousObject || o);
+      else trimAndLock(previousObject || o);
+      emit(o.command, last, lastColor || o.color, o.id, o.command);
+      continue;
+    }
     if (o.type === "manual" && !o.commands.length) continue;
     const next = prepared.units[regionIndex + 1],
       to = next
@@ -393,7 +450,8 @@ export function generate(project) {
         // Positioning is not a needle penetration. Anchor at the destination
         // before sewing away from it; otherwise a codec must invent this step.
         emit("stitch", p[0], o.color, o.id, "anchor");
-        if (first || trimmed || d > 0.3) lock(p, o, "tie");
+        if (o.tieIn !== false && (first || trimmed || d > 0.3))
+          lock(p, o, "tie");
       } else sew(p[0], o, phase);
       for (let i = 1; i < p.length; i++) sew(p[i], o, phase);
       first = false;
@@ -405,7 +463,35 @@ export function generate(project) {
   }
   const stats = analyze(events, machine);
   stats.sourceColorBlocks = diagnostics.sourceColorBlocks;
-  stats.regions = prepared.units.length;
+  stats.regions = prepared.units.filter((o) => o.type !== "command").length;
+  diagnostics.duplicates = duplicateArtwork(project);
+  if (diagnostics.duplicates.length)
+    warnings.push(
+      `${diagnostics.duplicates.length} source objects have coincident same-color geometry. Review duplicate objects before removing any: repeated passes may be intentional.`,
+    );
+  warnings.push(...(diagnostics.operationWarnings || []));
+  if (diagnostics.operationColorFallback)
+    warnings.push(
+      "Source object order retained because batching multicolor operation stacks would add manual thread changes.",
+    );
+  if (stats.stops)
+    warnings.push(
+      `${stats.stops} machine stops require operator action. PES/PEC encode stops with repeated thread colors; confirm pauses and fabric clearance on your machine.`,
+    );
+  const dense = project.objects.filter(
+    (o) =>
+      o.visible !== false &&
+      (o.operations || [o]).some(
+        (op) =>
+          op.enabled !== false &&
+          ["fill", "satin", "border"].includes(op.type) &&
+          op.spacing < 0.25,
+      ),
+  );
+  if (dense.length)
+    warnings.push(
+      `${dense.length} objects use spacing below 0.25 mm. Check thread weight, fabric, stabilizer and overlapping operations for excessive density.`,
+    );
   if (diagnostics.skippedDetails)
     warnings.push(
       `${diagnostics.skippedDetails} disconnected islands below ${prepared.options.smallDetail} mm are omitted from stitches; artwork and holes are preserved. Set Small islands to 0 to retain them.`,
@@ -446,6 +532,8 @@ export function generate(project) {
       objectId: o.id,
       color: o.color,
       index: o.index,
+      operationId: o.operationId || null,
+      operationName: o.operationName || null,
     })),
   };
 }
@@ -454,6 +542,7 @@ export function analyze(events, machine) {
     jumps = 0,
     trims = 0,
     changes = 0,
+    stops = 0,
     stitchLength = 0,
     maxLength = 0,
     shortStitches = 0,
@@ -510,6 +599,7 @@ export function analyze(events, machine) {
     if (e.cmd === "stitch") sewn = e;
     if (e.cmd === "trim") trims++;
     if (e.cmd === "color") changes++;
+    if (e.cmd === "stop") stops++;
     if (e.cmd === "stitch" || e.cmd === "jump") prev = e;
   }
   const b = bounds(events.filter((e) => ["stitch", "jump"].includes(e.cmd))),
@@ -523,6 +613,7 @@ export function analyze(events, machine) {
     jumps,
     trims,
     changes,
+    stops,
     colors: events.length ? changes + 1 : 0,
     uniqueColors: new Set(
       events.filter((e) => e.cmd === "stitch").map((e) => e.color),
@@ -540,6 +631,7 @@ export function analyze(events, machine) {
     bounds: b,
     fits,
     maxLength,
-    minutes: stitches / machine.speed + changes * 0.5 + trims * 0.025,
+    minutes:
+      stitches / machine.speed + changes * 0.5 + stops * 0.5 + trims * 0.025,
   };
 }

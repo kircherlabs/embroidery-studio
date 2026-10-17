@@ -4,16 +4,35 @@ import {
   ellipse,
   PALETTE,
   MACHINES,
-  uid,
   validateProject,
-  objectBounds,
-  translate,
-  transform,
 } from "./model.js";
 import { analyze } from "./engine.js";
 import { importSVG, rasterObjects, lettering } from "./importers.js";
 import { Stage } from "./stage.js";
 import { planningOptions } from "./planning.js";
+import {
+  PROJECT,
+  nodeById,
+  nodes,
+  children,
+  treeRows,
+  isVisible,
+  isLocked,
+  leaves,
+  roots,
+  selectionIds,
+  selectedLeaves,
+  selectionBounds,
+  transformSelection,
+  groupSelection,
+  ungroupSelection,
+  deleteSelection,
+  copySelection,
+  pasteSelection,
+  reorder,
+  alignSelection,
+} from "./hierarchy.js";
+import { renderInspector } from "./inspector.js";
 const $ = (id) => document.getElementById(id),
   esc = (s) =>
     String(s).replace(
@@ -32,6 +51,12 @@ const fmt = (n) => Math.round(n).toLocaleString(),
 const state = {
   project: demo(),
   selection: null,
+  selectionIds: [],
+  collapsed: new Set(),
+  isolation: null,
+  proportional: true,
+  snapGrid: false,
+  activeOperationId: null,
   mode: "design",
   tool: "select",
   plan: null,
@@ -65,10 +90,12 @@ let history = [],
   busy = false,
   machinePlan = false;
 const pendingFormats = new Map();
+let clipboard = null;
 const worker = new Worker(new URL("./digitize-worker.js", import.meta.url), {
   type: "module",
 });
 const stage = new Stage($("stage"), state, {
+  refresh: renderPanels,
   select,
   mutate,
   changed: record,
@@ -87,7 +114,19 @@ function selected() {
   return state.project.objects.find((o) => o.id === state.selection);
 }
 function record(before) {
-  if (before === JSON.stringify(state.project)) return;
+  if (before === JSON.stringify(state.project)) {
+    renderPanels();
+    stage.render();
+    return;
+  }
+  try {
+    validateProject(state.project);
+  } catch (e) {
+    state.project = JSON.parse(before);
+    select(null);
+    toast("Could not apply edit: " + e.message);
+    return;
+  }
   history.push(before);
   while (
     history.length > 1 &&
@@ -105,6 +144,20 @@ function mutate(fn) {
 }
 function changed() {
   pause();
+  $("preview-selection").disabled = false;
+  state.selectionIds = selectionIds(state).filter(
+    (id) => id === PROJECT || nodeById(state.project, id),
+  );
+  state.selection = state.selectionIds[0] || null;
+  if (
+    state.activeOperationId &&
+    !state.project.objects
+      .find((o) => o.id === state.selection)
+      ?.operations?.some((op) => op.id === state.activeOperationId)
+  )
+    state.activeOperationId = null;
+  if (state.isolation && !nodeById(state.project, state.isolation))
+    state.isolation = null;
   machinePlan = false;
   $("sequence-source").textContent = "Generated design";
   renderPanels();
@@ -156,8 +209,17 @@ worker.onerror = (e) => {
   toast("Stitch engine error. Reload the page to restart.");
   $("status").textContent = e.message;
 };
-function select(id) {
-  state.selection = id;
+function select(id, options = {}) {
+  let ids = Array.isArray(id) ? id : id ? [id] : [];
+  if (options.toggle && ids.length) {
+    const current = new Set(selectionIds(state));
+    for (const item of ids)
+      current.has(item) ? current.delete(item) : current.add(item);
+    ids = [...current];
+  }
+  state.selectionIds = roots(state.project, ids);
+  state.selection = state.selectionIds[0] || null;
+  state.activeOperationId = null;
   stage.node = null;
   state.manualIndex = 0;
   renderPanels();
@@ -262,7 +324,11 @@ function addShape({ start: a, end: b }) {
 function addObjects(objects) {
   mutate(() => {
     state.project.objects.push(...objects);
-    state.selection = objects.at(-1)?.id || null;
+    if (objects.groups) (state.project.groups ||= []).push(...objects.groups);
+    state.selectionIds = objects.groups?.length
+      ? [objects.groups[0].id]
+      : objects.map((o) => o.id);
+    state.selection = state.selectionIds[0] || null;
   });
   toast(
     `Added ${objects.length === 1 ? objects[0].name : objects.length + " objects"}`,
@@ -279,18 +345,33 @@ function renderPanels() {
   const m = MACHINES[state.project.machine];
   $("hoop-size").textContent = `${m.width} × ${m.height} mm`;
   $("object-count").textContent = state.project.objects.length;
-  $("object-list").innerHTML = state.project.objects.length
-    ? state.project.objects
-        .map(
-          (o, i) =>
-            `<div class="object-row ${o.id === state.selection ? "selected" : ""} ${o.visible === false ? "hidden" : ""}"><span class="order">${String(i + 1).padStart(2, "0")}</span><button class="object-select" data-select="${esc(o.id)}"><span class="swatch" style="background:${o.color}"></span><span class="object-text"><span class="object-title">${esc(o.name)}</span><span class="object-type">${o.type === "fill" ? "Tatami fill" : o.type === "satin" ? "Satin column" : o.type === "manual" ? "Manual stitches" : "Running stitch"}</span></span></button><button class="visibility" data-visibility="${esc(o.id)}" aria-label="${o.visible === false ? "Show" : "Hide"} ${esc(o.name)}">${o.visible === false ? "○" : "◉"}</button></div>`,
-        )
-        .join("")
-    : '<p class="empty-list">Your next design starts here.<br>Draw a shape, add lettering, or import artwork.</p>';
+  const selectedIds = new Set(selectionIds(state)),
+    affected = new Set(selectedLeaves(state).map((o) => o.id));
+  const row = (
+    o,
+    depth,
+  ) => `<div role="treeitem" aria-level="${depth + 2}" aria-selected="${selectedIds.has(o.id)}" ${o.kind ? `aria-expanded="${!state.collapsed.has(o.id)}"` : ""} class="object-row ${o.kind ? "group-row" : ""} ${selectedIds.has(o.id) ? "selected" : affected.has(o.id) ? "affected" : ""} ${!isVisible(state.project, o) ? "hidden" : ""}" style="--depth:${depth}">
+    ${o.kind ? `<button class="tree-toggle" data-expand="${esc(o.id)}" aria-label="${state.collapsed.has(o.id) ? "Expand" : "Collapse"} ${esc(o.name)}">${state.collapsed.has(o.id) ? "▸" : "▾"}</button>` : '<span class="tree-toggle"></span>'}
+    <button class="object-select" data-select="${esc(o.id)}"><span class="swatch ${o.kind ? "group-icon" : ""}" style="background:${o.color || "transparent"}">${o.kind ? (o.kind === "svg" ? "▧" : "▱") : ""}</span><span class="object-text"><span class="object-title">${esc(o.name)}</span><span class="object-type">${o.kind ? `${leaves(state.project, [o.id]).length} regions · ${o.kind === "svg" ? "Imported SVG" : "Group"}` : o.operations ? `${o.operations.length} operations` : o.svgLabel ? esc(o.svgLabel) : o.type === "fill" ? "Tatami fill" : o.type === "satin" ? "Satin column" : o.type === "manual" ? "Manual stitches" : "Running stitch"}</span></span></button>
+    <button class="tree-lock" data-lock="${esc(o.id)}" aria-label="${o.locked ? "Unlock" : "Lock"} ${esc(o.name)}">${isLocked(state.project, o) ? "▪" : "▫"}</button><button class="visibility" data-visibility="${esc(o.id)}" aria-label="${o.visible === false ? "Show" : "Hide"} ${esc(o.name)}">${o.visible === false ? "○" : "◉"}</button></div>`;
+  $("object-list").setAttribute("role", "tree");
+  $("object-list").setAttribute("aria-multiselectable", "true");
+  $("object-list").innerHTML =
+    `<button class="project-tree ${selectedIds.has(PROJECT) ? "selected" : ""}" data-select="${PROJECT}" role="treeitem" aria-selected="${selectedIds.has(PROJECT)}">◇ ${esc(state.project.name)} <small>Project</small></button>` +
+    treeRows(state.project, state.collapsed)
+      .map(({ node, depth }) => row(node, depth))
+      .join("") +
+    (state.project.objects.length
+      ? ""
+      : '<p class="empty-list">Draw, add lettering or import artwork.</p>');
+  $("selection-count").textContent = affected.size
+    ? `${affected.size} selected${state.isolation ? " · focus mode" : ""}`
+    : "Select artwork";
+  $("exit-isolation").hidden = !state.isolation;
   $("undo").disabled = !history.length;
   $("redo").disabled = !future.length;
   for (const id of ["move-up", "move-down", "duplicate", "delete"])
-    $(id).disabled = !selected();
+    $(id).disabled = !selectedLeaves(state, { editable: true }).length;
   renderProperties();
   markSourceRows();
 }
@@ -301,7 +382,7 @@ function markSourceRows() {
   );
   document.querySelectorAll(".object-row").forEach((row) => {
     const id = row.querySelector("[data-select]")?.dataset.select,
-      sourceOnly = !active.has(id);
+      sourceOnly = !leaves(state.project, [id]).some((o) => active.has(o.id));
     row.classList.toggle("source-only", sourceOnly);
     row.title = sourceOnly
       ? "Source artwork retained. This object currently produces no sewing stitches; check digitizing settings or its geometry."
@@ -325,10 +406,21 @@ function bindNumber(id, fn, min, max) {
     };
 }
 function renderProperties() {
-  const o = selected();
-  $("inspector-title").textContent = o
-    ? "Object properties"
-    : "Design overview";
+  if (
+    renderInspector({
+      state,
+      mutate,
+      toast,
+      refresh: renderProperties,
+      palette: PALETTE,
+      manualEditor,
+      bindManual,
+      convertManual,
+      draw: () => stage.render(),
+    })
+  )
+    return;
+  const o = null;
   if (!o) {
     $("properties").innerHTML =
       `<p class="intro">From a first sketch to the final stitch.<br>Create something worth making.</p><div class="quick-actions"><button id="quick-import">↗ Import artwork or embroidery</button><button id="quick-lettering">T Add lettering / monogram</button><button id="quick-flower">✽ Load wildflower example</button></div><div class="section-label">A SIMPLE WORKFLOW</div><p class="property-note">01 &nbsp; Draw or import your artwork.<br><br>02 &nbsp; Set stitch type, spacing and direction.<br><br>03 &nbsp; Inspect the actual sequence in Stitch preview.<br><br>04 &nbsp; Export a machine file and test your sew-out.</p>`;
@@ -337,94 +429,24 @@ function renderProperties() {
     $("quick-flower").onclick = loadDemo;
     return;
   }
-  const b = objectBounds(o);
-  $("properties").innerHTML =
-    `<label class="field">Object name<input id="object-name" value="${esc(o.name)}" maxlength="100"></label><label class="field">Stitch type<select id="stitch-type">${[
-      ["fill", "Tatami fill"],
-      ["run", "Running stitch"],
-      ["satin", "Satin centerline"],
-      ["manual", "Manual stitches"],
-    ]
-      .filter(([k]) =>
-        k === "manual" ? o.type === "manual" : o.type !== "manual",
-      )
-      .map(
-        ([k, v]) =>
-          `<option value="${k}" ${k === o.type ? "selected" : ""}>${v}</option>`,
-      )
-      .join(
-        "",
-      )}</select></label><div class="section-label">THREAD COLOR <span>40 WT</span></div><input id="thread-color" type="color" aria-label="Thread color" value="${o.color}"><div class="swatch-palette">${PALETTE.map((c) => `<button data-color="${c}" class="${c === o.color ? "active" : ""}" style="background:${c}" aria-label="Use thread ${c}"></button>`).join("")}</div>${o.type === "manual" ? "" : `<div class="section-label">STITCH SETTINGS</div><div class="two-col">${field("Row spacing", "spacing", o.spacing, "mm", 0.15, 5)}${field(o.type === "satin" ? "Column width" : "Stitch length", o.type === "satin" ? "satin-width" : "length", o.type === "satin" ? o.width : o.length, "mm", 0.3, 7)}</div>${o.type === "fill" ? field("Stitch direction", "angle", o.angle, "°", -360, 360, 1) : ""}${o.type !== "run" ? field("Pull compensation", "compensation", o.compensation, "mm", 0, 1) : ""}<label class="check"><input id="underlay" type="checkbox" ${o.underlay ? "checked" : ""}> Light underlay</label>${o.type !== "fill" ? `<label class="check"><input id="closed-path" type="checkbox" ${o.closed ? "checked" : ""}> Close path</label>` : ""}<p class="property-note">${o.type === "fill" ? "Smaller row spacing makes a denser fill. Underlay runs perpendicular at a wider spacing." : o.type === "satin" ? "The path is the centerline. Width controls the zigzag span; spacing controls the advance along the column." : "Running stitches follow the path. Row spacing applies when switching to fill or satin."}</p>`}<div class="section-label">POSITION & SIZE</div><div class="two-col">${field("Center X", "pos-x", (b.minX + b.maxX) / 2, "mm", -1000, 1000)}${field("Center Y", "pos-y", (b.minY + b.maxY) / 2, "mm", -1000, 1000)}${field("Width", "size-w", b.width, "mm", 0.1, 500)}${field("Height", "size-h", b.height, "mm", 0.1, 500)}</div>${field("Rotate by", "rotate", 0, "°", -360, 360, 1)}<p class="property-note">Origin is the hoop center. Width and height scale independently.</p>${o.type !== "manual" ? '<button id="convert-manual">Make stitches editable</button>' : manualEditor(o)}`;
-  $("properties").insertAdjacentHTML(
-    "afterbegin",
-    `<label class="check"><input id="sequence-locked" type="checkbox" ${o.sequenceLocked || o.type === "manual" ? "checked" : ""} ${o.type === "manual" ? "disabled" : ""}> Keep sequence position</label><p class="property-note">${o.type === "manual" ? "Manual stitch blocks always retain their position." : "Pin this object in layer order while other compatible colors are grouped."}</p>`,
-  );
-  $("sequence-locked").onchange = (e) =>
-    mutate(() => (o.sequenceLocked = e.target.checked));
-  $("object-name").onchange = (e) =>
-    mutate(() => (o.name = e.target.value.trim() || "Untitled object"));
-  $("stitch-type").onchange = (e) => mutate(() => (o.type = e.target.value));
-  $("thread-color").onchange = (e) => mutate(() => (o.color = e.target.value));
-  document
-    .querySelectorAll("[data-color]")
-    .forEach(
-      (el) => (el.onclick = () => mutate(() => (o.color = el.dataset.color))),
-    );
-  bindNumber("spacing", (v) => (o.spacing = v), 0.15, 5);
-  bindNumber("length", (v) => (o.length = v), 0.3, 7);
-  bindNumber("satin-width", (v) => (o.width = v), 0.3, 7);
-  bindNumber("angle", (v) => (o.angle = v), -360, 360);
-  bindNumber("compensation", (v) => (o.compensation = v), 0, 1);
-  if ($("underlay"))
-    $("underlay").onchange = (e) =>
-      mutate(() => (o.underlay = e.target.checked));
-  if ($("closed-path"))
-    $("closed-path").onchange = (e) =>
-      mutate(() => (o.closed = e.target.checked));
-  bindNumber(
-    "pos-x",
-    (v) => translate(o, v - (b.minX + b.maxX) / 2, 0),
-    -1000,
-    1000,
-  );
-  bindNumber(
-    "pos-y",
-    (v) => translate(o, 0, v - (b.minY + b.maxY) / 2),
-    -1000,
-    1000,
-  );
-  bindNumber(
-    "size-w",
-    (v) => transform(o, b.width ? v / b.width : 1, 1),
-    0.1,
-    500,
-  );
-  bindNumber(
-    "size-h",
-    (v) => transform(o, 1, b.height ? v / b.height : 1),
-    0.1,
-    500,
-  );
-  bindNumber("rotate", (v) => transform(o, 1, 1, v), -360, 360);
-  if ($("convert-manual"))
-    $("convert-manual").onclick = () => {
-      if (!state.plan || machinePlan) {
-        toast("Return to the generated design sequence first.");
-        return;
-      }
-      const commands = state.plan.events
-        .filter((e) => e.objectId === o.id && !["color", "end"].includes(e.cmd))
-        .map(({ x, y, cmd }) => ({ x, y, cmd }));
-      if (!commands.length) return;
-      mutate(() => {
-        o.commands = commands;
-        o.type = "manual";
-        o.rings = [];
-        state.manualIndex = 0;
-      });
-      toast("Stitches are now editable. Undo returns to the vector object.");
-    };
-  if (o.type === "manual") bindManual(o);
+}
+function convertManual(o) {
+  if (!state.plan || machinePlan) {
+    toast("Return to the generated design sequence first.");
+    return;
+  }
+  const commands = state.plan.events
+    .filter((e) => e.objectId === o.id && !["color", "end"].includes(e.cmd))
+    .map(({ x, y, cmd }) => ({ x, y, cmd }));
+  if (!commands.length) return;
+  mutate(() => {
+    o.commands = commands;
+    o.type = "manual";
+    o.rings = [];
+    delete o.operations;
+    state.manualIndex = 0;
+  });
+  toast("Stitches are now editable. Undo returns to the vector object.");
 }
 function manualEditor(o) {
   const i = Math.min(state.manualIndex, o.commands.length - 1),
@@ -480,6 +502,11 @@ function renderStats() {
     ? `<div><strong>${fmt(stats.stitches)}</strong><span>Sewing stitches</span></div><div><strong>${stats.colors}</strong><span>Color blocks · ${stats.uniqueColors} threads</span></div><div><strong>${stats.manualChanges}</strong><span>Manual thread changes</span></div><div><strong>${fmt(stats.jumps)}</strong><span>Jumps · ${fmt(stats.trims)} trims</span></div><div><strong>${num(stats.minutes, 0)} <small>min</small></strong><span>Estimated machine time</span></div><div><strong>${num(stats.thread)} <small>m</small></strong><span>Top thread path</span></div>`
     : '<p class="property-note">No stitch sequence</p>';
   if (stats) {
+    if (stats.stops)
+      $("stats").insertAdjacentHTML(
+        "beforeend",
+        `<div><strong>${stats.stops}</strong><span>Machine stops · operator action</span></div>`,
+      );
     const b = stats.jumpBreakdown;
     const detail =
       machinePlan || b.unclassified
@@ -499,6 +526,13 @@ function renderStats() {
   $("warnings").innerHTML = (state.plan?.warnings || [])
     .map((w) => `<p>${esc(w)}</p>`)
     .join("");
+  if (state.plan?.diagnostics?.duplicates?.length) {
+    $("warnings").insertAdjacentHTML(
+      "beforeend",
+      '<button id="review-duplicates">Review duplicate objects</button>',
+    );
+    $("review-duplicates").onclick = () => editCommand("duplicates");
+  }
 }
 function renderTimeline() {
   const ev = state.plan?.events || [];
@@ -525,20 +559,31 @@ function renderTimeline() {
   $("timeline").value = state.cursor;
   const stats = state.plan?.stats;
   $("sequence-metrics").textContent = stats
-    ? `${stats.colors} color blocks · ${stats.manualChanges} manual changes · ${fmt(stats.jumps)} jumps${stats.sourceColorBlocks !== undefined ? ` · source order: ${stats.sourceColorBlocks} blocks` : ""}`
+    ? `${stats.colors} color blocks · ${stats.manualChanges} manual changes · ${fmt(stats.jumps)} jumps${stats.stops ? ` · ${stats.stops} stops` : ""}${stats.sourceColorBlocks !== undefined ? ` · source order: ${stats.sourceColorBlocks} blocks` : ""}`
     : "";
   drawCommandTrack();
   const names = new Map(state.project.objects.map((o) => [o.id, o.name])),
     runs = [];
   ev.forEach((e, i) => {
-    if (e.cmd === "stitch" && e.objectId && runs.at(-1)?.id !== e.objectId)
-      runs.push({ id: e.objectId, start: i + 1, color: e.color });
+    if (
+      ["stitch", "stop", "trim"].includes(e.cmd) &&
+      e.objectId &&
+      (runs.at(-1)?.id !== e.objectId ||
+        runs.at(-1)?.operationId !== e.operationId)
+    )
+      runs.push({
+        id: e.objectId,
+        operationId: e.operationId,
+        name: e.operationName,
+        start: i + 1,
+        color: e.color,
+      });
   });
   $("sewing-order").innerHTML = runs.length
     ? runs
         .map(
           (r, i) =>
-            `<button data-object-step="${r.start}" style="border-left-color:${r.color}">${i + 1}. ${esc(names.get(r.id) || "Object")}</button>`,
+            `<button data-object-step="${r.start}" style="border-left-color:${r.color}">${i + 1}. ${esc(names.get(r.id) || "Object")}${r.name ? ` · ${esc(r.name)}` : ""}</button>`,
         )
         .join("")
     : '<span class="property-note">Machine files do not retain source object boundaries.</span>';
@@ -555,7 +600,7 @@ function drawCommandTrack() {
   const ctx = canvas.getContext("2d"),
     events = state.plan?.events || [];
   ctx.scale(devicePixelRatio || 1, devicePixelRatio || 1);
-  for (const cmd of ["jump", "trim", "color"]) {
+  for (const cmd of ["jump", "trim", "color", "stop"]) {
     ctx.fillStyle =
       cmd === "jump" ? "#82aacf" : cmd === "trim" ? "#e7b784" : "#eff2df";
     const h = cmd === "jump" ? 3 : cmd === "trim" ? 7 : 12;
@@ -586,12 +631,23 @@ function scrub(n) {
   if (state.mode !== "preview") setMode("preview");
   state.cursor = n;
   const e = state.plan?.events[n - 1];
-  if (e?.objectId && e.objectId !== state.selection) {
+  if (e?.objectId && !selectedLeaves(state).some((o) => o.id === e.objectId)) {
     state.selection = e.objectId;
+    state.selectionIds = [e.objectId];
+    state.activeOperationId = e.operationId || null;
     renderPanels();
   }
   if (e?.sourceIndex !== undefined) {
     state.manualIndex = e.sourceIndex;
+    renderProperties();
+  }
+  if (
+    e?.operationId &&
+    selectionIds(state).length === 1 &&
+    state.selection === e.objectId &&
+    state.activeOperationId !== e.operationId
+  ) {
+    state.activeOperationId = e.operationId;
     renderProperties();
   }
   renderPlayback();
@@ -683,6 +739,8 @@ async function loadDemo() {
   mutate(() => {
     state.project = demo();
     state.selection = null;
+    state.selectionIds = [];
+    state.activeOperationId = null;
   });
   stage.fit();
 }
@@ -776,6 +834,10 @@ async function exportDialog() {
     state.plan = { events: result.events, stats, warnings: [] };
     state.cursor = result.events.length;
     machinePlan = true;
+    state.previewSelection = false;
+    state.activeOperationId = null;
+    $("preview-selection").checked = false;
+    $("preview-selection").disabled = true;
     $("sequence-source").textContent = ext.toUpperCase() + " file · decoded";
     setMode("preview");
     renderStats();
@@ -809,12 +871,14 @@ async function importFile(file) {
         mutate(() => {
           state.project = p;
           state.selection = null;
+          state.selectionIds = [];
+          state.activeOperationId = null;
         });
         stage.fit();
         toast("Project opened.");
       }
     } else if (ext === "svg") {
-      const objects = importSVG(await file.text());
+      const objects = importSVG(await file.text(), file.name);
       addObjects(objects);
       if (objects.importWarnings) toast(objects.importWarnings);
     } else if (["png", "jpg", "jpeg"].includes(ext)) {
@@ -881,8 +945,13 @@ async function importFile(file) {
 }
 function removeSelected() {
   const o = selected();
-  if (!o) return;
-  if (state.tool === "node" && stage.node !== null && o.type !== "manual") {
+  if (
+    state.tool === "node" &&
+    stage.node !== null &&
+    o &&
+    !isLocked(state.project, o) &&
+    o.type !== "manual"
+  ) {
     const p = o.rings.flat()[stage.node],
       r = o.rings.find((r) => r.includes(p));
     if (r && r.length > (o.type === "fill" ? 3 : 2)) {
@@ -892,8 +961,11 @@ function removeSelected() {
     }
   }
   mutate(() => {
-    state.project.objects = state.project.objects.filter((x) => x.id !== o.id);
+    deleteSelection(state.project, selectionIds(state));
     state.selection = null;
+    state.selectionIds = [];
+    state.activeOperationId = null;
+    state.selectionIds = [];
   });
 }
 function undo() {
@@ -902,6 +974,8 @@ function undo() {
   future.push(JSON.stringify(state.project));
   state.project = JSON.parse(history.pop());
   state.selection = null;
+  state.selectionIds = [];
+  state.activeOperationId = null;
   stage.draft = [];
   updateDraft();
   changed();
@@ -911,6 +985,8 @@ function redo() {
   history.push(JSON.stringify(state.project));
   state.project = JSON.parse(future.pop());
   state.selection = null;
+  state.selectionIds = [];
+  state.activeOperationId = null;
   changed();
 }
 $("machine").innerHTML = Object.entries(MACHINES)
@@ -926,18 +1002,67 @@ $("machine").onchange = (e) => {
 };
 $("object-list").onclick = (e) => {
   const selectEl = e.target.closest("[data-select]"),
-    visibility = e.target.closest("[data-visibility]");
+    visibility = e.target.closest("[data-visibility]"),
+    expand = e.target.closest("[data-expand]"),
+    lock = e.target.closest("[data-lock]");
+  if (expand) {
+    const id = expand.dataset.expand;
+    state.collapsed.has(id)
+      ? state.collapsed.delete(id)
+      : state.collapsed.add(id);
+    renderPanels();
+    return;
+  }
+  if (lock) {
+    const o = nodeById(state.project, lock.dataset.lock);
+    mutate(() => (o.locked = !o.locked));
+    return;
+  }
   if (selectEl) {
-    select(selectEl.dataset.select);
+    select(selectEl.dataset.select, {
+      toggle: e.shiftKey || e.ctrlKey || e.metaKey,
+    });
     if (innerWidth <= 680) $("layers-panel").classList.remove("open");
   }
   if (visibility)
     mutate(() => {
-      const o = state.project.objects.find(
-        (x) => x.id === visibility.dataset.visibility,
-      );
+      const o = nodeById(state.project, visibility.dataset.visibility);
       o.visible = o.visible === false;
     });
+};
+$("object-list").onkeydown = (e) => {
+  const button = e.target.closest("[data-select]");
+  if (
+    !button ||
+    !["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)
+  )
+    return;
+  e.preventDefault();
+  e.stopPropagation();
+  const id = button.dataset.select,
+    node = nodeById(state.project, id);
+  const buttons = [...$("object-list").querySelectorAll("[data-select]")],
+    index = buttons.indexOf(button);
+  let next;
+  if (e.key === "ArrowDown") next = buttons[index + 1]?.dataset.select;
+  if (e.key === "ArrowUp") next = buttons[index - 1]?.dataset.select;
+  if (e.key === "ArrowRight" && node?.kind) {
+    if (state.collapsed.has(id)) {
+      state.collapsed.delete(id);
+      renderPanels();
+    } else next = children(state.project, id)[0]?.id;
+  }
+  if (e.key === "ArrowLeft") {
+    if (node?.kind && !state.collapsed.has(id)) {
+      state.collapsed.add(id);
+      renderPanels();
+    } else next = node?.parentId || PROJECT;
+  }
+  if (next) select(next);
+  const target = [...$("object-list").querySelectorAll("[data-select]")].find(
+    (b) => b.dataset.select === (next || id),
+  );
+  target?.focus();
 };
 $("new-project").onclick = async () => {
   if (await confirmReplace("Start a new design?")) {
@@ -949,13 +1074,17 @@ $("new-project").onclick = async () => {
         objects: [],
       };
       state.selection = null;
+      state.selectionIds = [];
+      state.activeOperationId = null;
     });
     stage.fit();
   }
 };
 $("open-file").onclick = () => $("file-input").click();
-$("file-input").onchange = (e) =>
-  e.target.files[0] && importFile(e.target.files[0]);
+$("file-input").onchange = async (e) => {
+  const files = [...e.target.files];
+  for (const file of files) await importFile(file);
+};
 $("save-project").onclick = () => {
   download(
     JSON.stringify(state.project, null, 2),
@@ -969,6 +1098,7 @@ $("export").onclick = exportDialog;
 $("design-tab").onclick = () => {
   setMode("design");
   if (machinePlan) {
+    $("preview-selection").disabled = false;
     machinePlan = false;
     $("sequence-source").textContent = "Generated design";
     scheduleGenerate();
@@ -983,30 +1113,219 @@ $("undo").onclick = undo;
 $("redo").onclick = redo;
 $("delete").onclick = removeSelected;
 $("duplicate").onclick = () => {
-  const o = selected();
-  if (o) {
-    const copy = structuredClone(o);
-    copy.id = uid();
-    copy.name += " copy";
-    translate(copy, 3, 3);
-    addObjects([copy]);
-  }
+  const copy = copySelection(state.project, selectionIds(state));
+  if (copy.objects.length)
+    mutate(() => {
+      state.selectionIds = pasteSelection(state.project, copy);
+      state.selection = state.selectionIds[0];
+    });
 };
 for (const [id, dir] of [
   ["move-up", -1],
   ["move-down", 1],
 ])
   $(id).onclick = () => {
-    const i = state.project.objects.findIndex((o) => o.id === state.selection),
-      j = i + dir;
-    if (i >= 0 && j >= 0 && j < state.project.objects.length)
-      mutate(() => {
-        [state.project.objects[i], state.project.objects[j]] = [
-          state.project.objects[j],
-          state.project.objects[i],
-        ];
-      });
+    mutate(() => {
+      if (!reorder(state.project, selectionIds(state), dir))
+        toast("Select siblings to reorder them together.");
+    });
   };
+function editCommand(command) {
+  if (command === "duplicates") {
+    const ids =
+      state.plan?.diagnostics?.duplicates?.map((d) => d.objectId) || [];
+    if (ids.length) {
+      setMode("design");
+      select(ids);
+    } else toast("No coincident same-color source objects found.");
+    return;
+  }
+  const ids = selectionIds(state),
+    selected = selectedLeaves(state, { editable: true });
+  if (command === "all") {
+    select(state.isolation || PROJECT);
+    return;
+  }
+  if (command === "children") {
+    select(
+      ids.flatMap((id) =>
+        id === PROJECT
+          ? children(state.project).map((n) => n.id)
+          : children(state.project, id).map((n) => n.id),
+      ),
+    );
+    return;
+  }
+  if (command === "similar") {
+    const o = selected[0];
+    if (o)
+      select(
+        state.project.objects
+          .filter(
+            (n) =>
+              n.color === o.color &&
+              n.type === o.type &&
+              isVisible(state.project, n) &&
+              !isLocked(state.project, n),
+          )
+          .map((n) => n.id),
+      );
+    return;
+  }
+  if (command === "copy") {
+    clipboard = copySelection(state.project, ids);
+    toast(`Copied ${clipboard.objects.length} artwork objects.`);
+    return;
+  }
+  if (command === "paste") {
+    if (clipboard?.objects.length)
+      mutate(() => {
+        state.selectionIds = pasteSelection(state.project, clipboard);
+        state.selection = state.selectionIds[0];
+      });
+    return;
+  }
+  if (command === "group") {
+    mutate(() => {
+      const id = groupSelection(state.project, ids);
+      if (id) {
+        state.selectionIds = [id];
+        state.selection = id;
+      }
+    });
+    return;
+  }
+  if (command === "ungroup") {
+    mutate(() => {
+      state.selectionIds = ungroupSelection(state.project, ids);
+      state.selection = state.selectionIds[0] || null;
+    });
+    return;
+  }
+  if (command === "isolate") {
+    state.isolation = ids.length === 1 ? ids[0] : null;
+    stage.render();
+    renderPanels();
+    return;
+  }
+  if (command === "fit") {
+    stage.fitSelection();
+    return;
+  }
+  if (command === "center") {
+    const b = selectionBounds(selected);
+    mutate(() =>
+      transformSelection(selected, {
+        dx: -(b.minX + b.maxX) / 2,
+        dy: -(b.minY + b.maxY) / 2,
+      }),
+    );
+    return;
+  }
+  if (command === "lock" || command === "unlock" || command === "hide") {
+    mutate(() =>
+      nodes(state.project)
+        .filter(
+          (n) =>
+            roots(state.project, ids).includes(n.id) || ids.includes(PROJECT),
+        )
+        .forEach((n) => {
+          if (command === "hide") n.visible = false;
+          else n.locked = command === "lock";
+        }),
+    );
+    return;
+  }
+  if (command === "basting" || command === "registration") {
+    if (!selected.length) return;
+    const b = selectionBounds(selected),
+      margin = 2,
+      color = selected[0].color;
+    if (command === "basting") {
+      const ring = [
+        { x: b.minX - margin, y: b.minY - margin },
+        { x: b.maxX + margin, y: b.minY - margin },
+        { x: b.maxX + margin, y: b.maxY + margin },
+        { x: b.minX - margin, y: b.maxY + margin },
+      ];
+      const o = object("Selection basting box", [ring], {
+        type: "run",
+        length: 5,
+        closed: true,
+        underlay: false,
+        color,
+        sequenceLocked: true,
+      });
+      mutate(() => {
+        state.project.objects.unshift(o);
+        state.selectionIds = [o.id];
+        state.selection = o.id;
+      });
+    } else {
+      const objects = [];
+      for (const x of [b.minX - 3, b.maxX + 3]) {
+        const y = (b.minY + b.maxY) / 2;
+        objects.push(
+          object(
+            "Registration cross",
+            [
+              [
+                { x: x - 2, y },
+                { x: x + 2, y },
+              ],
+              [
+                { x, y: y - 2 },
+                { x, y: y + 2 },
+              ],
+            ],
+            { type: "run", underlay: false, color, sequenceLocked: true },
+          ),
+        );
+      }
+      addObjects(objects);
+      mutate(() => {
+        const id = groupSelection(
+          state.project,
+          objects.map((o) => o.id),
+          "Registration marks",
+        );
+        state.selectionIds = [id];
+        state.selection = id;
+      });
+    }
+    return;
+  }
+  if (command.startsWith("align-") || command.startsWith("distribute-")) {
+    // Each selected group is one alignment unit; its descendants move together.
+    const bundles = roots(state.project, ids).map((id) => ({
+      type: "run",
+      rings: [
+        leaves(state.project, [id], { editable: true }).flatMap((o) =>
+          o.type === "manual" ? o.commands : o.rings.flat(),
+        ),
+      ],
+    }));
+    mutate(() => alignSelection(bundles, command.replace(/^align-/, "")));
+  }
+}
+$("edit-command").onchange = (e) => {
+  const value = e.target.value;
+  e.target.value = "";
+  editCommand(value);
+};
+$("select-all").onclick = () => editCommand("all");
+$("group-selection").onclick = () => editCommand("group");
+$("ungroup-selection").onclick = () => editCommand("ungroup");
+$("exit-isolation").onclick = () => {
+  state.isolation = null;
+  renderPanels();
+  stage.render();
+};
+$("snap-grid").onchange = (e) => (state.snapGrid = e.target.checked);
+$("preview-selection").onchange = (e) => {
+  state.previewSelection = e.target.checked;
+  stage.render();
+};
 $("finish-draw").onclick = finishPath;
 $("cancel-draw").onclick = () => {
   stage.draft = [];
@@ -1068,7 +1387,7 @@ $("toggle-inspector").onclick = () => {
 $("help").onclick = () =>
   ask(
     "Your embroidery workbench",
-    '<p><strong>Draw:</strong> Use polygon for filled regions, running path for outlines, and satin for narrow columns. Click points, then press <kbd>Enter</kbd> or Finish path. Drag to create rectangles and ellipses.</p><p><strong>Edit:</strong> Select and drag objects. The node tool lets you move individual points; double-click an edge to insert a node. Use the properties panel for exact dimensions, angles and stitch settings. Automatic sequencing completes each object and batches compatible colors while preserving construction order. Disable grouping for exact layer order, or use Keep sequence position to pin an object.</p><p><strong>Simulate:</strong> Open Stitch preview. Play, step through, scrub, click a stitch, or click a color block. Command positions, underlay and jump paths are inspectable. Export replaces the preview with commands decoded from the saved file.</p><p><strong>Manual editing:</strong> Make a vector object’s stitches editable, then adjust needle points with the node tool or command index editor. Imported embroidery files are editable stitch blocks.</p><p><strong>Shortcuts:</strong> <kbd>V</kbd> select · <kbd>N</kbd> nodes · <kbd>P</kbd> fill · <kbd>R</kbd> run · <kbd>S</kbd> satin · <kbd>T</kbd> text · <kbd>E</kbd> ellipse · <kbd>H</kbd> pan · <kbd>Space</kbd> temporary pan / preview playback · <kbd>Ctrl Z</kbd> undo · <kbd>Ctrl Shift Z</kbd> redo · <kbd>Delete</kbd> selected object / vector node.</p><p>SVG import supports paths, basic shapes, transforms, holes and inline solid paints. Convert text to paths and expand clipping or effects first. Image digitizing is intended for flat artwork. Core editing works locally; machine conversion loads a pinned Python/WASM runtime from jsDelivr on first use. Thread colors are visual approximations.</p><p><a href="https://github.com/kircherlabs/embroidery-studio#readme" target="_blank" rel="noreferrer">Documentation & known limitations ↗</a></p>',
+    '<p><strong>Artwork tree:</strong> Imported SVGs contain their original regions and nested groups. Select a parent to edit the whole SVG; expand it to edit a child. Shift/Ctrl-click or drag a box to multiselect. Drag corner/edge handles to resize, or the round handle to rotate. Ctrl A selects all, Ctrl G groups, Ctrl Shift G ungroups, Ctrl D duplicates, and F fits selection. Locked artwork still sews; focus mode changes only the view.</p><p><strong>Operations:</strong> Add independent steps in the inspector. The appliqué recipe creates placement, stop, tackdown, stop and satin finishing steps on closed regions. Stops require operator action; test pauses and clearance on your machine.</p><p><strong>Draw:</strong> Use polygon for filled regions, running path for outlines, and satin for narrow columns. Click points, then press <kbd>Enter</kbd> or Finish path. Drag to create rectangles and ellipses.</p><p><strong>Edit:</strong> Select and drag objects. The node tool lets you move individual points; double-click an edge to insert a node. Use the properties panel for exact dimensions, angles and stitch settings. Automatic sequencing completes each object and batches compatible colors while preserving construction order. Disable grouping for exact layer order, or use Keep sequence position to pin an object.</p><p><strong>Simulate:</strong> Open Stitch preview. Play, step through, scrub, click a stitch, or click a color block. Command positions, underlay and jump paths are inspectable. Export replaces the preview with commands decoded from the saved file.</p><p><strong>Manual editing:</strong> Make a vector object’s stitches editable, then adjust needle points with the node tool or command index editor. Imported embroidery files are editable stitch blocks.</p><p><strong>Shortcuts:</strong> <kbd>V</kbd> select · <kbd>N</kbd> nodes · <kbd>P</kbd> fill · <kbd>R</kbd> run · <kbd>S</kbd> satin · <kbd>T</kbd> text · <kbd>E</kbd> ellipse · <kbd>H</kbd> pan · <kbd>Space</kbd> temporary pan / preview playback · <kbd>Ctrl Z</kbd> undo · <kbd>Ctrl Shift Z</kbd> redo · <kbd>Delete</kbd> selected object / vector node.</p><p>SVG import supports paths, basic shapes, transforms, holes and inline solid paints. Convert text to paths and expand clipping or effects first. Image digitizing is intended for flat artwork. Core editing works locally; machine conversion loads a pinned Python/WASM runtime from jsDelivr on first use. Thread colors are visual approximations.</p><p><a href="https://github.com/kircherlabs/embroidery-studio#readme" target="_blank" rel="noreferrer">Documentation & known limitations ↗</a></p>',
     "Got it",
   );
 document.addEventListener("keydown", (e) => {
@@ -1082,6 +1401,40 @@ document.addEventListener("keydown", (e) => {
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
     e.preventDefault();
     $("save-project").click();
+    return;
+  }
+  if (e.ctrlKey || e.metaKey) {
+    const key = e.key.toLowerCase(),
+      command = {
+        a: "all",
+        c: "copy",
+        v: "paste",
+        g: e.shiftKey ? "ungroup" : "group",
+      }[key];
+    if (command) {
+      e.preventDefault();
+      editCommand(command);
+      return;
+    }
+    if (key === "d") {
+      e.preventDefault();
+      $("duplicate").click();
+      return;
+    }
+  }
+  if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(e.key)) {
+    e.preventDefault();
+    const step = e.shiftKey ? 10 : e.altKey ? 0.1 : 1;
+    mutate(() =>
+      transformSelection(selectedLeaves(state, { editable: true }), {
+        dx: e.key === "ArrowLeft" ? -step : e.key === "ArrowRight" ? step : 0,
+        dy: e.key === "ArrowUp" ? -step : e.key === "ArrowDown" ? step : 0,
+      }),
+    );
+    return;
+  }
+  if (e.key.toLowerCase() === "f") {
+    stage.fitSelection();
     return;
   }
   if (e.code === "Space") {
@@ -1103,6 +1456,8 @@ document.addEventListener("keydown", (e) => {
     stage.draft = [];
     updateDraft();
     select(null);
+    state.isolation = null;
+    renderPanels();
   }
   if (e.key === "Delete" || e.key === "Backspace") {
     e.preventDefault();
@@ -1133,9 +1488,9 @@ window.addEventListener("blur", () => {
 document.addEventListener("dragover", (e) => {
   e.preventDefault();
 });
-document.addEventListener("drop", (e) => {
+document.addEventListener("drop", async (e) => {
   e.preventDefault();
-  if (e.dataTransfer.files[0]) importFile(e.dataTransfer.files[0]);
+  for (const file of e.dataTransfer.files) await importFile(file);
 });
 renderPanels();
 renderStats();
@@ -1146,4 +1501,10 @@ window.studio = {
   getProject: () => structuredClone(state.project),
   getPlan: () => structuredClone(state.plan),
   getMode: () => state.mode,
+  getSelection: () => ({
+    ids: [...selectionIds(state)],
+    objects: selectedLeaves(state).map((o) => o.id),
+    operationId: state.activeOperationId,
+    isolation: state.isolation,
+  }),
 };

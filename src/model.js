@@ -186,6 +186,97 @@ export function validateProject(p) {
     throw Error("Unsupported or invalid studio project.");
   if (typeof p.name !== "string" || p.name.length > 200)
     throw Error("Invalid project name.");
+  if (
+    p.groups !== undefined &&
+    (!Array.isArray(p.groups) || p.groups.length > 3000)
+  )
+    throw Error("Invalid artwork groups.");
+  const groupMap = new Map((p.groups || []).map((g) => [g?.id, g]));
+  if (
+    (p.groups || []).some((g) => !g || !["svg", "group"].includes(g.kind)) ||
+    p.objects.some((o) => o?.kind)
+  )
+    throw Error("Invalid artwork group membership.");
+  const all = [...(p.groups || []), ...p.objects];
+  if (new Set(all.map((n) => n?.id)).size !== all.length)
+    throw Error("Duplicate artwork identifiers.");
+  for (const n of all) {
+    if (
+      !n ||
+      typeof n.id !== "string" ||
+      n.id === "@project" ||
+      typeof n.name !== "string" ||
+      n.name.length > 200 ||
+      ["visible", "locked", "sequenceLocked"].some(
+        (k) => n[k] !== undefined && typeof n[k] !== "boolean",
+      )
+    )
+      throw Error("Invalid artwork node.");
+    if (n.kind && !["svg", "group"].includes(n.kind))
+      throw Error("Invalid group type.");
+    let at = n.parentId,
+      seen = new Set([n.id]);
+    while (at) {
+      if (!groupMap.has(at) || seen.has(at) || seen.size > 64)
+        throw Error("Invalid or cyclic artwork hierarchy.");
+      seen.add(at);
+      at = groupMap.get(at).parentId;
+    }
+    if (n.operations !== undefined) {
+      if (
+        n.kind ||
+        n.type === "manual" ||
+        !Array.isArray(n.operations) ||
+        n.operations.length > 32
+      )
+        throw Error("Invalid embroidery operation stack.");
+      if (new Set(n.operations.map((op) => op.id)).size !== n.operations.length)
+        throw Error("Duplicate operation identifiers.");
+      for (const op of n.operations) {
+        if (
+          !op ||
+          typeof op.id !== "string" ||
+          typeof op.name !== "string" ||
+          op.name.length > 100 ||
+          ![
+            "fill",
+            "run",
+            "bean",
+            "triple",
+            "satin",
+            "border",
+            "placement",
+            "tackdown",
+            "basting",
+            "contour",
+            "stop",
+            "trim",
+          ].includes(op.type) ||
+          ["enabled", "underlay", "closed", "reverse", "tieIn", "tieOff"].some(
+            (k) => op[k] !== undefined && typeof op[k] !== "boolean",
+          ) ||
+          (op.color !== undefined && !/^#[0-9a-f]{6}$/i.test(op.color)) ||
+          (op.pattern !== undefined &&
+            !["quarter", "half", "aligned"].includes(op.pattern))
+        )
+          throw Error("Invalid embroidery operation.");
+        for (const [k, min, max] of [
+          ["spacing", 0.15, 5],
+          ["length", 0.3, 7],
+          ["width", 0.3, 7],
+          ["angle", -360, 360],
+          ["compensation", 0, 1],
+          ["offset", -5, 5],
+          ["startIndex", 0, 500000],
+        ])
+          if (
+            op[k] !== undefined &&
+            (!Number.isFinite(op[k]) || op[k] < min || op[k] > max)
+          )
+            throw Error(`Invalid operation ${k}.`);
+      }
+    }
+  }
   if (p.planning) {
     if (
       typeof p.planning !== "object" ||
@@ -207,6 +298,8 @@ export function validateProject(p) {
       typeof o.id !== "string" ||
       typeof o.name !== "string" ||
       !/^#[0-9a-f]{6}$/i.test(o.color) ||
+      (o.pattern !== undefined &&
+        !["quarter", "half", "aligned"].includes(o.pattern)) ||
       (o.sequenceLocked !== undefined &&
         typeof o.sequenceLocked !== "boolean") ||
       !["fill", "run", "satin", "manual"].includes(o.type)

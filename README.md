@@ -1,1 +1,130 @@
-# embroidery-studio
+# Embroidery Studio
+
+A free, browser-based embroidery workbench for drawing, digitizing and inspecting
+machine embroidery. Designed around the **Brother SE700's 100 × 100 mm field**.
+No account, paid service, design upload or backend required.
+
+**[Open the studio](https://kircherlabs.github.io/embroidery-studio/)**
+
+This is an early, functional release. It covers the complete artwork → stitches →
+simulation → machine file workflow. It is not yet a replacement for every feature
+in a mature commercial digitizing package. Test sew-outs on scrap fabric; the
+software has been tested in browsers and through file round trips, not on a
+physical SE700.
+
+## What works
+
+- SVG vector import (including transforms and holes), PNG/JPG color-region
+  digitizing, and existing PES, PEC, DST, EXP, JEF, VP3 and XXX stitch imports.
+- Fill polygons, rectangles, ellipses, running paths, constant-width satin
+  centerlines, lettering/monograms, and direct needle-point placement.
+- Node editing, precise position/size/rotation, thread colors, object visibility,
+  stitching order, duplication and deletion.
+- Running stitches, angled/staggered tatami fill, satin zigzags, light underlay,
+  row spacing, stitch length and pull compensation.
+- Individual stitch/command editing, including jumps, trims and stops. Vector
+  objects can be converted to editable stitches; Undo restores their vector form.
+- SE700 and larger machine profiles, hoop boundary checks before **and after**
+  file conversion, bounded segment lengths and 0.1 mm coordinate quantization.
+- A slicer-inspired simulator: playback, timeline scrubbing, stepping, click-to-
+  inspect needle positions, color blocks, jumps and underlay visibility.
+- **PES v6**, PEC, DST, EXP, JEF and VP3 export using pinned pyembroidery. The
+  simulator switches to commands decoded from the exported bytes after export.
+- Editable `.embstudio` project files, browser autosave, undo/redo and a responsive
+  desktop/mobile interface with collapsible side panels.
+
+## Quick start
+
+1. Open the studio. The wildflower example is ready to inspect and export.
+2. Use **Import / Open** for artwork, machine files or saved projects. Or choose a
+   drawing tool. For paths, click points and press **Enter / Finish path**.
+3. Select an object. Adjust stitch settings, thread, dimensions and position in
+   the properties panel. Objects sew in list order, top to bottom.
+4. Open **Stitch preview**, scrub or play the sequence, and enable **Jumps** to
+   inspect travel. Click a stitch or color block to inspect its position.
+5. Choose **Export → PES** for the SE700. The first conversion loads its local
+   WebAssembly engine. Save the file to your usual machine transfer medium.
+6. Save a **project file** to keep the editable artwork and parameters. PES is a
+   machine stitch file and cannot restore the original vector editability.
+
+On mobile, the two list buttons above the canvas toggle Objects and Properties.
+Use the in-app **?** button for shortcuts and editing help. Zoom with the canvas
+buttons or a mouse wheel; pan with the hand tool or Space-drag.
+
+## Run locally
+
+Node.js 20+ is sufficient; the application has **no build/runtime npm packages**.
+
+```sh
+node scripts/serve.mjs
+# Open http://127.0.0.1:5173
+```
+
+Serve over HTTP; ES modules and workers cannot run correctly from `file://`.
+
+```sh
+node --test tests/*.test.mjs
+python tests/test_codec.py
+node scripts/build.mjs
+```
+
+Python 3.10+ is used only for native codec tests. The vendored ZIP imports directly,
+so no pip installation is needed. The build copies runtime assets into `dist/`.
+
+Optional browser integration (run the local server in another terminal):
+
+```sh
+npm install --no-save playwright@1.56.1
+npx playwright install chromium
+node tests/browser.mjs
+# Include the actual CDN/WASM export/import path:
+TEST_MACHINE=1 node tests/browser.mjs
+```
+
+On PowerShell, use `$env:TEST_MACHINE='1'` before the test command.
+`STUDIO_URL`, `BROWSER_CHANNEL` and `PLAYWRIGHT_MODULE` support other test setups.
+The test checks editing, history, playback, lettering, safe SVG import, counters,
+manual stitches, saving/reloading and a touch-sized viewport. Screenshots go to
+ignored `test-results/`.
+
+## GitHub Pages
+
+`.github/workflows/pages.yml` tests and builds every push to `main`, then uploads
+and deploys `dist/` with the official GitHub Pages actions. Pull requests run tests
+and builds without publishing. No deployment secret is needed. For first-time
+setup, select **Settings → Pages → Source → GitHub Actions**. Subsequent updates
+publish automatically after checks pass.
+
+All runtime asset URLs are relative, including worker/codec paths, so the studio
+works under the repository subpath `/embroidery-studio/`.
+
+## Privacy, formats and present limitations
+
+Artwork and stitch conversion stay on your device. Autosave uses localStorage;
+save a project file for a portable backup. Core editing loads from this site.
+Machine conversion lazily downloads pinned Pyodide 0.27.7 from jsDelivr. Network
+access is required on first conversion; this release is not a fully offline PWA.
+
+Image digitizing targets flat artwork, not photographic embroidery. Satin is
+constant-width centerline satin. Small lettering needs refinement. SVG filters,
+clipping, masks, symbols, CSS style sheets and text should be expanded to plain
+paths before import; unsupported content is skipped with a notice. Underlay and
+pull compensation are intentionally simple and documented in
+[engineering research](docs/RESEARCH.md).
+
+DST/EXP lack embedded thread palettes. Other formats may quantize colors, trims,
+stops or jump commands. Inspect the decoded export preview. Machine firmware can
+interpret these commands differently. Selecting a larger profile never enlarges
+the SE700's physical field. Designs are limited to 250,000 commands, projects to
+1,000 objects and 500,000 input points. Fabric behavior, thread tension, stabilizer
+and sew-out quality cannot be guaranteed by a screen preview.
+
+## Architecture and license
+
+Small ES modules separate the project model, pure stitch engine, importers,
+canvas renderer, interface and machine codec. Both stitch generation and Python
+conversion run in workers. See [research and extension seams](docs/RESEARCH.md).
+
+MIT licensed. pyembroidery is vendored under MIT with its license. Pyodide loads
+unmodified under its own license. No Ink/Stitch GPL code is copied. See
+[third-party notices](THIRD_PARTY_NOTICES.md).

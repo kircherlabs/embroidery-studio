@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width,initial-scale=1,viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#172523" />
+    <meta
+      name="description"
+      content="A free, local-first embroidery design studio. Draw, digitize, simulate and export designs for your embroidery machine."
+    />
+    <title>Embroidery Studio</title>
+    <link rel="icon" href="./assets/icon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <a class="brand" href="./" aria-label="Embroidery Studio home"
+        ><img src="./assets/icon.svg" alt="" /><span
+          >embroidery<span class="brand-light">studio</span></span
+        ><span class="beta">EARLY ACCESS</span></a
+      >
+      <div class="project-name">
+        <input
+          id="project-name"
+          aria-label="Project name"
+          maxlength="100"
+        /><span id="save-status">Saved on this device</span>
+      </div>
+      <div class="file-actions">
+        <button id="new-project" class="quiet">New</button
+        ><button id="open-file" class="quiet">Import / Open</button
+        ><button id="save-project" class="quiet">Save project</button
+        ><button id="export" class="primary">Export <span>↗</span></button>
+      </div>
+    </header>
+    <nav class="workspace-bar" aria-label="Workspace controls">
+      <div class="panel-toggles">
+        <button id="toggle-layers" aria-label="Toggle objects panel">☷</button
+        ><button id="toggle-inspector" aria-label="Toggle properties panel">
+          ☷
+        </button>
+      </div>
+      <div class="mode-tabs" role="tablist" aria-label="Workspace mode">
+        <button id="design-tab" role="tab" aria-selected="true">Design</button
+        ><button id="preview-tab" role="tab" aria-selected="false">
+          Stitch preview
+        </button>
+      </div>
+      <div class="workspace-tools">
+        <button id="undo" title="Undo (Ctrl Z)" aria-label="Undo">↶</button
+        ><button id="redo" title="Redo (Ctrl Shift Z)" aria-label="Redo">
+          ↷</button
+        ><span class="divider"></span
+        ><span class="local-badge"><i></i> Local workspace</span
+        ><button id="help" aria-label="Help and shortcuts">?</button>
+      </div>
+    </nav>
+    <main class="workspace">
+      <aside class="layers panel" id="layers-panel">
+        <div class="panel-heading">
+          <h2>Objects</h2>
+          <span id="object-count" class="count"></span>
+        </div>
+        <div class="sequence-label">STITCHING ORDER <span>↓</span></div>
+        <div id="object-list" class="object-list"></div>
+        <div class="layer-actions">
+          <button
+            id="move-up"
+            title="Sew earlier"
+            aria-label="Move object earlier"
+          >
+            ↑</button
+          ><button
+            id="move-down"
+            title="Sew later"
+            aria-label="Move object later"
+          >
+            ↓</button
+          ><button
+            id="duplicate"
+            title="Duplicate selected"
+            aria-label="Duplicate object"
+          >
+            ⧉</button
+          ><button
+            id="delete"
+            title="Delete selected"
+            aria-label="Delete object"
+          >
+            ⌫
+          </button>
+        </div>
+        <div class="machine-card">
+          <span class="eyebrow">YOUR MACHINE</span
+          ><label for="machine">Machine & hoop</label
+          ><select id="machine"></select>
+          <div class="hoop-spec">
+            <span class="hoop-icon">▢</span>
+            <div>
+              <strong id="hoop-size"></strong
+              ><span>Embroidery field · millimeters</span>
+            </div>
+          </div>
+          <p id="fit-status"></p>
+        </div>
+        <div class="privacy-note">◇ Your artwork stays on this device.</div>
+      </aside>
+      <section class="stage-shell" aria-label="Design workspace">
+        <div class="stage-top">
+          <div>
+            <span class="eyebrow" id="stage-kicker">DESIGN WORKSPACE</span
+            ><span id="stage-hint"
+              >Select an object to refine its stitches</span
+            >
+          </div>
+          <span class="unit-label">mm</span>
+        </div>
+        <div class="drawing-tools" role="toolbar" aria-label="Drawing tools">
+          <button
+            data-tool="select"
+            title="Select / move (V)"
+            aria-label="Select and move"
+            class="active"
+          >
+            ↖
+          </button>
+          <button
+            data-tool="node"
+            title="Edit nodes (N)"
+            aria-label="Edit vector nodes"
+          >
+            ◇</button
+          ><span></span>
+          <button
+            data-tool="polygon"
+            title="Fill polygon (P)"
+            aria-label="Draw fill polygon"
+          >
+            ⬡
+          </button>
+          <button
+            data-tool="run"
+            title="Running stitch path (R)"
+            aria-label="Draw running stitch path"
+          >
+            ⌁
+          </button>
+          <button
+            data-tool="satin"
+            title="Satin centerline (S)"
+            aria-label="Draw satin centerline"
+          >
+            ≋
+          </button>
+          <button
+            data-tool="rect"
+            title="Rectangle"
+            aria-label="Draw rectangle"
+          >
+            □
+          </button>
+          <button
+            data-tool="ellipse"
+            title="Ellipse (E)"
+            aria-label="Draw ellipse"
+          >
+            ○
+          </button>
+          <button
+            id="text-tool"
+            title="Lettering (T)"
+            aria-label="Add lettering"
+          >
+            T
+          </button>
+          <button
+            data-tool="manual"
+            title="Place individual stitches"
+            aria-label="Place manual stitches"
+          >
+            ⁙</button
+          ><span></span>
+          <button
+            data-tool="pan"
+            title="Pan (H) or hold Space"
+            aria-label="Pan canvas"
+          >
+            ✥
+          </button>
+        </div>
+        <canvas
+          id="stage"
+          tabindex="0"
+          aria-label="Embroidery design canvas. Use drawing tools, click to place nodes, Enter to finish, Escape to cancel."
+        ></canvas>
+        <div id="draw-actions" hidden>
+          <span id="draw-message"></span
+          ><button id="finish-draw" class="primary">Finish path ↵</button
+          ><button id="cancel-draw">Cancel</button>
+        </div>
+        <div class="canvas-controls">
+          <label
+            ><input type="checkbox" id="show-stitches" checked />
+            Stitches</label
+          ><label><input type="checkbox" id="show-jumps" /> Jumps</label
+          ><label
+            ><input type="checkbox" id="show-underlay" checked />
+            Underlay</label
+          ><span class="spacer"></span
+          ><button id="zoom-out" aria-label="Zoom out">−</button
+          ><button id="zoom-fit">Fit</button
+          ><button id="zoom-in" aria-label="Zoom in">+</button
+          ><span id="zoom-value">100%</span>
+        </div>
+        <section class="simulator" aria-label="Stitch simulator">
+          <div class="sim-header">
+            <div>
+              <span class="eyebrow">STITCH SEQUENCE</span
+              ><span id="sequence-source">Generated design</span>
+            </div>
+            <span id="command-readout">Ready to stitch</span>
+          </div>
+          <div
+            class="timeline-colors"
+            id="color-timeline"
+            aria-label="Color blocks"
+          ></div>
+          <input
+            id="timeline"
+            type="range"
+            min="0"
+            max="1"
+            value="1"
+            aria-label="Stitch timeline"
+          />
+          <div class="playback">
+            <div class="transport">
+              <button id="rewind" aria-label="Go to first stitch">|‹</button
+              ><button id="step-back" aria-label="Previous stitch">‹</button
+              ><button
+                id="play"
+                class="play-button"
+                aria-label="Play stitch simulation"
+              >
+                ▶</button
+              ><button id="step-next" aria-label="Next stitch">›</button
+              ><button id="end" aria-label="Go to last stitch">›|</button>
+            </div>
+            <span id="stitch-counter">0 / 0</span><span class="spacer"></span
+            ><label class="speed-label"
+              >Playback
+              <select id="speed" aria-label="Playback speed">
+                <option value="100">100 st/s</option>
+                <option value="500" selected>500 st/s</option>
+                <option value="2000">2,000 st/s</option>
+              </select></label
+            >
+          </div>
+        </section>
+      </section>
+      <aside class="inspector panel" id="inspector-panel">
+        <div class="panel-heading">
+          <h2 id="inspector-title">Design overview</h2>
+          <span class="small-icon">◈</span>
+        </div>
+        <div id="properties"></div>
+        <div class="design-stats">
+          <span class="eyebrow">DESIGN SUMMARY</span>
+          <div id="stats"></div>
+        </div>
+        <div id="warnings" class="warnings"></div>
+        <div class="tip-card">
+          <span>STUDIO NOTE</span>
+          <p>
+            Preview your sequence, then test on scrap fabric. Density,
+            stabilizer and thread all affect the final result.
+          </p>
+        </div>
+      </aside>
+    </main>
+    <footer class="status-bar">
+      <span id="status">Ready</span
+      ><span
+        >40 wt thread presets <i>·</i> v0.1 <i>·</i>
+        <a
+          href="https://github.com/kircherlabs/embroidery-studio"
+          target="_blank"
+          rel="noreferrer"
+          >Open source ↗</a
+        ></span
+      >
+    </footer>
+    <input
+      id="file-input"
+      type="file"
+      accept=".svg,.png,.jpg,.jpeg,.pes,.pec,.dst,.exp,.jef,.vp3,.xxx,.embstudio,.json"
+      hidden
+    />
+    <div id="toast" role="status" aria-live="polite"></div>
+    <dialog id="dialog">
+      <form method="dialog">
+        <div class="dialog-heading">
+          <h2 id="dialog-title"></h2>
+          <button value="cancel" aria-label="Close dialog">×</button>
+        </div>
+        <div id="dialog-content"></div>
+        <div class="dialog-actions">
+          <button value="cancel">Cancel</button
+          ><button id="dialog-submit" value="confirm" class="primary">
+            Continue
+          </button>
+        </div>
+      </form>
+    </dialog>
+    <script type="module" src="./src/app.js"></script>
+  </body>
+</html>

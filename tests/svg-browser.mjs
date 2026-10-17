@@ -203,12 +203,14 @@ try {
       version: 1,
       name: "SVG regression",
       machine: "se700",
+      groups: objects.groups,
       objects,
     });
     const plan = generate({
       version: 1,
       name: "SVG regression",
       machine: "se700",
+      groups: objects.groups,
       objects,
     });
     check(
@@ -382,6 +384,72 @@ try {
       window.studio.getPlan()?.stats?.stitches > 0,
   );
   assert(!(await page.locator("#status").innerText()).includes("failed"));
+  const imported = await page.evaluate(() => ({
+    project: window.studio.getProject(),
+    selection: window.studio.getSelection(),
+  }));
+  assert.equal(imported.selection.objects.length, 191);
+  assert.equal(
+    imported.project.groups.find((g) => g.id === imported.selection.ids[0])
+      .kind,
+    "svg",
+  );
+  const gesture = await page.evaluate(async () => {
+    const { selectedLeaves, selectionBounds } = await import(
+      "./src/hierarchy.js"
+    );
+    const p = window.studio.getProject(),
+      ids = window.studio.getSelection().ids;
+    const b = selectionBounds(
+        selectedLeaves({ project: p, selectionIds: ids }),
+      ),
+      r = document.getElementById("stage").getBoundingClientRect(),
+      scale = Math.min((r.width - 105) / 112, (r.height - 100) / 112);
+    return {
+      b,
+      scale,
+      cx: r.x + r.width / 2 + 18,
+      cy: r.y + r.height / 2 + 19,
+    };
+  });
+  await page.mouse.move(
+    gesture.cx + gesture.b.maxX * gesture.scale,
+    gesture.cy + gesture.b.maxY * gesture.scale,
+  );
+  await page.mouse.down();
+  await page.mouse.move(
+    gesture.cx + (gesture.b.minX + gesture.b.width * 0.8) * gesture.scale,
+    gesture.cy + (gesture.b.minY + gesture.b.height * 0.8) * gesture.scale,
+    { steps: 5 },
+  );
+  await page.mouse.up();
+  await page.waitForFunction(() => window.studio.getPlan());
+  const resized = await page.evaluate(() => window.studio.getProject());
+  assert.deepEqual(
+    resized.objects.slice(0, 12),
+    imported.project.objects.slice(0, 12),
+  );
+  resized.objects.slice(12).forEach((o, i) => {
+    const originalPoints = imported.project.objects[i + 12].rings.flat();
+    o.rings.flat().forEach((q, j) => {
+      const old = originalPoints[j];
+      assert(
+        Math.abs(q.x - (gesture.b.minX + (old.x - gesture.b.minX) * 0.8)) <
+          0.25,
+      );
+      assert(
+        Math.abs(q.y - (gesture.b.minY + (old.y - gesture.b.minY) * 0.8)) <
+          0.25,
+      );
+    });
+  });
+  await page.locator("#undo").click();
+  await page.waitForFunction(() => window.studio.getPlan());
+  assert(
+    JSON.stringify(await page.evaluate(() => window.studio.getProject())) ===
+      JSON.stringify(imported.project),
+    "Undo changed imported geometry or persisted properties",
+  );
   console.log(
     "SVG browser regression passed, including the exact 96-path attachment and real file-input workflow.",
   );

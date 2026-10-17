@@ -1,4 +1,4 @@
-import { object, bounds, translate } from "./model.js";
+import { object, bounds, translate, uid } from "./model.js";
 import { parseSVGPath, segmentPath, SVGPathError } from "./svg-path.js";
 export function simplify(points, tolerance = 0.12) {
   if (points.length < 4) return points;
@@ -84,7 +84,7 @@ const allowedAttrs = new Set([
   "preserveAspectRatio",
   "color",
 ]);
-export function importSVG(text) {
+export function importSVG(text, filename = "Imported SVG") {
   const ns = "http://www.w3.org/2000/svg";
   const doc = new DOMParser().parseFromString(text, "image/svg+xml");
   if (
@@ -97,7 +97,17 @@ export function importSVG(text) {
   let count = 0;
   const unsupported = new Set(),
     skipped = [];
-  function clean(el) {
+  const root = {
+      id: uid(),
+      name: filename.slice(0, 200),
+      kind: "svg",
+      parentId: null,
+      visible: true,
+      locked: false,
+    },
+    groups = [root],
+    metadata = new WeakMap();
+  function clean(el, parentId = root.id) {
     if (
       (el.namespaceURI && el.namespaceURI !== ns) ||
       !allowedTags.has(el.localName)
@@ -111,6 +121,24 @@ export function importSVG(text) {
     if (++count > 3000)
       throw Error("SVG contains too many shapes. Simplify it first.");
     const node = document.createElementNS(ns, el.localName);
+    const label =
+      el.getAttribute("inkscape:label") ||
+      el.getAttribute("aria-label") ||
+      el.id ||
+      "";
+    if (el !== doc.documentElement && ["g", "svg"].includes(el.localName)) {
+      const group = {
+        id: uid(),
+        name: label || `SVG group ${groups.length}`,
+        kind: "group",
+        parentId,
+        visible: true,
+        locked: false,
+      };
+      groups.push(group);
+      parentId = group.id;
+    }
+    metadata.set(node, { parentId, label });
     for (const a of el.attributes)
       if (allowedAttrs.has(a.name) && !/url\s*\(/i.test(a.value))
         node.setAttribute(a.name, a.value);
@@ -130,7 +158,7 @@ export function importSVG(text) {
       if (v && !/url\s*\(/i.test(v)) node.style.setProperty(key, v);
     }
     for (const child of el.children) {
-      const n = clean(child);
+      const n = clean(child, parentId);
       if (n) node.append(n);
     }
     return node;
@@ -394,7 +422,13 @@ export function importSVG(text) {
           (fillObject = object(
             `SVG region ${result.length + 1}`,
             fills.map((p) => p.points.map((q) => ({ ...q }))),
-            { color: fill, fillRule: rule, closed: true },
+            {
+              color: fill,
+              fillRule: rule,
+              closed: true,
+              parentId: metadata.get(el).parentId,
+              svgLabel: metadata.get(el).label,
+            },
           )),
         );
       // A path can contain both open and closed contours. Keep their stroke
@@ -415,6 +449,8 @@ export function importSVG(text) {
                   svgSource: true,
                   svgFillId: fillObject?.id,
                   svgStrokeWidth: strokeWidth,
+                  parentId: metadata.get(el).parentId,
+                  svgLabel: metadata.get(el).label,
                 },
               ),
             );
@@ -447,6 +483,11 @@ export function importSVG(text) {
       `SVG skipped ${skipped.length} empty, degenerate or unreadable elements (${skipped.slice(0, 3).join("; ")}${skipped.length > 3 ? "; …" : ""}).`,
     );
   fitted.importWarnings = messages.join(" ") || null;
+  // Discard only empty organizational containers, never drawable regions.
+  const used = new Set(fitted.map((o) => o.parentId));
+  for (let i = groups.length - 1; i >= 0; i--)
+    if (used.has(groups[i].id)) used.add(groups[i].parentId);
+  fitted.groups = groups.filter((g) => g === root || used.has(g.id));
   return fitted;
 }
 // Boundary tracing of quantized pixels; oriented loops retain holes and disconnected islands.

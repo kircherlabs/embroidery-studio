@@ -1,4 +1,6 @@
 import { bounds, objectBounds } from "./model.js";
+import { isVisible, ancestors } from "./hierarchy.js";
+import { operationsOf, operationObject, isSewing } from "./operations.js";
 import {
   clipping,
   fillPolygons,
@@ -46,7 +48,7 @@ function matchingOutline(o, objects) {
     o.rings.filter((r) => fill.rings.some((f) => equalRing(r, f))),
   );
 }
-export function preparePlan(project) {
+function prepareArtwork(project) {
   const options = planningOptions(project),
     units = [],
     diagnostics = {
@@ -66,7 +68,7 @@ export function preparePlan(project) {
   for (const [index, o] of project.objects.entries()) {
     if (o.visible === false) continue;
     const duplicateRings = options.skipSvgOutlines
-      ? matchingOutline(o, project.objects)
+      ? matchingOutline(o, project.artworkReferences || project.objects)
       : new Set();
     if (duplicateRings.size) {
       diagnostics.skippedOutlines++;
@@ -256,4 +258,125 @@ export function preparePlan(project) {
     diagnostics,
     options,
   };
+}
+
+export function preparePlan(project) {
+  const objects = project.objects
+    .filter((o) => isVisible(project, o))
+    .map((o) => ({
+      ...o,
+      sequenceLocked:
+        o.sequenceLocked || ancestors(project, o).some((g) => g.sequenceLocked),
+    }));
+  if (!objects.some((o) => o.operations)) {
+    const prepared = prepareArtwork({ ...project, objects });
+    prepared.diagnostics.sourceObjects = project.objects.length;
+    return prepared;
+  }
+  // Plan WHOLE objects first. A multi-operation object's footprint is a source
+  // stroke proxy, conservatively preserving any overlapping construction.
+  // Expansion happens afterwards, so optimization cannot interleave its steps.
+  const proxy = objects
+    .filter(
+      (o) =>
+        !o.operations ||
+        o.operations.some((op) => op.enabled !== false && isSewing(op)),
+    )
+    .map((o) =>
+      o.operations
+        ? {
+            ...o,
+            type: "run",
+            closed: false,
+            underlay: false,
+            color:
+              operationsOf(o).find((op) => op.enabled !== false && isSewing(op))
+                ?.color || o.color,
+          }
+        : o,
+    );
+  const references = objects.map((o) => {
+    if (!o.operations) return o;
+    const fill = o.operations.find(
+      (op) => op.enabled !== false && op.type === "fill",
+    );
+    return { ...o, type: fill ? "fill" : "run", color: fill?.color || o.color };
+  });
+  const prepared = prepareArtwork({
+      ...project,
+      objects: proxy,
+      artworkReferences: references,
+    }),
+    units = [],
+    seen = new Set();
+  const source = new Map(objects.map((o) => [o.id, o]));
+  for (const u of prepared.units) {
+    const o = source.get(u.id);
+    if (!o.operations) {
+      units.push(u);
+      continue;
+    }
+    if (seen.has(o.id)) continue;
+    seen.add(o.id);
+    for (const op of operationsOf(o).filter((op) => op.enabled !== false)) {
+      if (!isSewing(op)) {
+        units.push({
+          ...o,
+          type: "command",
+          command: op.type,
+          operationId: op.id,
+          operationName: op.name,
+          bounds: objectBounds(o),
+        });
+        continue;
+      }
+      const view = operationObject(o, op),
+        part = prepareArtwork({
+          ...project,
+          objects: [view],
+          planning: {
+            ...project.planning,
+            optimizeColors: false,
+            skipSvgOutlines: false,
+          },
+        });
+      for (const key of [
+        "skippedDetails",
+        "skippedOutlines",
+        "topologyFallbacks",
+        "skippedUnderlay",
+        "skippedOutlineContours",
+      ])
+        prepared.diagnostics[key] =
+          (prepared.diagnostics[key] || 0) + (part.diagnostics[key] || 0);
+      prepared.diagnostics.detailExamples = [
+        ...prepared.diagnostics.detailExamples,
+        ...part.diagnostics.detailExamples,
+      ].slice(0, 30);
+      if (view.operationWarning)
+        (prepared.diagnostics.operationWarnings ||= []).push(
+          view.operationWarning,
+        );
+      units.push(...part.units);
+    }
+  }
+  // First colors alone do not predict transitions across multicolor stacks.
+  // Compare complete expanded blocks and retain safe source object order if
+  // batching would introduce more operator thread changes.
+  const grouped = new Map();
+  for (const u of units) {
+    if (!grouped.has(u.id)) grouped.set(u.id, []);
+    grouped.get(u.id).push(u);
+  }
+  const baseline = objects.flatMap((o) => grouped.get(o.id) || []),
+    sewing = (list) => list.filter((o) => o.type !== "command");
+  prepared.units =
+    blocks(sewing(units)) > blocks(sewing(baseline)) ? baseline : units;
+  prepared.diagnostics.operationColorFallback = prepared.units === baseline;
+  prepared.diagnostics.sourceColorBlocks = blocks(sewing(baseline));
+  prepared.diagnostics.plannedRegions = units.filter(
+    (o) => o.type !== "command",
+  ).length;
+  prepared.diagnostics.sourceObjects = project.objects.length;
+  return prepared;
 }

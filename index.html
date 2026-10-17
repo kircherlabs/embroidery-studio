@@ -64,8 +64,54 @@
           <h2>Objects</h2>
           <span id="object-count" class="count"></span>
         </div>
-        <div class="sequence-label">
-          LAYER ORDER · BOTTOM TO TOP <span>↑</span>
+        <div class="sequence-label">ARTWORK HIERARCHY <span>↑</span></div>
+        <div
+          class="tree-tools"
+          role="toolbar"
+          aria-label="Selection and organization"
+        >
+          <button id="select-all" title="Select all (Ctrl A)">All</button
+          ><button id="group-selection" title="Group (Ctrl G)">Group</button
+          ><button id="ungroup-selection" title="Ungroup (Ctrl Shift G)">
+            Ungroup
+          </button>
+        </div>
+        <label class="edit-menu"
+          ><select id="edit-command" aria-label="Edit selection">
+            <option value="">Edit selection…</option>
+            <optgroup label="Selection">
+              <option value="children">Select children</option>
+              <option value="similar">Select similar color and type</option>
+              <option value="isolate">Focus selected object / group</option>
+              <option value="fit">Fit selection in view</option>
+            </optgroup>
+            <optgroup label="Organize">
+              <option value="copy">Copy (Ctrl C)</option>
+              <option value="paste">Paste (Ctrl V)</option>
+              <option value="lock">Lock selection</option>
+              <option value="unlock">Unlock selection</option>
+              <option value="hide">Hide selection</option>
+            </optgroup>
+            <optgroup label="Align and place">
+              <option value="center">Center in hoop</option>
+              <option value="align-left">Align left</option>
+              <option value="align-center-x">Align horizontal centers</option>
+              <option value="align-right">Align right</option>
+              <option value="align-top">Align top</option>
+              <option value="align-center-y">Align vertical centers</option>
+              <option value="align-bottom">Align bottom</option>
+              <option value="distribute-x">Distribute horizontal gaps</option>
+              <option value="distribute-y">Distribute vertical gaps</option>
+            </optgroup>
+            <optgroup label="Construction">
+              <option value="basting">Add selection basting box</option>
+              <option value="registration">Add registration crosses</option>
+            </optgroup>
+          </select></label
+        >
+        <div class="selection-status">
+          <span id="selection-count">Select artwork</span
+          ><button id="exit-isolation" hidden>Exit focus</button>
         </div>
         <details class="planning-controls">
           <summary>Digitizing & sequence</summary>
@@ -242,6 +288,11 @@
             Underlay</label
           ><label><input type="checkbox" id="show-events" /> Events</label
           ><span class="spacer"></span
+          ><label><input type="checkbox" id="snap-grid" />Snap</label
+          ><label
+            title="Show only selected source objects / operation; export is unchanged"
+            ><input type="checkbox" id="preview-selection" />Focus
+            stitches</label
           ><button id="zoom-out" aria-label="Zoom out">−</button
           ><button id="zoom-fit">Fit</button
           ><button id="zoom-in" aria-label="Zoom in">+</button
@@ -272,7 +323,8 @@
           ></canvas>
           <div class="command-legend">
             <span>━ Sew</span><span class="jump-key">┄ Jump</span
-            ><span class="trim-key">× Trim</span><span>○ Color change</span>
+            ><span class="trim-key">× Trim</span><span>○ Color change</span
+            ><span>□ Stop</span>
           </div>
           <input
             id="timeline"
@@ -330,7 +382,7 @@
     <footer class="status-bar">
       <span id="status">Ready</span
       ><span
-        >40 wt thread presets <i>·</i> v0.1 <i>·</i>
+        >40 wt thread presets <i>·</i> v0.2 <i>·</i>
         <a
           href="https://github.com/kircherlabs/embroidery-studio"
           target="_blank"
@@ -342,6 +394,7 @@
     <input
       id="file-input"
       type="file"
+      multiple
       accept=".svg,.png,.jpg,.jpeg,.pes,.pec,.dst,.exp,.jef,.vp3,.xxx,.embstudio,.json"
       hidden
     />

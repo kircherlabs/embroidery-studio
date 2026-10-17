@@ -429,9 +429,10 @@ try {
     resized.objects.slice(0, 12),
     imported.project.objects.slice(0, 12),
   );
-  resized.objects.slice(12).forEach((o, i) =>
+  resized.objects.slice(12).forEach((o, i) => {
+    const originalPoints = imported.project.objects[i + 12].rings.flat();
     o.rings.flat().forEach((q, j) => {
-      const old = imported.project.objects[i + 12].rings.flat()[j];
+      const old = originalPoints[j];
       assert(
         Math.abs(q.x - (gesture.b.minX + (old.x - gesture.b.minX) * 0.8)) <
           0.25,
@@ -440,8 +441,8 @@ try {
         Math.abs(q.y - (gesture.b.minY + (old.y - gesture.b.minY) * 0.8)) <
           0.25,
       );
-    }),
-  );
+    });
+  });
   await page.locator("#undo").click();
   await page.waitForFunction(() => window.studio.getPlan());
   assert(

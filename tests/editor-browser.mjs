@@ -223,6 +223,10 @@ try {
   await page.locator(`[data-expand="${first}"]`).click();
   await page.locator("#edit-command").selectOption("isolate");
   assert.equal((await selection()).isolation, first);
+  await pick(second);
+  assert.equal((await selection()).isolation, null);
+  await pick(first);
+  await page.locator("#edit-command").selectOption("isolate");
   await page.locator("#exit-isolation").click();
   assert.equal((await selection()).isolation, null);
   await page

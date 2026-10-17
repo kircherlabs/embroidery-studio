@@ -13,6 +13,7 @@ import { planningOptions } from "./planning.js";
 import {
   PROJECT,
   nodeById,
+  within,
   nodes,
   children,
   treeRows,
@@ -335,6 +336,18 @@ function addObjects(objects) {
   );
 }
 function renderPanels() {
+  // Selecting another SVG (including import or timeline selection) leaves the
+  // previous focus scope, so newly selected artwork cannot remain invisible.
+  if (
+    state.isolation &&
+    selectionIds(state).some((id) => {
+      const n = nodeById(state.project, id);
+      return (
+        id === PROJECT || (n && !within(state.project, n, state.isolation))
+      );
+    })
+  )
+    state.isolation = null;
   const planning = planningOptions(state.project);
   $("optimize-colors").checked = planning.optimizeColors;
   $("skip-outlines").checked = planning.skipSvgOutlines;

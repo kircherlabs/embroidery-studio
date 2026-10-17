@@ -64,18 +64,48 @@
           <h2>Objects</h2>
           <span id="object-count" class="count"></span>
         </div>
-        <div class="sequence-label">STITCHING ORDER <span>↓</span></div>
+        <div class="sequence-label">
+          LAYER ORDER · BOTTOM TO TOP <span>↑</span>
+        </div>
+        <details class="planning-controls">
+          <summary>Digitizing & sequence</summary>
+          <label
+            ><input id="optimize-colors" type="checkbox" checked /> Group
+            compatible colors</label
+          >
+          <label
+            ><input id="skip-outlines" type="checkbox" checked /> Skip duplicate
+            SVG outlines</label
+          >
+          <label
+            >Small islands below
+            <input
+              id="small-detail"
+              type="number"
+              value="0.3"
+              min="0"
+              max="2"
+              step="0.1"
+              aria-label="Small island threshold in millimeters"
+            />
+            mm</label
+          >
+          <p>
+            Overlap order is preserved. Source artwork stays editable. Set
+            islands to 0 to keep every detail.
+          </p>
+        </details>
         <div id="object-list" class="object-list"></div>
         <div class="layer-actions">
           <button
             id="move-up"
-            title="Sew earlier"
+            title="Move earlier in layer order"
             aria-label="Move object earlier"
           >
             ↑</button
           ><button
             id="move-down"
-            title="Sew later"
+            title="Move later in layer order"
             aria-label="Move object later"
           >
             ↓</button
@@ -209,6 +239,7 @@
           ><label
             ><input type="checkbox" id="show-underlay" checked />
             Underlay</label
+          ><label><input type="checkbox" id="show-events" /> Events</label
           ><span class="spacer"></span
           ><button id="zoom-out" aria-label="Zoom out">−</button
           ><button id="zoom-fit">Fit</button
@@ -223,11 +254,21 @@
             </div>
             <span id="command-readout">Ready to stitch</span>
           </div>
+          <div class="sequence-metrics" id="sequence-metrics"></div>
           <div
             class="timeline-colors"
             id="color-timeline"
             aria-label="Color blocks"
           ></div>
+          <canvas
+            id="command-track"
+            height="12"
+            aria-label="Command timeline: blue jumps, orange trims, white color changes"
+          ></canvas>
+          <div class="command-legend">
+            <span>━ Sew</span><span class="jump-key">┄ Jump</span
+            ><span class="trim-key">× Trim</span><span>○ Color change</span>
+          </div>
           <input
             id="timeline"
             type="range"

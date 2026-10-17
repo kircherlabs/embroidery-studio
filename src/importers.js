@@ -280,6 +280,8 @@ export function importSVG(text) {
           fill,
           stroke,
           rule: style.fillRule,
+          strokeWidth:
+            parseFloat(style.strokeWidth) * Math.hypot(m.a, m.b, m.c, m.d),
         });
         extents.push(...corners);
       } catch (e) {
@@ -327,7 +329,16 @@ export function importSVG(text) {
       }
       return points.length >= 2 ? points : null;
     }
-    for (const { el, index, m, contours, fill, stroke, rule } of records) {
+    for (const {
+      el,
+      index,
+      m,
+      contours,
+      fill,
+      stroke,
+      rule,
+      strokeWidth,
+    } of records) {
       const paths = [];
       try {
         if (contours) {
@@ -377,13 +388,14 @@ export function importSVG(text) {
         continue;
       }
       const fills = paths.filter((p) => noncollinear(p.points));
+      let fillObject = null;
       if (fill && !["line", "polyline"].includes(el.localName) && fills.length)
         result.push(
-          object(
+          (fillObject = object(
             `SVG region ${result.length + 1}`,
             fills.map((p) => p.points.map((q) => ({ ...q }))),
             { color: fill, fillRule: rule, closed: true },
-          ),
+          )),
         );
       // A path can contain both open and closed contours. Keep their stroke
       // closure independent; a single global /z/ test would close open strokes.
@@ -395,7 +407,15 @@ export function importSVG(text) {
               object(
                 `SVG outline ${result.length + 1}`,
                 outlines.map((p) => p.points.map((q) => ({ ...q }))),
-                { type: "run", color: stroke, closed, underlay: false },
+                {
+                  type: "run",
+                  color: stroke,
+                  closed,
+                  underlay: false,
+                  svgSource: true,
+                  svgFillId: fillObject?.id,
+                  svgStrokeWidth: strokeWidth,
+                },
               ),
             );
         }
@@ -409,8 +429,15 @@ export function importSVG(text) {
     throw Error(
       "No supported drawable SVG geometry found. Empty or unsupported elements were skipped.",
     );
+  const originalBounds = bounds(result.flatMap((o) => o.rings.flat())),
+    scale = Math.min(
+      75 / (originalBounds.width || 1),
+      75 / (originalBounds.height || 1),
+    );
   const fitted = fitObjects(result),
     messages = [];
+  for (const o of fitted)
+    if (o.svgStrokeWidth !== undefined) o.svgStrokeWidth *= scale;
   if (unsupported.size)
     messages.push(
       `SVG skipped unsupported content: ${[...unsupported].join(", ")}. Expand these in your vector editor first.`,

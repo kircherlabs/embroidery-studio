@@ -1,54 +1,54 @@
 import { bounds, MACHINES } from "./model.js";
-export const distance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+import { inside, distance, safeConnector, simplifyPath } from "./geometry.js";
+import { preparePlan } from "./planning.js";
+export { inside, distance } from "./geometry.js";
 const rotate = (p, a) => ({
   x: p.x * Math.cos(a) - p.y * Math.sin(a),
   y: p.x * Math.sin(a) + p.y * Math.cos(a),
 });
-export function inside(p, rings, rule = "evenodd") {
-  let winding = 0;
-  for (const ring of rings)
-    for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
-      const a = ring[j],
-        b = ring[i];
-      if ((a.y <= p.y && b.y > p.y) || (b.y <= p.y && a.y > p.y)) {
-        const x = a.x + ((p.y - a.y) * (b.x - a.x)) / (b.y - a.y);
-        if (x > p.x) winding += rule === "nonzero" ? (b.y > a.y ? 1 : -1) : 1;
-      }
-    }
-  return rule === "nonzero" ? winding !== 0 : winding % 2 === 1;
-}
-function insideExpanded(p, rings, rule, padding) {
-  if (inside(p, rings, rule)) return true;
-  for (const r of rings)
-    for (let i = 0, j = r.length - 1; i < r.length; j = i++) {
-      const a = r[j],
-        b = r[i],
-        l = distance(a, b) ** 2,
-        t = l
-          ? Math.max(
-              0,
-              Math.min(
-                1,
-                ((p.x - a.x) * (b.x - a.x) + (p.y - a.y) * (b.y - a.y)) / l,
-              ),
-            )
-          : 0;
-      if (
-        distance(p, { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t }) <=
-        padding
-      )
-        return true;
-    }
-  return false;
-}
+// Needle spacing follows arc length, not the number of SVG flattening vertices.
 export function resample(path, maxLength, closed = false) {
   if (!path.length) return [];
-  const out = [{ ...path[0] }],
-    p = closed ? [...path, path[0]] : path;
+  const clean = path.filter((p, i) => !i || distance(p, path[i - 1]) > 1e-9);
+  if (closed && distance(clean[0], clean.at(-1)) > 1e-9)
+    clean.push({ ...clean[0] });
+  const p = simplifyPath(clean, Math.min(0.04, maxLength / 8));
+  if (p.length < 2) return p;
+  const out = [{ ...p[0] }];
+  let carry = 0;
   for (let i = 1; i < p.length; i++) {
     const a = p[i - 1],
       b = p[i],
-      n = Math.ceil(distance(a, b) / maxLength);
+      d = distance(a, b);
+    if (!d) continue;
+    let at = maxLength - carry;
+    while (at < d - 1e-9) {
+      out.push({
+        x: a.x + ((b.x - a.x) * at) / d,
+        y: a.y + ((b.y - a.y) * at) / d,
+      });
+      at += maxLength;
+    }
+    carry = (carry + d) % maxLength;
+    const c = p[i + 1];
+    const corner =
+      c &&
+      ((a.x - b.x) * (c.x - b.x) + (a.y - b.y) * (c.y - b.y)) /
+        (d * (distance(b, c) || 1)) >
+        -0.85;
+    if (i === p.length - 1 || corner) {
+      if (distance(out.at(-1), b) > 1e-9) out.push({ ...b });
+      carry = 0;
+    }
+  }
+  return out;
+}
+function subdivide(path, limit) {
+  const out = path.length ? [path[0]] : [];
+  for (let i = 1; i < path.length; i++) {
+    const a = path[i - 1],
+      b = path[i],
+      n = Math.ceil(distance(a, b) / limit);
     for (let j = 1; j <= n; j++)
       out.push({
         x: a.x + ((b.x - a.x) * j) / n,
@@ -57,6 +57,7 @@ export function resample(path, maxLength, closed = false) {
   }
   return out;
 }
+
 // Intersect rotated scanlines with every contour. Winding rules preserve counters and holes.
 export function fillRows(
   rings,
@@ -86,16 +87,32 @@ export function fillRows(
       }
     cuts.sort((p, q) => p.x - q.x);
     let winding = 0,
-      start = null;
+      start = null,
+      startIndex = 0;
     const segments = [];
-    for (const c of cuts) {
+    for (let cutIndex = 0; cutIndex < cuts.length; cutIndex++) {
+      const c = cuts[cutIndex];
       const was = rule === "nonzero" ? winding !== 0 : winding % 2 !== 0;
       winding += rule === "nonzero" ? c.w : 1;
       const now = rule === "nonzero" ? winding !== 0 : winding % 2 !== 0;
-      if (!was && now) start = c.x;
-      else if (was && !now && c.x - start > 0.05) {
-        const x1 = start - compensation,
-          x2 = c.x + compensation,
+      if (!was && now) {
+        start = c.x;
+        startIndex = cutIndex;
+      } else if (was && !now && c.x - start > 0.05) {
+        // Compensation must not turn a microscopic span into a full-width speck.
+        const extension = Math.min(compensation, (c.x - start) * 0.15),
+          x1 =
+            start -
+            Math.min(
+              extension,
+              startIndex ? (start - cuts[startIndex - 1].x) / 3 : Infinity,
+            ),
+          x2 =
+            c.x +
+            Math.min(
+              extension,
+              cuts[cutIndex + 1] ? (cuts[cutIndex + 1].x - c.x) / 3 : Infinity,
+            ),
           pts = [{ x: x1, y }],
           phase = ((row % 4) * length) / 4;
         for (
@@ -131,14 +148,64 @@ export function satin(path, width, spacing, length) {
       y: p.y + ((((b.x - a.x) / d) * width) / 2) * sign,
     });
   }
-  return resample(pts, length);
+  return subdivide(pts, length);
+}
+function pathsFor(o) {
+  const paths = [];
+  if (o.underlay) {
+    if (o.type === "fill")
+      for (const row of fillRows(
+        o.rings,
+        Math.max(2, o.spacing * 5),
+        o.angle + 90,
+        3,
+        0,
+        o.fillRule,
+      ))
+        paths.push({ p: row, phase: "underlay" });
+    else
+      for (const ring of o.rings)
+        paths.push({ p: resample(ring, 2.5, o.closed), phase: "underlay" });
+  }
+  if (o.type === "fill")
+    for (const row of fillRows(
+      o.rings,
+      o.spacing,
+      o.angle,
+      o.length,
+      o.compensation,
+      o.fillRule,
+    ))
+      paths.push({ p: row, phase: "top" });
+  if (o.type === "run")
+    for (const ring of o.rings)
+      paths.push({ p: resample(ring, o.length, o.closed), phase: "top" });
+  if (o.type === "satin")
+    for (const ring of o.rings)
+      paths.push({
+        p: satin(
+          o.closed ? [...ring, ring[0]] : ring,
+          o.width + o.compensation * 2,
+          o.spacing,
+          7,
+        ),
+        phase: "top",
+      });
+  return paths.filter(
+    ({ p }) =>
+      new Set(p.map((q) => Math.round(q.x * 10) + "," + Math.round(q.y * 10)))
+        .size > 1,
+  );
 }
 export function generate(project) {
+  const prepared = preparePlan(project),
+    diagnostics = prepared.diagnostics;
   const events = [],
     warnings = [],
     machine = MACHINES[project.machine];
   let last = { x: 0, y: 0 },
-    lastColor = null;
+    lastColor = null,
+    threadTrimmed = true;
   const emit = (cmd, p, color, objectId, phase = "top") => {
     const e = {
       cmd,
@@ -148,8 +215,21 @@ export function generate(project) {
       objectId,
       phase,
     };
+    if (
+      cmd === "stitch" &&
+      phase !== "manual" &&
+      phase !== "anchor" &&
+      e.x === last.x &&
+      e.y === last.y
+    ) {
+      diagnostics.zeroLengthRemoved = (diagnostics.zeroLengthRemoved || 0) + 1;
+      return;
+    }
+    if (cmd === "trim" && threadTrimmed) return;
     events.push(e);
     last = e;
+    if (cmd === "stitch") threadTrimmed = false;
+    if (cmd === "trim") threadTrimmed = true;
     if (events.length > 250000)
       throw Error(
         "Design exceeds 250,000 commands. Increase spacing or simplify artwork.",
@@ -157,14 +237,15 @@ export function generate(project) {
   };
   const sew = (p, o, phase) => {
     const d = distance(last, p),
-      limit =
-        Math.min(
-          o.type === "satin"
-            ? machine.maxStitch
-            : o.length || machine.maxStitch,
-          machine.maxStitch,
-        ) - 0.12,
-      n = Math.ceil(d / limit),
+      limit = Math.min(
+        o.type === "satin" ? machine.maxStitch : o.length || machine.maxStitch,
+        machine.maxStitch - 0.15,
+      ),
+      n = Math.max(
+        1,
+        Math.ceil((d - 0.14) / limit),
+        Math.ceil(d / (machine.maxStitch - 0.14)),
+      ),
       from = { ...last };
     for (let j = 1; j <= n; j++)
       emit(
@@ -191,67 +272,54 @@ export function generate(project) {
     sew(q, o, phase);
     sew(a, o, phase);
   };
-  for (const o of project.objects.filter((o) => o.visible !== false)) {
+  const lockEnd = (o) => {
+    if (threadTrimmed) return;
+    const a = { ...last },
+      b = events.at(-2);
+    if (events.at(-1)?.cmd === "stitch" && b && distance(a, b) >= 0.3) {
+      const d = distance(a, b),
+        t = Math.min(0.5 / d, 1);
+      sew({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t }, o, "tie");
+      sew(a, o, "tie");
+    }
+  };
+  const trimAndLock = (o) => {
+    if (threadTrimmed) return;
+    lockEnd(o);
+    emit("trim", last, lastColor, o.id, "tie");
+  };
+  let previousObject = null;
+  for (const o of prepared.units) {
     if (o.type === "manual" && !o.commands.length) continue;
+    const paths = o.type === "manual" ? null : pathsFor(o);
+    if (paths && !paths.length) continue;
     if (lastColor !== o.color) {
       if (lastColor !== null) {
-        emit("trim", last, lastColor, o.id);
+        trimAndLock(previousObject || o);
         emit("color", last, o.color, o.id);
       }
       lastColor = o.color;
     }
+    previousObject = o;
     if (o.type === "manual") {
+      let positioned = false;
       for (let index = 0; index < o.commands.length; index++) {
         const c = o.commands[index],
           start = events.length;
         if (c.cmd === "end") continue;
-        if (c.cmd === "stitch") sew(c, { ...o, length: 7 }, "manual");
-        else emit(c.cmd, c, o.color, o.id, "manual");
+        if (c.cmd === "stitch") {
+          if (!positioned) emit("jump", c, o.color, o.id, "manual");
+          sew(c, { ...o, length: 7 }, "manual");
+          positioned = true;
+        } else if (c.cmd === "jump") {
+          emit(c.cmd, c, o.color, o.id, "manual");
+          positioned = true;
+        } else emit(c.cmd, last, o.color, o.id, "manual");
         for (let j = start; j < events.length; j++)
           events[j].sourceIndex = index;
       }
       continue;
     }
-    const paths = [];
-    if (o.underlay) {
-      if (o.type === "fill")
-        for (const row of fillRows(
-          o.rings,
-          Math.max(2, o.spacing * 5),
-          o.angle + 90,
-          3,
-          0,
-          o.fillRule,
-        ))
-          paths.push({ p: row, phase: "underlay" });
-      else
-        for (const ring of o.rings)
-          paths.push({ p: resample(ring, 2.5, o.closed), phase: "underlay" });
-    }
-    if (o.type === "fill")
-      for (const row of fillRows(
-        o.rings,
-        o.spacing,
-        o.angle,
-        o.length,
-        o.compensation,
-        o.fillRule,
-      ))
-        paths.push({ p: row, phase: "top" });
-    if (o.type === "run")
-      for (const ring of o.rings)
-        paths.push({ p: resample(ring, o.length, o.closed), phase: "top" });
-    if (o.type === "satin")
-      for (const ring of o.rings)
-        paths.push({
-          p: satin(
-            o.closed ? [...ring, ring[0]] : ring,
-            o.width + o.compensation * 2,
-            o.spacing,
-            7,
-          ),
-          phase: "top",
-        });
     let first = true;
     for (const { p, phase } of paths) {
       if (!p.length) continue;
@@ -260,42 +328,55 @@ export function generate(project) {
       const safe =
         o.type === "fill" &&
         d < 2.2 &&
-        Array.from({ length: 17 }, (_, i) => ({
-          x: last.x + ((p[0].x - last.x) * i) / 16,
-          y: last.y + ((p[0].y - last.y) * i) / 16,
-        })).every((q) =>
-          insideExpanded(q, o.rings, o.fillRule, o.compensation + 0.08),
+        safeConnector(
+          last,
+          p[0],
+          o.rings,
+          o.polygon ? o.compensation + 0.02 : 0,
+          o.polygon ? o.rings.slice(1) : [],
+          o.fillRule,
         );
       if (first || !safe) {
-        if (events.length && d > 3) emit("trim", last, o.color, o.id, phase);
+        const trimmed = events.length && d > 3;
+        if (trimmed) trimAndLock(o);
+        else if (d > 0.3) lockEnd(o);
         emit("jump", p[0], o.color, o.id, phase);
-        if (first) lock(p, o, phase);
+        // Positioning is not a needle penetration. Anchor at the destination
+        // before sewing away from it; otherwise a codec must invent this step.
+        emit("stitch", p[0], o.color, o.id, "anchor");
+        if (first || trimmed || d > 0.3) lock(p, o, "tie");
       } else sew(p[0], o, phase);
       for (let i = 1; i < p.length; i++) sew(p[i], o, phase);
       first = false;
     }
-    if (!first && events.length > 1) {
-      const a = { ...last },
-        b = events.at(-2),
-        d = distance(a, b);
-      if (d > 0.1) {
-        sew(
-          {
-            x: a.x + (b.x - a.x) * Math.min(0.5 / d, 1),
-            y: a.y + (b.y - a.y) * Math.min(0.5 / d, 1),
-          },
-          o,
-          "tie",
-        );
-        sew(a, o, "tie");
-      }
-    }
   }
   if (events.length) {
-    emit("trim", last, lastColor, null);
+    trimAndLock(previousObject);
     emit("end", last, lastColor, null);
   }
   const stats = analyze(events, machine);
+  stats.sourceColorBlocks = diagnostics.sourceColorBlocks;
+  stats.regions = prepared.units.length;
+  if (diagnostics.skippedDetails)
+    warnings.push(
+      `${diagnostics.skippedDetails} disconnected islands below ${prepared.options.smallDetail} mm are omitted from stitches; artwork and holes are preserved. Set Small islands to 0 to retain them.`,
+    );
+  if (diagnostics.skippedOutlines)
+    warnings.push(
+      `${diagnostics.skippedOutlineContours} matching same-color SVG outline contours are omitted from ${diagnostics.skippedOutlines} outline objects. Turn off Skip duplicate outlines to sew them.`,
+    );
+  if (diagnostics.topologyFallbacks)
+    warnings.push(
+      `${diagnostics.topologyFallbacks} complex fill objects retain conservative source-order routing.`,
+    );
+  if (diagnostics.optimizationLimited)
+    warnings.push(
+      "More than 2,000 sewing regions: source order retained to keep planning bounded. Increase the small-island threshold or simplify the artwork to enable color optimization.",
+    );
+  if (diagnostics.overlapPairs)
+    warnings.push(
+      `${diagnostics.overlapPairs} overlapping or compensated boundary pairs retain layer order. Overlapping fills are not automatically cut away; underlay and construction may require them.`,
+    );
   if (!stats.fits)
     warnings.push(
       "Stitches extend beyond the selected hoop. Move or resize the design before export.",
@@ -307,7 +388,17 @@ export function generate(project) {
       warnings.push(
         `${o.name}: wide satin is split into stitches of 7 mm or less.`,
       );
-  return { events, stats, warnings };
+  return {
+    events,
+    stats,
+    warnings,
+    diagnostics,
+    order: prepared.units.map((o) => ({
+      objectId: o.id,
+      color: o.color,
+      index: o.index,
+    })),
+  };
 }
 export function analyze(events, machine) {
   let stitches = 0,
@@ -316,6 +407,10 @@ export function analyze(events, machine) {
     changes = 0,
     stitchLength = 0,
     maxLength = 0,
+    shortStitches = 0,
+    zeroLength = 0,
+    anchorStitches = 0,
+    redundantStitches = 0,
     prev = { x: 0, y: 0 };
   for (const e of events) {
     const d = distance(prev, e);
@@ -323,11 +418,22 @@ export function analyze(events, machine) {
       stitches++;
       stitchLength += d;
       maxLength = Math.max(maxLength, d);
+      if (d < 0.3) shortStitches++;
+      if (e.phase === "anchor") anchorStitches++;
+      if (d === 0) {
+        zeroLength++;
+        if (
+          e.phase !== "anchor" &&
+          e.phase !== "manual" &&
+          e.phase !== "machine"
+        )
+          redundantStitches++;
+      }
     }
     if (e.cmd === "jump") jumps++;
     if (e.cmd === "trim") trims++;
     if (e.cmd === "color") changes++;
-    prev = e;
+    if (e.cmd === "stitch" || e.cmd === "jump") prev = e;
   }
   const b = bounds(events.filter((e) => ["stitch", "jump"].includes(e.cmd))),
     fits =
@@ -341,6 +447,14 @@ export function analyze(events, machine) {
     trims,
     changes,
     colors: events.length ? changes + 1 : 0,
+    uniqueColors: new Set(
+      events.filter((e) => e.cmd === "stitch").map((e) => e.color),
+    ).size,
+    manualChanges: changes,
+    shortStitches,
+    zeroLength,
+    anchorStitches,
+    redundantStitches,
     thread: stitchLength / 1000,
     bounds: b,
     fits,

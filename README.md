@@ -9,8 +9,9 @@ No account, paid service, design upload or backend required.
 This is an early, functional release. It covers the complete artwork → stitches →
 simulation → machine file workflow. It is not yet a replacement for every feature
 in a mature commercial digitizing package. Test sew-outs on scrap fabric; the
-software has been tested in browsers and through file round trips, not on a
-physical SE700.
+software has been tested in browsers and through independent file decoding.
+The PES origin repair matches a file verified by the owner on a physical SE700;
+new exports and sew-out quality still need machine testing.
 
 ## What works
 
@@ -68,8 +69,10 @@ python tests/test_codec.py
 node scripts/build.mjs
 ```
 
-Python 3.10+ is used only for native codec tests. The vendored ZIP imports directly,
-so no pip installation is needed. The build copies runtime assets into `dist/`.
+Python 3.10+ is used only for native codec tests, including the independent PES
+tests invoked by the Node suite. Set `PYTHON` to its executable if `python` is not
+on PATH. The vendored ZIP imports directly, so no pip installation is needed.
+The build copies runtime assets into `dist/`.
 
 Optional browser integration (run the local server in another terminal):
 
@@ -84,6 +87,8 @@ node tests/travel-browser.mjs
 TEST_MACHINE=1 node tests/browser.mjs
 TEST_MACHINE=1 node tests/digitizing-browser.mjs
 TEST_MACHINE=1 node tests/travel-browser.mjs
+# Hardware-verified PES fixture through the actual browser/Pyodide exporter:
+node tests/pes-browser.mjs
 ```
 
 On PowerShell, use `$env:TEST_MACHINE='1'` before the test command.
@@ -125,6 +130,8 @@ internal travel. Decoded file counts report actual encoded commands without
 guessing source-object boundaries. See
 [digitizing practices and limits](docs/DIGITIZING.md) for the measured root causes,
 algorithm choices and format behavior.
+See [Brother PES compatibility](docs/PES_COMPATIBILITY.md) for the origin-prefix
+repair, independent decoding tests and remaining physical-machine validation.
 
 Artwork and stitch conversion stay on your device. Autosave uses localStorage;
 save a project file for a portable backup. Core editing loads from this site.

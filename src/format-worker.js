@@ -8,13 +8,15 @@ async function ready() {
       const py = await loadPyodide({
         indexURL: "https://cdn.jsdelivr.net/pyodide/v0.27.7/full/",
       });
-      const [archive, bridge] = await Promise.all([
+      const [archive, bridge, compatibility] = await Promise.all([
         fetch("../vendor/pyembroidery.zip"),
         fetch("./codec.py"),
+        fetch("./pec_compat.py"),
       ]);
-      if (!archive.ok || !bridge.ok)
+      if (!archive.ok || !bridge.ok || !compatibility.ok)
         throw Error("Machine-file engine assets could not be loaded.");
       py.unpackArchive(await archive.arrayBuffer(), "zip");
+      py.FS.writeFile("pec_compat.py", await compatibility.text());
       await py.runPythonAsync(await bridge.text());
       return py;
     })().catch((e) => {

@@ -1376,3 +1376,26 @@ dialog::backdrop {
 .object-row.source-only .swatch {
   border-style: dashed;
 }
+.travel-summary {
+  grid-column: 1 / -1;
+}
+.object-sequence {
+  margin: 6px 0;
+  font-size: 11px;
+}
+.object-sequence summary {
+  cursor: pointer;
+  color: var(--muted);
+}
+#sewing-order {
+  display: flex;
+  overflow-x: auto;
+  gap: 5px;
+  padding: 6px 0;
+}
+#sewing-order button {
+  flex-shrink: 0;
+  border-left: 4px solid;
+  font-size: 11px;
+  padding: 4px 8px;
+}

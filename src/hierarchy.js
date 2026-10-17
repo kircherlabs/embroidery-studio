@@ -98,6 +98,62 @@ export function reorder(p, ids, direction) {
     }
   };
   walk(null);
+  if (leaves(p, selected).some((o) => isLocked(p, o))) return false;
+  for (const pin of p.objects.filter(
+    (o) => o.sequenceLocked || ancestors(p, o).some((g) => g.sequenceLocked),
+  )) {
+    const before = p.objects.slice(0, p.objects.indexOf(pin)).map((o) => o.id),
+      now = new Set(ordered.slice(0, ordered.indexOf(pin)).map((o) => o.id));
+    if (before.length !== now.size || before.some((id) => !now.has(id)))
+      return false;
+  }
+  if (p.objects.every((o, i) => o === ordered[i])) return false;
+  p.objects = ordered;
+  return true;
+}
+export function moveInTree(p, ids, target, after = false) {
+  const selected = roots(p, ids).filter((id) => id !== PROJECT),
+    at = nodeById(p, target),
+    set = new Set(selected);
+  if (!at || set.has(target) || !selected.length) return false;
+  const parent = at.parentId || null;
+  if (
+    selected.some((id) => {
+      const n = nodeById(p, id);
+      return (
+        !n ||
+        (n.parentId || null) !== parent ||
+        leaves(p, [id]).some((o) => isLocked(p, o))
+      );
+    })
+  )
+    return false;
+  const siblings = children(p, parent),
+    moving = siblings.filter((n) => set.has(n.id)),
+    rest = siblings.filter((n) => !set.has(n.id)),
+    index = rest.findIndex((n) => n.id === target) + Number(after);
+  const next = [...rest.slice(0, index), ...moving, ...rest.slice(index)];
+  if (next.every((n, i) => n.id === siblings[i].id)) return false;
+  const ordered = [];
+  const walk = (id) => {
+    for (const n of id === parent ? next : children(p, id)) {
+      if (n.kind) walk(n.id);
+      else ordered.push(n);
+    }
+  };
+  walk(null);
+  for (const pin of p.objects.filter(
+    (o) => o.sequenceLocked || ancestors(p, o).some((g) => g.sequenceLocked),
+  )) {
+    const before = p.objects.slice(0, p.objects.indexOf(pin)).map((o) => o.id),
+      now = new Set(ordered.slice(0, ordered.indexOf(pin)).map((o) => o.id));
+    if (
+      leaves(p, selected).includes(pin) ||
+      before.length !== now.size ||
+      before.some((id) => !now.has(id))
+    )
+      return false;
+  }
   p.objects = ordered;
   return true;
 }

@@ -12,6 +12,7 @@ import {
 } from "./helpers/pes-decoder.mjs";
 import { generate } from "../src/engine.js";
 import { demo } from "../src/model.js";
+import { useTreeOrder } from "../src/sequencing.js";
 import { object } from "../src/model.js";
 import { applique } from "../src/operations.js";
 mkdirSync(new URL("../test-results/", import.meta.url), { recursive: true });
@@ -184,7 +185,21 @@ test("negative short/long jumps and alternating color markers survive actual exp
   assert(dec.pec.events.some((e) => e.type === "trim"));
 });
 test("multicolor generated objects match the independent PEC decoder and CSewSeg points", () => {
-  check(generate(demo()).events);
+  const plan = generate(demo()),
+    { dec } = check(plan.events);
+  assert.equal(dec.pec.colorIndices.length, 4);
+  assert.equal(
+    dec.pec.events.filter((e) => e.type === "colorChange").length,
+    3,
+  );
+  const manual = demo();
+  useTreeOrder(manual);
+  const edited = check(generate(manual).events).dec;
+  assert.equal(edited.pec.colorIndices.length, 9);
+  assert.equal(
+    edited.pec.events.filter((e) => e.type === "colorChange").length,
+    8,
+  );
 });
 
 test("applique stops survive the existing PES codec with complete independently decoded sewing geometry", () => {

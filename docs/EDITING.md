@@ -34,8 +34,50 @@ Use the selection menu to select children/similar artwork, copy/paste, lock,
 hide, align, distribute gaps, center in the hoop, or add basting/registration
 geometry. Aligning selected groups moves each group's children together. Group
 and Ungroup change organization without flattening geometry. Reorder siblings
-with the layer arrows; a group's whole block moves together. Turn off compatible
-color grouping or pin sequence positions for manufacturing order overrides.
+with the row grips or layer arrows; a group's whole block moves together.
+Use the separate selection boxes to add/remove rows without a keyboard; clicking
+row text selects normally. The eye hides artwork from canvas and manufacture;
+locks protect edits while leaving embroidery enabled.
+
+## Artwork layers and sewing order
+
+The tree lists artwork layers from bottom to top. **Object sewing order** shows
+complete source objects in their actual machine order. Its colored edge and
+color strip identify thread colors; **Operation steps** expands the individual
+steps for inspection without splitting the object's construction stack.
+
+- **Automatic** batches compatible colors and reduces travel while preserving
+  overlapping construction, sequence pins and operation dependencies.
+- Drag siblings in the tree to change their layer order and switch to
+  **Manual · Linked to tree layers**. Multiselected siblings move together;
+  dragging never reparents children into an unrelated SVG.
+- Drag complete object blocks in the bottom strip to switch to
+  **Manual · Independent of tree layers**. This changes embroidery order without
+  rearranging artwork layers. Reordering overlapping objects can change which
+  thread is sewn on top: inspect the preview before exporting.
+- **Alt+Up/Down** on a tree grip and **Alt+Left/Right** on a sewing grip provide
+  keyboard reordering. Touch users drag the same grips; other row areas scroll.
+- Choose **Automatic** again to explicitly resume optimization. Manual order is
+  never silently optimized away. A sequence pin cannot be dragged or crossed.
+  Undo/redo restores both order and mode. Projects retain the manual order;
+  new artwork appends to an independent manual sequence. Deleting artwork removes
+  its order entry, and temporarily hidden objects keep their position.
+
+The revised built-in **Wildflower** uses slightly narrower, more widely spaced
+petals. This removes the overlapping yellow/red petal dependency that previously
+required nine color blocks. Automatic planning now completes green construction,
+yellow petals, red petals and the center in **four blocks / three thread changes**.
+The generic planner still preserves overlaps in existing projects and imports;
+old saved Wildflower artwork is unchanged. Reload the built-in example to use the
+new construction. Both automatic and deliberately overridden orders are checked
+against independently decoded PES stitch positions and color-change commands.
+
+Hover or keyboard-focus controls for concise descriptions, including units and
+embroidery effects. On touch, enable **Explain**, then tap a control to read help
+without activating it; **Done explaining** or Escape returns to editing.
+Machine & hoop lives in the collapsible workspace header. Machine, hoop size
+and fit status remain visible when collapsed; selecting a machine never resizes
+artwork.
 
 ## Ordered operations
 

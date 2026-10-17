@@ -353,6 +353,10 @@ try {
     .locator("#file-input")
     .setInputFiles("test-results/advanced-editor.embstudio");
   await page.locator("#dialog-submit").click();
+  await page.waitForFunction(
+    (count) => window.studio.getProject().objects.length === count,
+    saved.objects.length,
+  );
   await ready();
   assert.deepEqual(await project(), saved);
   if (process.env.TEST_MACHINE === "1") {

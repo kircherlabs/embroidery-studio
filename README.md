@@ -23,6 +23,11 @@ new exports and sew-out quality still need machine testing.
   stitching order, duplication and deletion.
 - Imported SVG parents and nested groups in an expandable artwork tree;
   project/group/region multiselection, grouping, locking, isolation and undo.
+- Clear selection boxes and eye toggles, touch-friendly tree rows, drag grips in
+  both the artwork tree and complete-object sewing strip, and persisted manual
+  sewing order with an explicit Automatic/Manual switch.
+- Hover/focus descriptions and an **Explain** mode for tap-to-read control help.
+  The compact Machine & hoop panel sits above the canvas.
 - Shared canvas resize/rotation handles, proportional scaling, box selection,
   bulk editing with mixed values, alignment/distribution, grid snapping and
   touch zoom/pan.
@@ -61,7 +66,8 @@ new exports and sew-out quality still need machine testing.
    machine stitch file and cannot restore the original vector editability.
 
 On mobile, the two list buttons above the canvas toggle Objects and Properties.
-Use the in-app **?** button for shortcuts and editing help. Zoom with the canvas
+Use **Explain** then tap a control for its description; tap **Done explaining**
+to resume editing. **?** opens the workflow guide and shortcuts. Zoom with the canvas
 buttons or a mouse wheel; pan with the hand tool or Space-drag.
 
 ## Run locally
@@ -96,6 +102,7 @@ node tests/svg-browser.mjs
 node tests/digitizing-browser.mjs
 node tests/travel-browser.mjs
 node tests/editor-browser.mjs
+node tests/ux-browser.mjs
 # Include the actual CDN/WASM export/import path:
 TEST_MACHINE=1 node tests/browser.mjs
 TEST_MACHINE=1 node tests/digitizing-browser.mjs

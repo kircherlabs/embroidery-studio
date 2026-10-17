@@ -1575,3 +1575,479 @@ dialog::backdrop {
   font-size: 11px;
   padding: 4px 8px;
 }
+
+/* Interaction refinements: source layers and machine order stay distinct. */
+.workspace {
+  grid-template-columns: 300px minmax(0, 1fr) 268px;
+}
+.zoom-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+button,
+summary,
+select,
+label {
+  touch-action: manipulation;
+}
+.mode-tabs {
+  margin-left: 270px;
+}
+.object-row {
+  position: relative;
+  gap: 2px;
+  padding: 3px 2px 3px calc(2px + var(--depth, 0) * 8px);
+  min-height: 54px;
+  cursor: pointer;
+}
+.object-row:hover {
+  background: #344238;
+  border-color: #75886c;
+}
+.object-row:focus-within {
+  outline: 2px solid #e7b784;
+  outline-offset: -2px;
+}
+.object-row.selected {
+  background: #465239;
+  border-color: #e7b784;
+  box-shadow: inset 3px 0 #e7b784;
+}
+.object-row.hidden {
+  opacity: 1;
+}
+.object-row.hidden .object-text {
+  color: #abb5a5;
+  text-decoration: line-through;
+}
+.object-row.hidden .swatch {
+  opacity: 0.5;
+}
+.object-row.source-only:not(.selected) {
+  opacity: 1;
+}
+.object-row.source-only .object-type {
+  font-style: italic;
+}
+.object-row.locked .tree-lock {
+  color: #e7b784;
+  background: #e7b78415;
+}
+.object-row .object-select {
+  min-height: 44px;
+  gap: 5px;
+}
+.object-row .object-title {
+  font-size: 12px;
+  max-width: none;
+}
+.object-row .object-type {
+  font-size: 8px;
+  letter-spacing: 0.4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.object-row .swatch {
+  width: 10px;
+  height: 22px;
+  box-shadow: none;
+}
+.object-row .swatch.group-icon {
+  width: 16px;
+}
+.object-row span.tree-toggle {
+  display: none;
+}
+.object-row button.tree-toggle {
+  width: 20px;
+  min-height: 44px;
+}
+.object-row .tree-lock {
+  width: 28px;
+  min-height: 44px;
+  display: grid;
+  place-items: center;
+}
+.object-row .visibility {
+  color: #d5dec9;
+  width: 36px;
+  min-height: 44px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  border-radius: 5px;
+}
+.object-row .visibility[aria-pressed="true"] {
+  color: #f0cda4;
+  background: #e7b78417;
+}
+.selection-check {
+  width: 32px;
+  min-height: 44px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background: none;
+}
+.selection-check span {
+  width: 19px;
+  height: 19px;
+  border: 2px solid #a9b49e;
+  border-radius: 4px;
+  font-size: 15px;
+  line-height: 15px;
+  font-weight: 700;
+  color: #1b2a23;
+}
+.selection-check[aria-pressed="true"] span {
+  background: #e7b784;
+  border-color: #e7b784;
+}
+.selection-check[aria-pressed="mixed"] span {
+  background: #b6c39c;
+  border-color: #b6c39c;
+}
+.object-row button:hover {
+  background: #ffffff13;
+}
+.drag-grip {
+  width: 22px;
+  min-height: 44px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  padding: 0;
+  border: 0;
+  color: #afbea6;
+  background: transparent;
+  cursor: grab;
+  touch-action: none;
+}
+.drag-grip:hover,
+.drag-grip:focus-visible {
+  color: #f4d2a7;
+  background: #ffffff13;
+}
+.drag-grip:active {
+  cursor: grabbing;
+}
+.dragging {
+  opacity: 0.5;
+  outline: 1px dashed #e7b784;
+}
+.reordering {
+  cursor: grabbing;
+  user-select: none;
+}
+.object-row.drop-before::before,
+.object-row.drop-after::after {
+  content: "";
+  position: absolute;
+  height: 3px;
+  background: #f2c38c;
+  left: 0;
+  right: 0;
+  z-index: 4;
+  box-shadow: 0 0 7px #e7b78480;
+}
+.object-row.drop-before::before {
+  top: -2px;
+}
+.object-row.drop-after::after {
+  bottom: -2px;
+}
+.canvas-area {
+  display: flex;
+  flex: 1;
+  min-height: 140px;
+  position: relative;
+  overflow: hidden;
+}
+#stage {
+  min-width: 0;
+  height: 100%;
+  position: absolute;
+  inset: 0;
+}
+.workspace-machine {
+  flex-shrink: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-bottom: 1px solid #b9c3b0;
+  border-radius: 0;
+  background: #e6e8dc;
+  color: #354c3a;
+}
+.workspace-machine summary {
+  padding: 9px 16px;
+  font-size: 11px;
+  cursor: pointer;
+  min-height: 38px;
+}
+.workspace-machine summary > * {
+  margin-left: 9px;
+}
+.workspace-machine summary .machine-title {
+  margin-left: 0;
+}
+.workspace-machine summary strong {
+  font-weight: 650;
+}
+.workspace-machine #fit-status {
+  font-size: 10px;
+  color: #3b633d;
+}
+.workspace-machine #fit-status.bad {
+  color: #a12e22;
+  font-weight: 600;
+}
+.workspace-machine .machine-settings {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 16px 10px;
+  flex-wrap: wrap;
+}
+.workspace-machine .machine-settings label {
+  font-size: 11px;
+  margin: 0;
+}
+.workspace-machine .machine-settings select {
+  width: auto;
+  max-width: 100%;
+  background: #f7f6ee;
+  color: #284333;
+  border-color: #9cae94;
+  padding: 6px 9px;
+}
+.workspace-machine .machine-settings span {
+  font-size: 10px;
+}
+.order-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+  margin: 6px 0;
+  font-size: 10px;
+  color: #b3c1aa;
+}
+.order-controls select {
+  padding: 4px 7px;
+  font-size: 11px;
+  min-height: 30px;
+}
+#order-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 2px 6px;
+  border: 1px solid #718365;
+  border-radius: 4px;
+  color: #e9ceaa;
+  font-size: 9px;
+}
+.object-sequence summary {
+  color: #d2deca;
+}
+.sewing-object {
+  display: flex;
+  flex-shrink: 0;
+  position: relative;
+  border: 1px solid #62745a;
+  border-left: 5px solid var(--thread);
+  border-radius: 5px;
+  background: #283a2e;
+  min-width: 125px;
+}
+#sewing-order .sewing-object button {
+  border: 0;
+  background: transparent;
+  padding: 4px 6px;
+}
+#sewing-order .sewing-object .drag-grip {
+  padding: 0;
+  width: 25px;
+}
+.sewing-object [data-object-step] {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  color: #f1eadb;
+  min-height: 42px;
+}
+.sewing-object [data-object-step] strong {
+  font-size: 11px;
+  font-weight: 500;
+}
+.sewing-object small {
+  font-size: 9px;
+  color: #b8c9af;
+}
+.object-color-key {
+  position: absolute;
+  display: flex;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  pointer-events: none;
+}
+.object-color-key i {
+  flex: 1;
+}
+.sewing-object.drop-before::before,
+.sewing-object.drop-after::after {
+  content: "";
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  width: 3px;
+  background: #f2c38c;
+  z-index: 4;
+}
+.sewing-object.drop-before::before {
+  left: -6px;
+}
+.sewing-object.drop-after::after {
+  right: -4px;
+}
+#operation-order {
+  display: flex;
+  gap: 5px;
+  overflow-x: auto;
+  padding: 6px 0;
+}
+#operation-order button {
+  flex-shrink: 0;
+  font-size: 10px;
+}
+.control-help {
+  position: fixed;
+  z-index: 1000;
+  max-width: min(330px, calc(100vw - 16px));
+  padding: 11px 13px;
+  border: 1px solid #9eae8a;
+  border-radius: 7px;
+  background: #172a22;
+  color: #f4ecd9;
+  box-shadow: 0 5px 25px #0004;
+  font-size: 12px;
+  line-height: 1.55;
+  pointer-events: none;
+}
+.control-help[hidden] {
+  display: none;
+}
+#context-help {
+  font-size: 11px;
+  min-height: 32px;
+  padding: 4px 8px;
+}
+#context-help[aria-pressed="true"] {
+  background: #e7b784;
+  color: #193029;
+}
+.explain-mode :is(button, input, select, summary, canvas) {
+  cursor: help;
+}
+:is(button, input, select, summary):focus-visible {
+  outline: 2px solid #e7b784;
+  outline-offset: 2px;
+}
+@media (max-width: 1180px) and (min-width: 941px) {
+  .workspace {
+    grid-template-columns: 270px minmax(0, 1fr) 235px;
+  }
+  .mode-tabs {
+    margin-left: 240px;
+  }
+}
+@media (max-width: 940px) and (min-width: 681px) {
+  .workspace {
+    grid-template-columns: 270px minmax(0, 1fr);
+  }
+  .mode-tabs {
+    margin-left: 240px;
+  }
+}
+@media (max-width: 680px) {
+  .workspace {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .mode-tabs {
+    margin-left: 0;
+    gap: 10px;
+  }
+  .layers {
+    width: min(350px, 94vw);
+  }
+  .workspace-machine summary {
+    padding: 8px 10px;
+    line-height: 1.8;
+  }
+  .workspace-machine summary .machine-title {
+    display: none;
+  }
+  .workspace-machine #fit-status {
+    display: inline-block;
+  }
+  .workspace-machine .machine-settings {
+    padding: 0 10px 8px;
+  }
+  #context-help {
+    max-width: 85px;
+    font-size: 10px;
+  }
+  .workspace-tools #help {
+    margin-left: 2px;
+  }
+  .canvas-area {
+    min-height: 100px;
+  }
+  .drawing-tools {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    top: 54px;
+    left: 8px;
+    right: 8px;
+    overflow-x: auto;
+    width: max-content;
+    max-width: calc(100% - 16px);
+  }
+  .drawing-tools button {
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+  }
+  .drawing-tools > span {
+    width: 1px;
+    height: 25px;
+    flex-shrink: 0;
+  }
+  .selection-check {
+    width: 38px;
+  }
+  .object-row .visibility {
+    width: 44px;
+  }
+  .object-row .tree-lock {
+    width: 32px;
+  }
+  .object-row {
+    min-height: 56px;
+  }
+  .order-controls {
+    gap: 5px;
+  }
+  .order-controls label {
+    display: none;
+  }
+}

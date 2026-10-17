@@ -31,3 +31,20 @@ for the object travel regression. Do not reformat or simplify this fixture.
 - The travel browser test checks every required top-fill needle position,
   contiguous source objects, sequence pinning/undo and an optional real PES
   round trip. No small-detail or duplicate-outline suppression is involved.
+
+## PES compatibility fixtures
+
+`HayDave.broken.pes` comes from the owner's supplied `pes-export-fix.zip`.
+`HayDave.fixed.pes` is the owner's supplied `HayDave_FIXED.pes`, confirmed to
+work on the physical Brother SE700. Both are 36,963 bytes and retain the original
+artwork. Do not regenerate these golden fixtures with the exporter under test.
+
+- Broken SHA-256: `c6ef5fdd0ee33d59b6b1c917f960ea8a42033a27ab0ab9ae91774d30293e2247`
+- Fixed SHA-256: `00fbe0e935bd327e2541c966ec0a458e1a2a4d4c66b3ea9396d43515a92ba41d`
+- Only offsets 24,693–24,696 differ: `90 36 9f df` → `91 ae 90 a9`.
+- Full geometry: 75.2 × 40.4 mm; 5,660 sewing stitches.
+
+The production repair must reproduce the fixed bytes exactly. The test-only
+independent decoder is adapted from the owner's repair package; its reference
+writer is not part of the application's runtime. See
+[PES compatibility](../../docs/PES_COMPATIBILITY.md).

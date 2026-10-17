@@ -12,6 +12,7 @@ ROOT=pathlib.Path(__file__).resolve().parents[1]
 (ROOT/'test-results').mkdir(exist_ok=True)
 tempfile.tempdir=str(ROOT/'test-results')
 sys.path.insert(0,str(ROOT/'vendor'/'pyembroidery.zip'))
+sys.path.insert(0,str(ROOT/'src'))
 spec=importlib.util.spec_from_file_location('codec', ROOT/'src'/'codec.py')
 codec=importlib.util.module_from_spec(spec)
 spec.loader.exec_module(codec)

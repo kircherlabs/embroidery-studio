@@ -77,6 +77,7 @@ Optional browser integration (run the local server in another terminal):
 npm install --no-save playwright@1.56.1
 npx playwright install chromium
 node tests/browser.mjs
+node tests/svg-browser.mjs
 # Include the actual CDN/WASM export/import path:
 TEST_MACHINE=1 node tests/browser.mjs
 ```
@@ -86,6 +87,12 @@ On PowerShell, use `$env:TEST_MACHINE='1'` before the test command.
 The test checks editing, history, playback, lettering, safe SVG import, counters,
 manual stitches, saving/reloading and a touch-sized viewport. Screenshots go to
 ignored `test-results/`.
+
+The SVG regression suite includes the unchanged 96-path user attachment. It
+checks compact path syntax, temporary geometry lifecycle, transforms, empty and
+degenerate elements, independent fill/outline points, and the actual file-input
+workflow. It compares normalized paths with native SVG geometry and rasterizes
+both the original artwork and imported fills to detect geometry or color loss.
 
 ## GitHub Pages
 

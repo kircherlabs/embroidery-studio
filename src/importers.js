@@ -1,4 +1,5 @@
 import { object, bounds, translate } from "./model.js";
+import { parseSVGPath, segmentPath, SVGPathError } from "./svg-path.js";
 export function simplify(points, tolerance = 0.12) {
   if (points.length < 4) return points;
   const sq = tolerance * tolerance;
@@ -79,50 +80,54 @@ const allowedAttrs = new Set([
   "fill-opacity",
   "stroke-opacity",
   "display",
+  "visibility",
+  "preserveAspectRatio",
+  "color",
 ]);
 export function importSVG(text) {
+  const ns = "http://www.w3.org/2000/svg";
   const doc = new DOMParser().parseFromString(text, "image/svg+xml");
   if (
     doc.querySelector("parsererror") ||
-    doc.documentElement.localName !== "svg"
+    doc.documentElement.localName !== "svg" ||
+    (doc.documentElement.namespaceURI &&
+      doc.documentElement.namespaceURI !== ns)
   )
     throw Error("This SVG could not be read.");
-  let count = 0,
-    unsupported = new Set();
+  let count = 0;
+  const unsupported = new Set(),
+    skipped = [];
   function clean(el) {
-    if (!allowedTags.has(el.localName)) {
+    if (
+      (el.namespaceURI && el.namespaceURI !== ns) ||
+      !allowedTags.has(el.localName)
+    ) {
       if (!["title", "desc", "metadata"].includes(el.localName))
         unsupported.add(el.localName);
       return null;
     }
-    if (
-      el.hasAttribute("clip-path") ||
-      el.hasAttribute("mask") ||
-      el.hasAttribute("filter")
-    )
+    if (["clip-path", "mask", "filter"].some((a) => el.hasAttribute(a)))
       unsupported.add("clipping / effects");
     if (++count > 3000)
       throw Error("SVG contains too many shapes. Simplify it first.");
-    const node = document.createElementNS(
-      "http://www.w3.org/2000/svg",
-      el.localName,
-    );
+    const node = document.createElementNS(ns, el.localName);
     for (const a of el.attributes)
-      if (allowedAttrs.has(a.name) && !a.value.includes("url("))
+      if (allowedAttrs.has(a.name) && !/url\s*\(/i.test(a.value))
         node.setAttribute(a.name, a.value);
-    // Only retain paint attributes from inline CSS. Never mount source markup or URLs.
     for (const key of [
       "fill",
       "stroke",
       "stroke-width",
       "fill-rule",
       "display",
+      "visibility",
       "opacity",
       "fill-opacity",
       "stroke-opacity",
+      "color",
     ]) {
       const v = el.style?.getPropertyValue(key);
-      if (v && !v.includes("url(")) node.style.setProperty(key, v);
+      if (v && !/url\s*\(/i.test(v)) node.style.setProperty(key, v);
     }
     for (const child of el.children) {
       const n = clean(child);
@@ -130,100 +135,291 @@ export function importSVG(text) {
     }
     return node;
   }
-  const svg = clean(doc.documentElement);
-  svg.style.cssText +=
-    ";position:fixed;left:-10000px;top:0;width:500px;height:500px;visibility:hidden;";
-  document.body.append(svg);
-  const result = [];
-  try {
-    const rootInverse = svg.getCTM().inverse();
-    for (const el of svg.querySelectorAll(
-      "path,rect,circle,ellipse,polygon,polyline,line",
-    )) {
-      const style = getComputedStyle(el);
-      if (style.display === "none" || Number(style.opacity) === 0) continue;
-      const m = rootInverse.multiply(el.getCTM());
-      const apply = (p) => ({
-        x: m.a * p.x + m.c * p.y + m.e,
-        y: m.b * p.x + m.d * p.y + m.f,
-      });
-      let paths = [];
-      if (el.localName === "path") {
-        // Each moveto creates a separate contour; relative movetos after the first need
-        // their predecessor's endpoint to retain the original coordinate system.
-        const d = el.getAttribute("d") || "",
-          parts = d.match(/[Mm][^Mm]*/g) || [];
-        let previous = { x: 0, y: 0 };
-        for (let part of parts) {
-          if (part[0] === "m") {
-            const match = part.match(/^m\s*([-+\d.eE]+)[\s,]+([-+\d.eE]+)/);
-            if (!match) throw Error("Unsupported SVG path syntax.");
-            const x = previous.x + Number(match[1]),
-              y = previous.y + Number(match[2]);
-            part = `M${x},${y}` + part.slice(match[0].length);
-          }
-          const path = document.createElementNS(svg.namespaceURI, "path");
-          path.setAttribute("d", part);
-          const length = path.getTotalLength();
-          if (length > 1e6) throw Error("SVG path is too complex.");
-          const n = Math.max(2, Math.min(6000, Math.ceil(length / 0.4)));
-          const pts = Array.from({ length: n + 1 }, (_, i) =>
-            path.getPointAtLength((length * i) / n),
-          );
-          previous = pts.at(-1);
-          paths.push(pts.map(apply));
-        }
-      } else {
-        const length = el.getTotalLength(),
-          n = Math.max(2, Math.min(6000, Math.ceil(length / 0.4)));
-        paths = [
-          Array.from({ length: n + 1 }, (_, i) =>
-            apply(el.getPointAtLength((length * i) / n)),
-          ),
-        ];
-      }
-      const closed =
-        !["line", "polyline"].includes(el.localName) &&
-        (el.localName !== "path" || /[zZ]/.test(el.getAttribute("d")));
-      const fill = style.fill,
-        stroke = style.stroke;
-      function hex(value) {
-        const c = document.createElement("canvas").getContext("2d");
-        c.fillStyle = value;
-        return c.fillStyle.startsWith("#") ? c.fillStyle : "#303b53";
-      }
-      if (
-        fill !== "none" &&
-        Number(style.fillOpacity) > 0 &&
-        !["line", "polyline"].includes(el.localName)
+  // Geometry APIs are invoked on connected elements in a renderable SVG viewport.
+  // Hide the outer host with opacity so source visibility/opacity remain inspectable.
+  const host = document.createElement("div");
+  host.setAttribute("aria-hidden", "true");
+  host.style.cssText =
+    "position:fixed;left:-10000px;top:0;width:500px;height:500px;opacity:0;pointer-events:none;";
+  const svg = clean(doc.documentElement),
+    scratch = document.createElementNS(ns, "svg"),
+    sampler = document.createElementNS(ns, "path");
+  scratch.setAttribute("width", "1");
+  scratch.setAttribute("height", "1");
+  scratch.append(sampler);
+  host.append(svg, scratch);
+  document.body.append(host);
+  const result = [],
+    records = [],
+    paint = document.createElement("canvas").getContext("2d");
+  const finite = (p) => Number.isFinite(p.x) && Number.isFinite(p.y);
+  const apply = (m, p) => ({
+    x: m.a * p.x + m.c * p.y + m.e,
+    y: m.b * p.x + m.d * p.y + m.f,
+  });
+  const recoverable = (e) =>
+    e instanceof SVGPathError ||
+    (e instanceof DOMException &&
+      ["InvalidStateError", "NotSupportedError", "InvalidAccessError"].includes(
+        e.name,
+      ));
+  function warn(index, message) {
+    skipped.push(`${index + 1}: ${message}`);
+  }
+  function rendered(el) {
+    if (["hidden", "collapse"].includes(getComputedStyle(el).visibility))
+      return false;
+    for (let node = el; node !== host; node = node.parentElement) {
+      const s = getComputedStyle(node);
+      if (s.display === "none" || Number(s.opacity) === 0) return false;
+    }
+    return true;
+  }
+  function color(value) {
+    if (value === "none") return null;
+    paint.clearRect(0, 0, 1, 1);
+    paint.fillStyle = value;
+    paint.fillRect(0, 0, 1, 1);
+    const rgba = paint.getImageData(0, 0, 1, 1).data;
+    return rgba[3]
+      ? "#" +
+          [...rgba]
+            .slice(0, 3)
+            .map((n) => n.toString(16).padStart(2, "0"))
+            .join("")
+      : null;
+  }
+  function noncollinear(points) {
+    const a = points[0],
+      b = points.find((p) => Math.hypot(p.x - a.x, p.y - a.y) > 1e-9);
+    return (
+      b &&
+      points.some(
+        (p) =>
+          Math.abs((b.x - a.x) * (p.y - a.y) - (b.y - a.y) * (p.x - a.x)) >
+          1e-10,
       )
+    );
+  }
+  try {
+    // Use screen CTMs directly: getCTM omits a root CSS transform, and inverting
+    // the root CTM discards its transform and fails for singular matrices.
+    // Final fitting removes only
+    // uniform viewport scale/translation, retaining rotation, skew and reflection.
+    const extents = [];
+    for (const [index, el] of [
+      ...svg.querySelectorAll("path,rect,circle,ellipse,polygon,polyline,line"),
+    ].entries()) {
+      if (!rendered(el)) continue;
+      const style = getComputedStyle(el),
+        fill = Number(style.fillOpacity) > 0 ? color(style.fill) : null,
+        stroke = Number(style.strokeOpacity) > 0 ? color(style.stroke) : null;
+      if (!fill && !stroke) continue;
+      try {
+        const m = el.getScreenCTM();
+        if (!m || ![m.a, m.b, m.c, m.d, m.e, m.f].every(Number.isFinite)) {
+          warn(index, "non-finite transform");
+          continue;
+        }
+        const contours =
+          el.localName === "path"
+            ? parseSVGPath(el.getAttribute("d") || "")
+            : null;
+        // A move-only contour must not enlarge the sampling extent. Build the
+        // measurement path from drawable contours while retaining their starts.
+        let b;
+        if (contours) {
+          const drawable = contours.filter((c) =>
+            c.segments.some(
+              (s) =>
+                s.type !== "L" ||
+                s.start.x !== s.end.x ||
+                s.start.y !== s.end.y,
+            ),
+          );
+          if (!drawable.length) {
+            warn(index, "empty or degenerate geometry");
+            continue;
+          }
+          sampler.setAttribute(
+            "d",
+            drawable
+              .map(
+                (c) =>
+                  `M${c.start.x} ${c.start.y} ` +
+                  c.segments.map((s) => s.type + s.args.join(" ")).join(" "),
+              )
+              .join(" "),
+          );
+          b = sampler.getBBox();
+        } else b = el.getBBox();
+        if (!b.width && !b.height) {
+          warn(index, "empty or degenerate geometry");
+          continue;
+        }
+        const corners = [
+          { x: b.x, y: b.y },
+          { x: b.x + b.width, y: b.y },
+          { x: b.x, y: b.y + b.height },
+          { x: b.x + b.width, y: b.y + b.height },
+        ].map((p) => apply(m, p));
+        if (!corners.every(finite)) {
+          warn(index, "non-finite bounds");
+          continue;
+        }
+        const extent = bounds(corners);
+        if (!extent.width && !extent.height) {
+          warn(index, "collapsed transform");
+          continue;
+        }
+        records.push({
+          el,
+          index,
+          m,
+          contours,
+          fill,
+          stroke,
+          rule: style.fillRule,
+        });
+        extents.push(...corners);
+      } catch (e) {
+        if (!recoverable(e)) throw e;
+        warn(index, e.message);
+      }
+    }
+    const box = bounds(extents),
+      fitScale = Math.min(75 / (box.width || 1), 75 / (box.height || 1));
+    // Sample and simplify in approximately final millimeters, not arbitrary SVG
+    // units. Exact segment endpoints are retained, including sharp corners.
+    const tolerance = 0.005 / fitScale;
+    let totalPoints = 0;
+    function sample(geometry, m, start, end) {
+      const length = geometry.getTotalLength();
+      if (!Number.isFinite(length))
+        throw new SVGPathError("non-finite path length");
+      if (length <= 0) return null; // Do not call getPointAtLength on empty geometry.
+      const stretch = Math.hypot(m.a, m.b, m.c, m.d),
+        n = Math.max(
+          4,
+          Math.min(6000, Math.ceil((length * stretch * fitScale) / 0.1)),
+        );
+      if ((totalPoints += n + 1) > 500000)
+        throw Error(
+          "SVG sampling exceeds 500,000 points. Simplify the artwork first.",
+        );
+      const points = [];
+      for (let i = 0; i <= n; i++) {
+        const p = apply(
+          m,
+          i === 0 && start
+            ? start
+            : i === n && end
+              ? end
+              : geometry.getPointAtLength((length * i) / n),
+        );
+        if (!finite(p))
+          throw new SVGPathError("non-finite sampled coordinates");
+        if (
+          !points.length ||
+          Math.hypot(p.x - points.at(-1).x, p.y - points.at(-1).y) > 1e-9
+        )
+          points.push(p);
+      }
+      return points.length >= 2 ? points : null;
+    }
+    for (const { el, index, m, contours, fill, stroke, rule } of records) {
+      const paths = [];
+      try {
+        if (contours) {
+          for (const contour of contours) {
+            const points = [];
+            for (const segment of contour.segments) {
+              let part;
+              if (segment.type === "L") {
+                if ((totalPoints += 2) > 500000)
+                  throw Error(
+                    "SVG sampling exceeds 500,000 points. Simplify the artwork first.",
+                  );
+                part = [apply(m, segment.start), apply(m, segment.end)];
+              } else {
+                sampler.setAttribute("d", segmentPath(segment));
+                part = sample(sampler, m, segment.start, segment.end);
+              }
+              if (!part) continue;
+              for (const p of part) {
+                if (!finite(p))
+                  throw new SVGPathError("non-finite sampled coordinates");
+                if (
+                  !points.length ||
+                  Math.hypot(p.x - points.at(-1).x, p.y - points.at(-1).y) >
+                    1e-9
+                )
+                  points.push(p);
+              }
+            }
+            if (points.length >= 2)
+              paths.push({
+                points: simplify(points, tolerance),
+                closed: contour.closed,
+              });
+          }
+        } else {
+          const points = sample(el, m);
+          if (points)
+            paths.push({
+              points: simplify(points, tolerance),
+              closed: !["line", "polyline"].includes(el.localName),
+            });
+        }
+      } catch (e) {
+        if (!recoverable(e)) throw e;
+        warn(index, e.message);
+        continue;
+      }
+      const fills = paths.filter((p) => noncollinear(p.points));
+      if (fill && !["line", "polyline"].includes(el.localName) && fills.length)
         result.push(
           object(
             `SVG region ${result.length + 1}`,
-            paths.map((r) => simplify(r, 0.08)),
-            { color: hex(fill), fillRule: style.fillRule, closed: true },
+            fills.map((p) => p.points.map((q) => ({ ...q }))),
+            { color: fill, fillRule: rule, closed: true },
           ),
         );
-      if (stroke !== "none" && Number(style.strokeOpacity) > 0)
-        result.push(
-          object(
-            `SVG outline ${result.length + 1}`,
-            paths.map((r) => simplify(r, 0.08)),
-            { type: "run", color: hex(stroke), closed, underlay: false },
-          ),
-        );
+      // A path can contain both open and closed contours. Keep their stroke
+      // closure independent; a single global /z/ test would close open strokes.
+      if (stroke)
+        for (const closed of [false, true]) {
+          const outlines = paths.filter((p) => p.closed === closed);
+          if (outlines.length)
+            result.push(
+              object(
+                `SVG outline ${result.length + 1}`,
+                outlines.map((p) => p.points.map((q) => ({ ...q }))),
+                { type: "run", color: stroke, closed, underlay: false },
+              ),
+            );
+        }
+      if (!paths.length || (!fills.length && !stroke))
+        warn(index, "empty or degenerate geometry");
     }
   } finally {
-    svg.remove();
+    host.remove();
   }
   if (!result.length)
     throw Error(
-      "No supported vector paths found. Convert text and complex effects to paths before importing.",
+      "No supported drawable SVG geometry found. Empty or unsupported elements were skipped.",
     );
-  const fitted = fitObjects(result);
-  fitted.importWarnings = unsupported.size
-    ? `SVG skipped unsupported content: ${[...unsupported].join(", ")}. Expand these in your vector editor first.`
-    : null;
+  const fitted = fitObjects(result),
+    messages = [];
+  if (unsupported.size)
+    messages.push(
+      `SVG skipped unsupported content: ${[...unsupported].join(", ")}. Expand these in your vector editor first.`,
+    );
+  if (skipped.length)
+    messages.push(
+      `SVG skipped ${skipped.length} empty, degenerate or unreadable elements (${skipped.slice(0, 3).join("; ")}${skipped.length > 3 ? "; …" : ""}).`,
+    );
+  fitted.importWarnings = messages.join(" ") || null;
   return fitted;
 }
 // Boundary tracing of quantized pixels; oriented loops retain holes and disconnected islands.

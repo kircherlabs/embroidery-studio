@@ -33,7 +33,7 @@ import {
   safeConnector,
 } from "../src/geometry.js";
 import { generate, fillRows, satin, resample } from "../src/engine.js";
-import { makeOperation } from "../src/operations.js";
+import { makeOperation, operationObject } from "../src/operations.js";
 import { vectorizePixels } from "../src/importers.js";
 const project = (objects, groups = []) => ({
   version: 1,
@@ -388,4 +388,36 @@ test("individual vertex rounding leaves unrelated corners sharp and preserves to
   for (const p of before[0].slice(1))
     assert(o.rings[0].some((q) => distance(p, q) < 1e-8));
   assert(fillPolygons(o.rings, o.fillRule));
+});
+
+test("wide-column stagger obeys maximum span even at the first and last float", () => {
+  const o = smartShape("rect", 24, 12, { radius: 0 });
+  const rows = fillRows(o.rings, 0.42, 0, 7, 0, "evenodd", "quarter", 1);
+  for (const row of rows)
+    for (let i = 1; i < row.length; i++)
+      assert(distance(row[i], row[i - 1]) <= 1.000001);
+});
+test("construction borders exclude cutout counters when requested and location markers are real stitches", () => {
+  const body = smartShape("rect", 30, 20),
+    eye = smartShape("eyelet");
+  applyRecipe(body, "patch");
+  const p = project([body, eye]);
+  cutEyelet(p, eye, [body]);
+  const border = body.operations.find((op) => op.type === "border");
+  assert.equal(operationObject(body, border).rings.length, 1);
+  border.outerOnly = false;
+  assert.equal(operationObject(body, border).rings.length, 2);
+  const marker = makeOperation("marker", eye);
+  eye.operations.unshift(marker);
+  const plan = generate(p);
+  assert(
+    plan.events.some(
+      (e) =>
+        e.objectId === eye.id &&
+        e.operationId === marker.id &&
+        e.cmd === "stitch" &&
+        e.phase === "marker",
+    ),
+  );
+  validateProject(p);
 });

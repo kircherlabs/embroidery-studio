@@ -216,6 +216,18 @@ try {
   await ready();
   p = await project();
   assert(p.objects.find((o) => o.id === body.id).rings.length >= 2);
+  await page.locator('[data-tool="eyelet"]').click();
+  const placement = await world(28, 0);
+  await page.mouse.click(placement.x, placement.y);
+  await ready();
+  assert.equal((await project()).objects.at(-1).shape.kind, "eyelet");
+  await page.locator("#eyelet-marker").check();
+  await ready();
+  assert(
+    (await project()).objects
+      .at(-1)
+      .operations.some((op) => op.type === "marker"),
+  );
   await page.screenshot({ path: "test-results/creative-desktop.png" });
   // Save/reopen and independently decode actual PES commands from the new operations.
   const saved = await project();

@@ -147,8 +147,10 @@ export function fillRows(
                 : pattern === "half"
                   ? ((row % 2) * split) / 2
                   : ((row % 4) * split) / 4;
-          for (let x = x1 + split / 2 + phase; x < x2 - 0.1; x += split)
-            pts.push({ x, y });
+          // Cycle the stagger within one split length; the first float must
+          // obey the same width limit as all following split stitches.
+          const first = ((split / 2 + phase - 1e-9) % split) + 1e-9;
+          for (let x = x1 + first; x < x2 - 0.1; x += split) pts.push({ x, y });
         }
         pts.push({ x: x2, y });
         const inset = Math.min(0.2, (c.x - start) / 4);

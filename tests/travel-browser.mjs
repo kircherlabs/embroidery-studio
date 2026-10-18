@@ -106,6 +106,7 @@ try {
     11,
   );
   await page.screenshot({ path: "test-results/travel-outline-preview.png" });
+  await page.locator(".display-options > summary").click();
   await page.locator("#show-jumps").check();
   await page.locator("#show-events").check();
   assert.equal(

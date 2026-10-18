@@ -1,0 +1,646 @@
+/* Docked panels reclaim their tracks; compact screens use accessible drawers. */
+.workspace {
+  position: relative;
+  grid-template-columns: var(--left-track, 300px) minmax(0, 1fr) var(
+      --right-track,
+      280px
+    );
+  grid-template-rows: minmax(0, 1fr);
+}
+.workspace [hidden] {
+  display: none !important;
+}
+.workspace > .layers {
+  grid-column: 1;
+  grid-row: 1;
+  position: static;
+  width: auto;
+  min-width: 0;
+  display: flex;
+  overflow: hidden;
+}
+.workspace > .stage-shell {
+  grid-column: 2;
+  grid-row: 1;
+  min-width: 0;
+}
+.workspace > .inspector {
+  grid-column: 3;
+  grid-row: 1;
+  position: static;
+  width: auto;
+  min-width: 0;
+  display: flex;
+}
+.panel-heading .count {
+  margin-left: auto;
+  margin-right: 8px;
+}
+.panel-close {
+  width: 30px;
+  min-height: 30px;
+  padding: 0;
+  font-size: 21px;
+  border-color: transparent;
+  background: transparent;
+  flex-shrink: 0;
+}
+.inspector .panel-heading {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--panel);
+}
+.workspace-bar {
+  gap: 12px;
+}
+.workspace-bar .mode-tabs {
+  margin-left: 0;
+  flex-shrink: 0;
+}
+.workspace-bar .panel-toggles {
+  display: flex;
+  gap: 3px;
+  margin: 0;
+}
+.workspace-bar .panel-toggles button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  padding: 6px 8px;
+  min-height: 32px;
+}
+.panel-toggles [aria-expanded="true"] {
+  background: #3e513a;
+  border-color: #7f936c;
+}
+.workspace-bar .workspace-tools {
+  margin-left: auto;
+}
+.panel-resizer {
+  position: absolute;
+  z-index: 12;
+  touch-action: none;
+  outline-offset: -2px;
+}
+.panel-resizer::after {
+  content: "";
+  position: absolute;
+  border-radius: 4px;
+  background: #91a17d;
+  opacity: 0.65;
+}
+.resize-left,
+.resize-right {
+  width: 10px;
+  top: 0;
+  bottom: 0;
+  cursor: col-resize;
+}
+.resize-left {
+  left: calc(var(--left-size) - 5px);
+}
+.resize-right {
+  right: calc(var(--right-size) - 5px);
+}
+.resize-left::after,
+.resize-right::after {
+  width: 3px;
+  height: 42px;
+  top: 50%;
+  left: 3px;
+}
+.panel-resizer:hover,
+.panel-resizer:focus-visible {
+  background: #e7b78435;
+}
+.panel-resizer:hover::after,
+.panel-resizer:focus-visible::after {
+  background: #f2c68f;
+  opacity: 1;
+}
+.resizing-panels {
+  cursor: col-resize;
+  user-select: none;
+}
+.resizing-panels:has(.resize-bottom:focus) {
+  cursor: row-resize;
+}
+.resizing-panels #stage {
+  pointer-events: none;
+}
+.panel-backdrop {
+  position: absolute;
+  inset: 0;
+  background: #0b1e1b55;
+  z-index: 8;
+}
+.compact-workspace > .layers,
+.compact-workspace > .inspector {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 10;
+  box-shadow: 0 0 30px #0006;
+}
+.compact-workspace > .layers {
+  left: 0;
+  width: var(--left-size);
+}
+.compact-workspace > .inspector {
+  right: 0;
+  width: var(--right-size);
+}
+.is-maximized .workspace-machine {
+  display: none;
+}
+.simulator {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 var(--bottom-track, 240px);
+  height: var(--bottom-track, 240px);
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+}
+.resize-bottom {
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 8px;
+  cursor: row-resize;
+}
+.resize-bottom::after {
+  height: 3px;
+  width: 42px;
+  left: calc(50% - 21px);
+  top: 1px;
+}
+.sim-header {
+  flex-shrink: 0;
+  min-height: 38px;
+  padding: 8px 15px 4px;
+  gap: 8px;
+  margin: 0;
+}
+.sim-header #command-readout {
+  margin-left: auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sim-header .panel-close {
+  font-size: 18px;
+  min-height: 25px;
+}
+.sequence-content {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 2px 15px 6px;
+}
+.simulator > #timeline {
+  width: calc(100% - 30px);
+  margin: 2px 15px 0;
+  flex-shrink: 0;
+  height: 20px;
+}
+.simulator > .playback {
+  flex-shrink: 0;
+  padding: 5px 15px 8px;
+  margin: 0;
+}
+.canvas-area {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  overflow: hidden;
+}
+.canvas-surface {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  min-height: 40px;
+  overflow: hidden;
+}
+.tool-rail {
+  display: flex;
+  flex-direction: column;
+  width: 49px;
+  flex: 0 0 49px;
+  min-height: 0;
+  padding: 4px 3px;
+  background: #eeeee1;
+  border-right: 1px solid #aab39e;
+}
+.tool-rail .drawing-tools {
+  position: static;
+  display: flex;
+  flex-direction: column;
+  flex-wrap: nowrap;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  max-width: none;
+  padding: 2px 1px;
+  gap: 2px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+  scrollbar-width: thin;
+}
+.tool-rail .drawing-tools button {
+  width: 36px;
+  height: 36px;
+  min-height: 36px;
+  flex-shrink: 0;
+}
+.tool-rail > button {
+  height: 22px;
+  min-height: 22px;
+  width: 36px;
+  flex-shrink: 0;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  color: #425c41;
+  font-size: 22px;
+  line-height: 1;
+  transform: rotate(90deg);
+}
+.tool-rail > button:disabled {
+  opacity: 0.25;
+}
+.drawing-tools [aria-pressed="true"] {
+  background: #344c38;
+  color: #eed0a8;
+}
+.stage-top {
+  gap: 4px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+}
+#navigation-hint {
+  grid-column: 1/-1;
+  font-size: 9px;
+  color: #5c6f55;
+}
+.canvas-controls {
+  position: relative;
+  z-index: 4;
+  min-height: 42px;
+  gap: 8px;
+  padding: 5px 10px;
+}
+.canvas-controls button,
+.canvas-controls select {
+  font-size: 11px;
+  min-height: 30px;
+}
+.canvas-controls select {
+  padding: 4px;
+  background: #f0f1e6;
+  color: #294332;
+  border-color: #a8b59b;
+}
+#navigation-mode {
+  width: 116px;
+}
+#view-command {
+  width: 76px;
+}
+.zoom-controls {
+  gap: 3px;
+}
+.display-options {
+  position: relative;
+  font-size: 11px;
+  color: #34503a;
+}
+.display-options summary {
+  cursor: pointer;
+  padding: 6px 2px;
+}
+.display-options > div {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 0;
+  width: 180px;
+  max-height: 250px;
+  overflow: auto;
+  padding: 8px 12px;
+  border: 1px solid #93a37f;
+  border-radius: 7px;
+  background: #20342a;
+  box-shadow: 0 5px 20px #0005;
+}
+.display-options > div label {
+  display: flex;
+  gap: 10px;
+  font-size: 12px;
+  min-height: 34px;
+  color: #eceddc;
+}
+.display-options > div input {
+  width: 18px;
+  height: 18px;
+}
+.arrange-menu {
+  position: fixed;
+  z-index: 1000;
+  width: 280px;
+  max-width: calc(100vw - 16px);
+  max-height: calc(100dvh - 16px);
+  overflow: auto;
+  background: #21362b;
+  color: #e6eddf;
+  border: 1px solid #8f9f7f;
+  border-radius: 8px;
+  box-shadow: 0 8px 35px #0005;
+  padding: 8px;
+}
+.arrange-menu[hidden] {
+  display: none;
+}
+.arrange-menu button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  background: transparent;
+  min-height: 34px;
+  padding: 7px 9px;
+  font-size: 12px;
+}
+.arrange-menu button:hover {
+  background: #3e5239;
+}
+.alignment-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 2px;
+}
+.menu-caption {
+  color: #c8bb9c;
+  font-size: 9px;
+  letter-spacing: 0.7px;
+  text-transform: uppercase;
+  margin: 9px 9px 4px;
+}
+.control-help {
+  z-index: 1200;
+}
+@media (max-width: 1099px) {
+  .workspace-bar {
+    flex-wrap: wrap;
+    height: auto;
+    padding: 5px 10px;
+    gap: 3px 10px;
+  }
+  .workspace-bar .panel-toggles {
+    order: 3;
+    width: 100%;
+    justify-content: center;
+  }
+  .workspace-bar .mode-tabs {
+    order: 1;
+  }
+  .workspace-bar .workspace-tools {
+    order: 2;
+  }
+  .workspace-tools .local-badge {
+    display: none;
+  }
+  .workspace-bar .panel-toggles button {
+    min-height: 34px;
+  }
+}
+@media (max-width: 1099px), (max-height: 799px) {
+  .canvas-area {
+    flex-direction: column;
+  }
+  .tool-rail {
+    flex: 0 0 46px;
+    height: 46px;
+    width: 100%;
+    flex-direction: row;
+    border-right: 0;
+    border-bottom: 1px solid #aab39e;
+    padding: 3px;
+    min-width: 0;
+  }
+  .tool-rail .drawing-tools {
+    flex-direction: row;
+    overflow-x: auto;
+    overflow-y: hidden;
+    width: auto;
+    min-width: 0;
+    gap: 2px;
+  }
+  .tool-rail > button {
+    transform: none;
+    width: 23px;
+    height: 36px;
+  }
+  .tool-rail .drawing-tools > span {
+    height: 22px;
+    width: 1px;
+    flex-shrink: 0;
+    margin: 5px 3px;
+  }
+}
+@media (max-width: 680px) {
+  .workspace-bar .mode-tabs {
+    gap: 12px;
+  }
+  .workspace-bar .workspace-tools {
+    gap: 1px;
+  }
+  .canvas-controls {
+    gap: 6px;
+  }
+  .canvas-controls label {
+    font-size: 10px;
+  }
+  .canvas-controls #navigation-mode {
+    width: 96px;
+  }
+  .canvas-controls .zoom-controls {
+    margin-left: auto;
+  }
+  .stage-top {
+    top: 10px;
+    left: 12px;
+    right: 12px;
+  }
+  .sim-header .eyebrow {
+    font-size: 8px;
+  }
+  .sim-header {
+    padding: 8px 10px 2px;
+  }
+  .sequence-content {
+    padding: 2px 10px 4px;
+  }
+  .simulator > .playback {
+    padding: 4px 10px 8px;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .simulator > #timeline {
+    width: calc(100% - 20px);
+    margin-left: 10px;
+    margin-right: 10px;
+  }
+  .panel-close {
+    width: 36px;
+    min-height: 36px;
+  }
+}
+/* The compact landscape workspace keeps navigation and panel controls reachable. */
+@media (max-height: 500px) and (min-width: 681px) {
+  .app-header {
+    height: 48px;
+    min-height: 48px;
+    padding: 4px 12px;
+    gap: 12px;
+  }
+  .app-header .brand {
+    font-size: 14px;
+    flex: 0 1 auto;
+  }
+  .app-header .brand img {
+    width: 28px;
+    height: 28px;
+  }
+  .app-header .beta,
+  .project-name #save-status {
+    display: none;
+  }
+  .app-header .project-name {
+    max-width: 120px;
+  }
+  .file-actions button {
+    font-size: 10px;
+    padding: 5px 8px;
+  }
+  .workspace-bar {
+    padding-top: 2px;
+    padding-bottom: 2px;
+  }
+  .workspace-bar .panel-toggles button {
+    min-height: 28px;
+    padding: 3px 8px;
+  }
+  .workspace-bar .mode-tabs button {
+    min-height: 30px;
+  }
+  .status-bar {
+    height: 20px;
+    min-height: 20px;
+  }
+  .workspace-machine summary {
+    min-height: 30px;
+    padding: 5px 12px;
+  }
+}
+@media (pointer: coarse) {
+  .workspace-bar .panel-toggles button {
+    min-height: 40px;
+  }
+  .panel-close {
+    min-height: 40px;
+    width: 40px;
+  }
+  .resize-left,
+  .resize-right {
+    width: 14px;
+  }
+  .resize-left {
+    left: calc(var(--left-size) - 7px);
+  }
+  .resize-right {
+    right: calc(var(--right-size) - 7px);
+  }
+  .resize-bottom {
+    height: 12px;
+  }
+}
+.drawing-tools button.temporary {
+  outline: 2px solid #d4a168;
+  outline-offset: -2px;
+  background: #d9dfc9;
+}
+.display-options > div {
+  max-height: min(250px, calc(100dvh - 240px));
+}
+@media (max-width: 1099px) {
+  .workspace-bar {
+    min-height: 82px;
+  }
+  .workspace-bar .mode-tabs {
+    height: 34px;
+  }
+  .workspace-bar .panel-toggles {
+    flex-basis: 100%;
+    flex-shrink: 0;
+  }
+}
+.workspace-bar .panel-toggles #toggle-layers {
+  display: inline-flex;
+}
+@media (max-height: 600px) {
+  .workspace > .layers {
+    overflow-y: auto;
+  }
+  .layers > :not(.object-list) {
+    flex-shrink: 0;
+  }
+  .layers .object-list {
+    flex: 1 0 140px;
+    overflow: visible;
+  }
+  .layers .panel-heading {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: var(--panel);
+  }
+}
+.simulator.compact-sequence .sim-header {
+  min-height: 24px;
+  padding-top: 3px;
+  padding-bottom: 1px;
+}
+.simulator.compact-sequence .sim-header .panel-close {
+  min-height: 20px;
+  height: 20px;
+}
+.simulator.compact-sequence > #timeline {
+  height: 14px;
+}
+.simulator.compact-sequence > .playback {
+  min-height: 30px;
+  padding-top: 2px;
+  padding-bottom: 3px;
+  flex-wrap: nowrap;
+}
+.simulator.compact-sequence .playback button {
+  height: 24px;
+  min-height: 24px;
+  width: 25px;
+}
+.simulator.compact-sequence .playback select {
+  height: 25px;
+  min-height: 25px;
+  padding: 2px;
+  font-size: 9px;
+}
+.simulator.compact-sequence #stitch-counter {
+  font-size: 9px;
+}

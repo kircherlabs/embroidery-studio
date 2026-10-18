@@ -174,6 +174,7 @@ try {
     () => window.studio?.getPlan()?.stats?.stitches > 0,
   );
   assert(await mobile.locator("#export").isVisible());
+  await mobile.locator("#toggle-sequence").click();
   assert(await mobile.locator("#play").isVisible());
   assert(await mobile.locator("#stage").isVisible());
   assert(

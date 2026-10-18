@@ -1,4 +1,24 @@
 const descriptions = {
+  "toggle-sequence":
+    "Show or hide the stitch sequence, timeline and playback panel. Hiding it expands the canvas without changing any generated commands.",
+  "maximize-canvas":
+    "Temporarily hide all three panels to expand the canvas. Restore or Escape brings back your previous panel sizes and visibility.",
+  "reset-layout":
+    "Restore default panel sizes and visibility and fit the hoop in view. Artwork and embroidery settings stay unchanged.",
+  "tools-prev":
+    "Scroll back through the drawing tools. Arrow buttons and scrolling keep every tool accessible in a small workspace.",
+  "tools-next":
+    "Scroll forward to more drawing tools. Tools stay available when panels or the browser window are resized.",
+  "arrange-selection":
+    "Open positioning and alignment actions for selected objects or groups. Also available by right-clicking the canvas or pressing Shift F10.",
+  "snap-objects":
+    "Snap artwork dragging to the hoop center or visible object edges and centers within 7 screen pixels. Guides show the alignment; hold Alt to bypass snapping.",
+  "navigation-mode":
+    "Auto: notched mouse wheels zoom; small pixel scrolls and horizontal trackpad gestures pan. Choose Mouse or Trackpad explicitly if needed. Pinch and Ctrl/Command-scroll always zoom over the canvas.",
+  "fit-design":
+    "Fit all visible source artwork in the current canvas area. This changes the view only, not geometry or physical dimensions.",
+  "view-command":
+    "Fit selection, all artwork or the hoop; center the hoop view at the current zoom, or reset to Fit Hoop. Panel resizing never changes source artwork.",
   "context-help":
     "Explain controls: turn this on, then tap any control to read its description without changing the design. Tap Explain again or press Escape to resume editing.",
   help: "Open the workflow guide and keyboard shortcuts.",
@@ -156,6 +176,8 @@ const selector =
 function description(el) {
   if (descriptions[el.id]) return descriptions[el.id];
   if (el.dataset.help) return el.dataset.help;
+  if (el.matches("[data-close-panel]"))
+    return "Collapse this panel and give its space to the canvas. Reopen it with Objects, Properties or Sequence in the workspace bar. Its size is remembered.";
   if (el.matches("[data-check]"))
     return "Toggle this artwork's selection without clearing other selected objects. Selecting a parent includes its descendants.";
   if (el.matches("[data-select]"))
@@ -282,7 +304,7 @@ export function installHelp() {
   document.addEventListener("pointerover", (e) => {
     if (e.pointerType === "touch" || explain) return;
     const el = e.target.closest(selector);
-    if (!el || el === active) return;
+    if (!el || el === active || el.tagName === "CANVAS") return;
     hide();
     timer = setTimeout(() => show(el), 400);
   });
@@ -296,7 +318,8 @@ export function installHelp() {
       hide();
   });
   document.addEventListener("focusin", (e) => {
-    if (!suppressFocus) show(e.target.closest(selector));
+    if (!suppressFocus && e.target.tagName !== "CANVAS")
+      show(e.target.closest(selector));
   });
   document.addEventListener("focusout", () => {
     if (!explain) hide();

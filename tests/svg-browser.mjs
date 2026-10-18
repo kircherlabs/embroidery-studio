@@ -404,12 +404,13 @@ try {
         selectedLeaves({ project: p, selectionIds: ids }),
       ),
       r = document.getElementById("stage").getBoundingClientRect(),
-      scale = Math.min((r.width - 105) / 112, (r.height - 100) / 112);
+      view = window.studio.getView(),
+      scale = view.scale;
     return {
       b,
       scale,
-      cx: r.x + r.width / 2 + 18,
-      cy: r.y + r.height / 2 + 19,
+      cx: r.x + view.center.x,
+      cy: r.y + view.center.y,
     };
   });
   await page.mouse.move(

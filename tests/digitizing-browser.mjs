@@ -57,6 +57,7 @@ try {
   await page.keyboard.press("Escape");
   await page.locator("#toast.show").waitFor({ state: "hidden" });
   await page.screenshot({ path: "test-results/digitizing-preview.png" });
+  await page.locator(".display-options > summary").click();
   await page.locator("#show-jumps").check();
   await page.locator("#show-events").check();
   await page.screenshot({ path: "test-results/digitizing-commands.png" });

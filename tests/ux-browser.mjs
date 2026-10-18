@@ -316,6 +316,7 @@ try {
     () => !document.getElementById("layers-panel").classList.contains("open"),
   );
   assert(await mobile.evaluate(() => document.body.scrollWidth <= innerWidth));
+  await mobile.locator("#toggle-sequence").tap();
   const sewing = (id) =>
     mobile.locator(`.sewing-object[data-reorder-id="${id}"]`);
   const from = await sewing(m2).locator("[data-sew-grip]").boundingBox(),

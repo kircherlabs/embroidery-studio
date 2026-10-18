@@ -173,6 +173,10 @@ try {
     0.8,
   );
   const saved = await project();
+  await page.waitForFunction(
+    (expected) => localStorage.getItem("embroidery-studio-v1") === expected,
+    JSON.stringify(saved),
+  );
   await page.reload();
   await ready();
   assert.deepEqual(await project(), saved);

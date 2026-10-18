@@ -112,9 +112,12 @@ old saved Wildflower artwork is unchanged. Reload the built-in example to use th
 new construction. Both automatic and deliberately overridden orders are checked
 against independently decoded PES stitch positions and color-change commands.
 
-Hover or keyboard-focus controls for concise descriptions, including units and
-embroidery effects. On touch, enable **Explain**, then tap a control to read help
-without activating it; **Done explaining** or Escape returns to editing.
+Turn **Hints: On** for concise hover/focus descriptions, including units and
+embroidery effects. On touch, hold a control to read its hint without activating
+it; ordinary taps still operate controls. **Hints: Off** suppresses all popups,
+including keyboard-focus hints. The setting defaults to Off and is remembered
+on this device. Escape dismisses the current hint without changing the setting.
+Accessible control descriptions remain available in both states.
 Machine & hoop lives in the collapsible workspace header. Machine, hoop size
 and fit status remain visible when collapsed; selecting a machine never resizes
 artwork.

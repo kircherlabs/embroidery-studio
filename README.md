@@ -26,7 +26,7 @@ new exports and sew-out quality still need machine testing.
 - Clear selection boxes and eye toggles, touch-friendly tree rows, drag grips in
   both the artwork tree and complete-object sewing strip, and persisted manual
   sewing order with an explicit Automatic/Manual switch.
-- Hover/focus descriptions and an **Explain** mode for tap-to-read control help.
+- Optional hover/focus descriptions controlled by **Hints: On / Off**.
   The compact Machine & hoop panel sits above the canvas.
 - Resizable Objects, Properties and Sequence panels, a temporary canvas maximize
   mode, saved workspace layout and an adaptive scrolling tool rail.
@@ -70,8 +70,9 @@ new exports and sew-out quality still need machine testing.
    machine stitch file and cannot restore the original vector editability.
 
 On mobile, the two list buttons above the canvas toggle Objects and Properties.
-Use **Explain** then tap a control for its description; tap **Done explaining**
-to resume editing. **?** opens the workflow guide and shortcuts. Zoom with the canvas
+Turn **Hints: On** to see hover/focus descriptions, or hold a control on touch.
+**Hints: Off** hides all popups. Ordinary clicks/taps work in either state; the
+preference is remembered on this device. **?** opens the workflow guide and shortcuts. Zoom with the canvas
 buttons or a mouse wheel; pan with the hand tool or Space-drag.
 
 ## Run locally

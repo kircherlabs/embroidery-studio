@@ -53,6 +53,31 @@ try {
   };
   await page.goto(base);
   await ready();
+  const hints = page.locator("#context-help"),
+    tip = page.locator("#control-description");
+  assert.equal(await hints.innerText(), "Hints: Off");
+  assert.equal(await hints.getAttribute("aria-pressed"), "false");
+  await page.locator("#machine-panel").hover();
+  await page.waitForTimeout(500);
+  assert.equal(await tip.isVisible(), false);
+  await page.locator("#machine-panel").focus();
+  assert.equal(await tip.isVisible(), false);
+  // Accessible descriptions survive with visual hints disabled; native titles do not leak popups.
+  assert.match(
+    await page.locator("#machine-panel").getAttribute("aria-description"),
+    /Machine/,
+  );
+  assert.equal(
+    await page.locator("#machine-panel").getAttribute("title"),
+    null,
+  );
+  await hints.click();
+  assert.equal(await hints.innerText(), "Hints: On");
+  await page.locator("#machine-panel").hover();
+  await page.waitForFunction(
+    () => !document.getElementById("control-description").hidden,
+  );
+  assert.match(await tip.innerText(), /machine/i);
   const demoStats = await page.evaluate(() => window.studio.getPlan().stats);
   assert.equal(demoStats.colors, 4);
   assert.equal(demoStats.manualChanges, 3);
@@ -183,6 +208,7 @@ try {
   );
   await page.reload();
   await ready();
+  assert.equal(await hints.innerText(), "Hints: On");
   assert.deepEqual(await actual(), [b, c, a]);
   const download = page.waitForEvent("download");
   await page.locator("#save-project").click();
@@ -228,6 +254,26 @@ try {
   );
   await page.keyboard.press("Escape");
   await page.locator("#stage").focus();
+  // Disable while a hover is pending: neither its delayed callback nor later focus may show a hint.
+  await page.locator("#spacing").hover();
+  await hints.click();
+  assert.equal(await hints.innerText(), "Hints: Off");
+  await page.waitForTimeout(500);
+  assert.equal(await tip.isVisible(), false);
+  await page.locator("#spacing").focus();
+  assert.equal(await tip.isVisible(), false);
+  assert.equal(
+    await page.locator("#spacing").getAttribute("aria-describedby"),
+    null,
+  );
+  await page.reload();
+  await ready();
+  assert.equal(await hints.innerText(), "Hints: Off");
+  // Regenerated inspector controls respect Off as well.
+  await pick(a);
+  await page.locator("#spacing").hover();
+  await page.waitForTimeout(500);
+  assert.equal(await tip.isVisible(), false);
   await page.screenshot({ path: "test-results/ux-desktop.png" });
 
   const mobile = await browser.newPage({
@@ -260,7 +306,31 @@ try {
     JSON.stringify(window.studio.getProject()),
   );
   await mobile.locator("#context-help").tap();
+  // Hints no longer intercept ordinary taps: visibility still toggles immediately.
   await mobile.locator(`[data-visibility="${m1}"]`).tap();
+  await mobile.waitForFunction(
+    (id) =>
+      window.studio.getProject().objects.find((o) => o.id === id).visible ===
+      false,
+    m1,
+  );
+  await mobile.locator(`[data-visibility="${m1}"]`).tap();
+  await mobile.waitForFunction(() => window.studio.getPlan());
+  const hintTouch = await mobile.context().newCDPSession(mobile);
+  await hintTouch.send("Input.dispatchTouchEvent", {
+    type: "touchStart",
+    touchPoints: [
+      { x: hit.x + hit.width / 2, y: hit.y + hit.height / 2, id: 8 },
+    ],
+  });
+  await mobile.waitForFunction(
+    () => !document.getElementById("control-description").hidden,
+  );
+  await hintTouch.send("Input.dispatchTouchEvent", {
+    type: "touchEnd",
+    touchPoints: [],
+  });
+  await mobile.waitForTimeout(600);
   assert.match(
     await mobile.locator("#control-description").innerText(),
     /without deleting/,
@@ -270,6 +340,8 @@ try {
     before,
   );
   await mobile.locator("#context-help").tap();
+  assert.equal(await mobile.locator("#control-description").isVisible(), false);
+  assert.equal(await mobile.locator("#context-help").innerText(), "Hints: Off");
   const touch = await mobile.context().newCDPSession(mobile),
     grip = await mobile
       .locator(`.object-row[data-reorder-id="${m1}"] [data-tree-grip]`)

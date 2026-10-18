@@ -4,6 +4,8 @@ import Clipper from "../vendor/clipper.js";
 
 export const OPERATION_TYPES = {
   fill: "Tatami fill",
+  column: "Satin column",
+  marker: "Location marker",
   run: "Running stitch",
   bean: "Bean stitch",
   triple: "Triple run",
@@ -18,9 +20,9 @@ export const OPERATION_TYPES = {
 };
 export const isSewing = (op) => !["stop", "trim"].includes(op.type);
 export function propertyApplies(type, key) {
-  const fill = type === "fill",
+  const fill = ["fill", "column"].includes(type),
     satin = ["satin", "border"].includes(type),
-    path = !["fill", "stop", "trim", "manual"].includes(type),
+    path = !["fill", "column", "stop", "trim", "manual"].includes(type),
     outline = [
       "placement",
       "tackdown",
@@ -34,7 +36,7 @@ export function propertyApplies(type, key) {
   if (key === "width") return satin;
   if (key === "length") return fill || (path && !satin);
   if (key === "reverse" || key === "startIndex") return path;
-  if (key === "offset") return outline;
+  if (key === "offset" || key === "outerOnly") return outline;
   if (key === "closed") return path && !outline;
   return key === "type" || isSewing({ type });
 }
@@ -54,6 +56,10 @@ const settings = [
   "offset",
   "startIndex",
   "pattern",
+  "cornerControl",
+  "minCornerStitch",
+  "maxSatin",
+  "outerOnly",
 ];
 export function defaultOperation(o) {
   return {
@@ -78,7 +84,13 @@ export function makeOperation(type, o) {
     type,
     enabled: true,
   };
-  if (type !== "fill" && type !== "satin") op.underlay = false;
+  if (type === "column") {
+    op.maxSatin = 6;
+    op.angle = 0;
+    op.compensation = 0.1;
+  }
+  if (type !== "fill" && type !== "column" && type !== "satin")
+    op.underlay = false;
   if (["placement", "tackdown", "basting", "border", "contour"].includes(type))
     op.closed = true;
   if (
@@ -161,7 +173,19 @@ export function operationObject(o, op) {
       throw Error(
         `${o.name}: ${OPERATION_TYPES[type]} requires closed artwork.`,
       );
-    rings = offsetRings(o, op.offset || 0);
+    rings = offsetRings(
+      o.shape?.kind === "eyelet" && type === "border"
+        ? { ...o, rings: [o.rings[0]] }
+        : o,
+      op.offset || 0,
+    );
+    if (op.outerOnly && rings.length) {
+      const polygons = fillPolygons(rings, "nonzero");
+      if (polygons)
+        rings = polygons.map((poly) =>
+          poly[0].slice(0, -1).map(([x, y]) => ({ x, y })),
+        );
+    }
     closed = true;
     if (!rings.length)
       operationWarning = `${o.name} · ${op.name}: this offset collapses the region; no stitches are generated. Reduce the inset.`;
@@ -173,6 +197,25 @@ export function operationObject(o, op) {
   )
     type = "run";
   if (type === "border") type = "satin";
+  if (type === "column") type = "fill";
+  if (type === "marker") {
+    const b = objectBounds(o),
+      x = (b.minX + b.maxX) / 2,
+      y = (b.minY + b.maxY) / 2,
+      r = Math.min(0.8, o.shape?.diameter / 3 || 0.8);
+    rings = [
+      [
+        { x: x - r, y },
+        { x: x + r, y },
+      ],
+      [
+        { x, y: y - r },
+        { x, y: y + r },
+      ],
+    ];
+    type = "run";
+    closed = false;
+  }
   if (op.reverse || op.startIndex)
     rings = rings.map((r) => {
       let copy = [...r];
@@ -190,6 +233,7 @@ export function operationObject(o, op) {
     rings,
     type,
     closed,
+    satinColumn: op.type === "column",
     operationId: op.id,
     operationName: op.name,
     technique: op.type,

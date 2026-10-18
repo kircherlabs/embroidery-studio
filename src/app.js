@@ -1,3 +1,11 @@
+import { traceDialog } from "./tracing-ui.js";
+import {
+  smartShape,
+  productTemplate,
+  alignReference,
+  distributeArtwork,
+} from "./creative.js";
+import { detachSource, curveRings, identity } from "./smart-geometry.js";
 import {
   demo,
   object,
@@ -7,7 +15,7 @@ import {
   validateProject,
 } from "./model.js";
 import { analyze } from "./engine.js";
-import { importSVG, rasterObjects, lettering } from "./importers.js";
+import { importSVG, lettering } from "./importers.js";
 import { Stage } from "./stage.js";
 import { planningOptions } from "./planning.js";
 import {
@@ -158,8 +166,15 @@ function record(before) {
 }
 function mutate(fn) {
   const before = JSON.stringify(state.project);
-  fn();
-  record(before);
+  try {
+    fn();
+    record(before);
+  } catch (e) {
+    state.project = JSON.parse(before);
+    renderPanels();
+    stage.render();
+    toast("Could not apply edit: " + e.message);
+  }
 }
 function changed() {
   pause();
@@ -284,12 +299,18 @@ function setTool(tool) {
     rect: "Drag to draw a rectangle",
     ellipse: "Drag to draw an ellipse",
     pan: "Drag to pan the view · + / − to zoom",
+    regular: "Drag a polygon · adjust sides and radius in Smart shape",
+    star: "Drag a star · adjust points and inner radius in Smart shape",
+    eyelet:
+      "Place reinforcement · adjust hole diameter and satin band in Smart eyelet",
+    pen: "Click-drag curve anchors · Enter finishes · edit handles with Node tool",
   };
   $("stage-hint").textContent = hints[tool];
   stage.render();
 }
 function updateDraft() {
   $("draw-actions").hidden = stage.draft.length === 0;
+  $("pen-closed").closest("label").hidden = state.tool !== "pen";
   $("draw-message").textContent = `${stage.draft.length} points placed`;
   $("finish-draw").disabled =
     stage.draft.length < (state.tool === "polygon" ? 3 : 2);
@@ -297,6 +318,22 @@ function updateDraft() {
 function finishPath() {
   const type = state.tool,
     pts = stage.draft;
+  if (type === "pen" && pts.length >= 2) {
+    const closed = $("pen-closed").checked,
+      curve = { nodes: structuredClone(pts), closed, frame: identity() };
+    addObjects([
+      object("Bézier path", curveRings(curve), {
+        curve,
+        type: closed ? "fill" : "run",
+        closed,
+        underlay: false,
+      }),
+    ]);
+    stage.draft = [];
+    updateDraft();
+    setTool("select");
+    return;
+  }
   if (pts.length < (type === "polygon" ? 3 : 2)) return;
   let o = object(
     type === "polygon"
@@ -323,25 +360,38 @@ function finishPath() {
   setTool("select");
 }
 function addShape({ start: a, end: b }) {
-  const x = Math.min(a.x, b.x),
-    y = Math.min(a.y, b.y),
-    w = Math.abs(a.x - b.x),
+  const w = Math.abs(a.x - b.x),
     h = Math.abs(a.y - b.y),
-    ring =
-      state.tool === "ellipse"
-        ? ellipse(x + w / 2, y + h / 2, w / 2, h / 2)
-        : [
-            { x, y },
-            { x: x + w, y },
-            { x: x + w, y: y + h },
-            { x, y: y + h },
-          ];
-  addObjects([
-    object(state.tool === "ellipse" ? "Ellipse" : "Rectangle", [ring], {
-      color: selected()?.color || PALETTE[0],
-    }),
-  ]);
+    kind = state.tool;
+  const o = smartShape(
+    kind,
+    kind === "eyelet" ? 6 : w,
+    kind === "eyelet" ? 6 : h,
+    {
+      frame: [1, 0, 0, 1, (a.x + b.x) / 2, (a.y + b.y) / 2],
+    },
+  );
+  o.color = selected()?.color || PALETTE[0];
+  if (kind === "eyelet") for (const op of o.operations) op.color = o.color;
+  addObjects([o]);
   setTool("select");
+}
+async function templateDialog() {
+  const ok = await ask(
+    "Create an editable product",
+    '<label>Product<select id="template-kind"><option value="keychain">Keychain / tag</option><option value="badge">Patch / badge</option><option value="applique">Appliqué</option></select></label><label>Width · mm<input id="template-width" type="number" min="15" max="90" value="65" required></label><label>Height · mm<input id="template-height" type="number" min="15" max="90" value="28" required></label><label>Corner radius · mm<input id="template-radius" type="number" min="0" max="20" value="4" required></label><label>Border width · mm<input id="template-border" type="number" min=".5" max="5" value="2.5" required step=".1"></label><p>Creates ordinary editable artwork with shared construction steps. Configure stops for your fabric and process. An eyelet is reinforcement for a manually punched hole.</p>',
+    "Create product",
+  );
+  if (ok)
+    addObjects(
+      productTemplate(
+        $("template-kind").value,
+        Number($("template-width").value),
+        Number($("template-height").value),
+        Number($("template-radius").value),
+        Number($("template-border").value),
+      ),
+    );
 }
 function addObjects(objects) {
   mutate(() => {
@@ -480,6 +530,39 @@ function renderProperties() {
       bindManual,
       convertManual,
       draw: () => stage.render(),
+      node: () => stage.node,
+      retrace: async (group) => {
+        const response = await fetch(group.imageSource.data),
+          file = await response.blob();
+        const result = await traceDialog(file, ask, {
+          ...group.imageSource,
+          settings: group.traceSettings,
+        });
+        if (result)
+          mutate(() => {
+            const old = leaves(state.project, [group.id]),
+              b = selectionBounds(old),
+              q = selectionBounds(result);
+            transformSelection(result, {
+              sx: b.width / (q.width || 1),
+              sy: b.height / (q.height || 1),
+              dx: (b.minX + b.maxX) / 2,
+              dy: (b.minY + b.maxY) / 2,
+            });
+            const parent = group.parentId,
+              name = group.name,
+              id = group.id;
+            deleteSelection(state.project, [id]);
+            result.groups[0].id = id;
+            result.groups[0].name = name;
+            result.groups[0].parentId = parent;
+            result.forEach((o) => (o.parentId = id));
+            state.project.objects.push(...result);
+            (state.project.groups ||= []).push(...result.groups);
+            state.selection = id;
+            state.selectionIds = [id];
+          });
+      },
     })
   )
     return;
@@ -966,22 +1049,8 @@ async function importFile(file) {
       addObjects(objects);
       if (objects.importWarnings) toast(objects.importWarnings);
     } else if (["png", "jpg", "jpeg"].includes(ext)) {
-      const ok = await ask(
-        "Digitize an image",
-        '<p>Best for flat-color illustrations, logos and silhouettes. Photos are reduced to color regions. Small details under about 0.5 mm are removed.</p><label>Thread colors<input id="raster-colors" type="number" value="5" min="2" max="10" required></label><label>Artwork width (mm)<input id="raster-width" type="number" value="70" min="5" max="200" required></label><label class="inline"><input id="raster-bg" type="checkbox" checked> Remove the dominant border color</label>',
-        "Digitize image",
-      );
-      if (ok) {
-        await new Promise((r) => requestAnimationFrame(r));
-        addObjects(
-          await rasterObjects(
-            file,
-            Number($("raster-colors").value),
-            $("raster-bg").checked,
-            Number($("raster-width").value),
-          ),
-        );
-      }
+      const objects = await traceDialog(file, ask);
+      if (objects) addObjects(objects);
     } else if (
       ["pes", "pec", "dst", "exp", "jef", "vp3", "xxx"].includes(ext)
     ) {
@@ -1036,10 +1105,22 @@ function removeSelected() {
     !isLocked(state.project, o) &&
     o.type !== "manual"
   ) {
+    if (o.curve) {
+      if (o.curve.nodes.length > (o.curve.closed ? 3 : 2))
+        mutate(() => {
+          o.curve.nodes.splice(stage.node, 1);
+          o.rings = curveRings(o.curve);
+        });
+      stage.node = null;
+      return;
+    }
     const p = o.rings.flat()[stage.node],
       r = o.rings.find((r) => r.includes(p));
     if (r && r.length > (o.type === "fill" ? 3 : 2)) {
-      mutate(() => r.splice(r.indexOf(p), 1));
+      mutate(() => {
+        detachSource(o);
+        r.splice(r.indexOf(p), 1);
+      });
       stage.node = null;
       return;
     }
@@ -1091,6 +1172,11 @@ $("object-list").onclick = (e) => {
     visibility = e.target.closest("[data-visibility]"),
     expand = e.target.closest("[data-expand]"),
     lock = e.target.closest("[data-lock]");
+  if (e.target.closest(".tree-rename")) return;
+  if (e.detail === 2 && selectEl) {
+    beginRename(selectEl.dataset.select);
+    return;
+  }
   if (expand) {
     const id = expand.dataset.expand;
     state.collapsed.has(id)
@@ -1123,7 +1209,58 @@ $("object-list").onclick = (e) => {
       workspaceLayout?.close("left");
   }
 };
+function beginRename(id) {
+  const n = id === PROJECT ? state.project : nodeById(state.project, id);
+  if (!n || (id !== PROJECT && isLocked(state.project, n))) return;
+  const el = [...$("object-list").querySelectorAll("[data-select]")].find(
+    (b) => b.dataset.select === id,
+  );
+  if (!el) return;
+  const input = document.createElement("input");
+  input.className = "tree-rename";
+  input.value = n.name;
+  input.maxLength = 200;
+  input.setAttribute("aria-label", "Rename " + n.name);
+  el.replaceWith(input);
+  let done = false;
+  const finish = (save) => {
+    if (done) return;
+    done = true;
+    const value = input.value.trim();
+    if (save && value) mutate(() => (n.name = value));
+    else renderPanels();
+    [...$("object-list").querySelectorAll("[data-select]")]
+      .find((b) => b.dataset.select === id)
+      ?.focus();
+  };
+  input.addEventListener("keydown", (e) => {
+    e.stopPropagation();
+    if (e.key === "Enter") {
+      e.preventDefault();
+      finish(true);
+    }
+    if (e.key === "Escape") {
+      e.preventDefault();
+      finish(false);
+    }
+  });
+  input.onblur = () => finish(true);
+  input.focus();
+  input.select();
+}
+$("object-list").addEventListener("dblclick", (e) => {
+  const el = e.target.closest("[data-select]");
+  if (el) beginRename(el.dataset.select);
+});
 $("object-list").onkeydown = (e) => {
+  if (e.key === "F2") {
+    e.preventDefault();
+    beginRename(
+      e.target.closest("[data-select]")?.dataset.select || state.selection,
+    );
+    return;
+  }
+
   const button = e.target.closest("[data-select]");
   if (
     !button ||
@@ -1309,6 +1446,14 @@ const collapseCompactSequence = () => {
 collapseCompactSequence();
 compactSequence.addEventListener("change", collapseCompactSequence);
 function editCommand(command) {
+  if (command === "rename") {
+    beginRename(state.selection);
+    return;
+  }
+  if (command === "template") {
+    templateDialog();
+    return;
+  }
   if (command === "duplicates") {
     const ids =
       state.plan?.diagnostics?.duplicates?.map((d) => d.objectId) || [];
@@ -1491,16 +1636,11 @@ function editCommand(command) {
     return;
   }
   if (command.startsWith("align-") || command.startsWith("distribute-")) {
-    // Each selected group is one alignment unit; its descendants move together.
-    const bundles = roots(state.project, ids).map((id) => ({
-      type: "run",
-      rings: [
-        leaves(state.project, [id], { editable: true }).flatMap((o) =>
-          o.type === "manual" ? o.commands : o.rings.flat(),
-        ),
-      ],
-    }));
-    mutate(() => alignSelection(bundles, command.replace(/^align-/, "")));
+    if (command.startsWith("align-"))
+      mutate(() =>
+        alignReference(state.project, ids, "selection", command.slice(6)),
+      );
+    else mutate(() => distributeArtwork(state.project, ids, command));
   }
 }
 $("edit-command").onchange = (e) => {

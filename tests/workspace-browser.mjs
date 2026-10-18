@@ -386,7 +386,23 @@ try {
       i++
     ) {
       await mobile.locator("#tools-next").click();
-      await mobile.waitForTimeout(180);
+      // Wait for smooth overflow scrolling to settle before checking the next
+      // button again: its enabled state can change on the animation's last frame.
+      await tools.evaluate(
+        (el) =>
+          new Promise((resolve) => {
+            let previous = el.scrollLeft + el.scrollTop,
+              quiet = 0;
+            const frame = () => {
+              const at = el.scrollLeft + el.scrollTop;
+              quiet = at === previous ? quiet + 1 : 0;
+              previous = at;
+              if (quiet >= 4) resolve();
+              else requestAnimationFrame(frame);
+            };
+            requestAnimationFrame(frame);
+          }),
+      );
     }
     await mobile.locator('[data-tool="pan"]').scrollIntoViewIfNeeded();
     const tool = await mobile.locator('[data-tool="pan"]').boundingBox(),

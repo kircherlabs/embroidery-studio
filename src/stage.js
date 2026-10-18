@@ -1,3 +1,11 @@
+import {
+  detachSource,
+  curveRings,
+  mapPoint,
+  inversePoint,
+  splitCurve,
+  regenerateShape,
+} from "./smart-geometry.js";
 import { objectBounds, pointsOf, bounds, MACHINES } from "./model.js";
 import { inside, distance } from "./engine.js";
 import { movementSegments } from "./preview.js";
@@ -72,7 +80,12 @@ export class Stage {
     });
     canvas.addEventListener("contextmenu", (e) => {
       e.preventDefault();
-      const hit = this.hit(this.toWorld(e));
+      const world = this.toWorld(e);
+      const hit =
+        this.hit(
+          world,
+          selectedLeaves(this.state, { editable: true, visible: true }),
+        ) || this.hit(world);
       if (hit && !selectedLeaves(this.state).some((o) => o.id === hit.id))
         this.actions.select(this.canvasTarget(hit, e.altKey));
       this.actions.contextMenu?.({ x: e.clientX, y: e.clientY });
@@ -476,7 +489,27 @@ export class Stage {
         selectionIds(s).length === 1 &&
         s.selection === selected.id
       ) {
-        pointsOf(selected).forEach((p, i) => {
+        const points = selected.curve
+          ? selected.curve.nodes.map((p) => mapPoint(p, selected.curve.frame))
+          : pointsOf(selected);
+        if (selected.curve)
+          for (const n of selected.curve.nodes)
+            for (const key of ["in", "out"])
+              if (n[key]) {
+                const a = mapPoint(n, selected.curve.frame),
+                  b = mapPoint(n[key], selected.curve.frame);
+                ctx.strokeStyle = "#936c47";
+                ctx.beginPath();
+                ctx.moveTo(a.x, a.y);
+                ctx.lineTo(b.x, b.y);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.arc(b.x, b.y, 3 / scale, 0, Math.PI * 2);
+                ctx.fillStyle = "#e7b784";
+                ctx.fill();
+                ctx.stroke();
+              }
+        points.forEach((p, i) => {
           ctx.fillStyle = this.node === i ? "#e7b784" : "#fcf7e6";
           ctx.strokeStyle = "#3a5941";
           ctx.lineWidth = 1 / scale;
@@ -491,6 +524,22 @@ export class Stage {
         ctx.moveTo((b.minX + b.maxX) / 2, b.minY);
         ctx.lineTo((b.minX + b.maxX) / 2, b.minY - 22 / scale);
         ctx.stroke();
+        if (selected?.shape?.kind === "rect") {
+          const sh = selected.shape,
+            pt = mapPoint(
+              {
+                x: sh.width / 2 - Math.max(sh.radius, 2),
+                y: -sh.height / 2 + 2,
+              },
+              sh.frame,
+            );
+          ctx.beginPath();
+          ctx.arc(pt.x, pt.y, 4 / scale, 0, Math.PI * 2);
+          ctx.fillStyle = "#e7b784";
+          ctx.fill();
+          ctx.stroke();
+          ctx.fillStyle = "#f8f1df";
+        }
         for (const { id, x, y } of this.handles(b)) {
           ctx.beginPath();
           if (id === "rotate") ctx.arc(x, y, 4 / scale, 0, Math.PI * 2);
@@ -522,7 +571,13 @@ export class Stage {
       ctx.strokeStyle = "#3d5b40";
       ctx.fillStyle = "#59794d25";
       ctx.lineWidth = 1.5 / scale;
-      this.path(ctx, [this.draft], s.tool === "polygon");
+      this.path(
+        ctx,
+        s.tool === "pen"
+          ? curveRings({ nodes: this.draft, closed: false })
+          : [this.draft],
+        s.tool === "polygon",
+      );
       if (s.tool === "polygon") ctx.fill();
       ctx.stroke();
       for (const p of this.draft) {
@@ -576,8 +631,8 @@ export class Stage {
     ctx.beginPath();
     ctx.roundRect(x, y, w, h, r);
   }
-  hit(p) {
-    return [...this.state.project.objects].reverse().find((o) => {
+  hit(p, candidates = this.state.project.objects) {
+    return [...candidates].reverse().find((o) => {
       if (
         !isVisible(this.state.project, o) ||
         isLocked(this.state.project, o) ||
@@ -595,26 +650,33 @@ export class Stage {
       )
         return false;
       if (o.type === "fill") return inside(p, o.rings, o.fillRule);
-      const pts = pointsOf(o);
-      for (let i = 1; i < pts.length; i++) {
-        const a = pts[i - 1],
-          b = pts[i],
-          l = distance(a, b) ** 2,
-          t = l
-            ? Math.max(
-                0,
-                Math.min(
-                  1,
-                  ((p.x - a.x) * (b.x - a.x) + (p.y - a.y) * (b.y - a.y)) / l,
-                ),
-              )
-            : 0;
-        if (
-          distance(p, { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t }) <
-          pad
-        )
-          return true;
-      }
+      for (const pts of o.type === "manual" ? [o.commands] : o.rings)
+        for (
+          let i = 1;
+          i < pts.length + (o.type !== "manual" && o.closed ? 1 : 0);
+          i++
+        ) {
+          if (o.type === "manual" && pts[i].cmd !== "stitch") continue;
+          const a = pts[i - 1],
+            b = pts[i % pts.length],
+            l = distance(a, b) ** 2,
+            t = l
+              ? Math.max(
+                  0,
+                  Math.min(
+                    1,
+                    ((p.x - a.x) * (b.x - a.x) + (p.y - a.y) * (b.y - a.y)) / l,
+                  ),
+                )
+              : 0;
+          if (
+            distance(p, {
+              x: a.x + (b.x - a.x) * t,
+              y: a.y + (b.y - a.y) * t,
+            }) < pad
+          )
+            return true;
+        }
       return false;
     });
   }
@@ -670,6 +732,14 @@ export class Stage {
       if (index >= 0) this.actions.scrub(index + 1);
       return;
     }
+    if (s.tool === "pen") {
+      const node = { x: p.x, y: p.y };
+      this.draft.push(node);
+      this.drag = { type: "pen", node, start: p };
+      this.actions.draft();
+      this.render();
+      return;
+    }
     if (["polygon", "run", "satin", "manual"].includes(s.tool)) {
       this.draft.push({
         x: Math.round(p.x * 10) / 10,
@@ -679,7 +749,7 @@ export class Stage {
       this.render();
       return;
     }
-    if (["rect", "ellipse"].includes(s.tool)) {
+    if (["rect", "ellipse", "regular", "star", "eyelet"].includes(s.tool)) {
       this.shape = { start: p, end: p };
       this.render();
       return;
@@ -691,7 +761,29 @@ export class Stage {
       !isLocked(s.project, selected) &&
       selectionIds(s).length === 1
     ) {
-      const pts = pointsOf(selected);
+      if (selected.curve) {
+        const c = selected.curve;
+        for (let i = 0; i < c.nodes.length; i++)
+          for (const key of ["anchor", "in", "out"]) {
+            const point = key === "anchor" ? c.nodes[i] : c.nodes[i][key];
+            if (!point) continue;
+            if (distance(p, mapPoint(point, c.frame)) < 8 / this.scale) {
+              this.node = i;
+              this.drag = {
+                type: "curve",
+                o: selected,
+                index: i,
+                key,
+                start: p,
+                original: structuredClone(c),
+                before: JSON.stringify(s.project),
+              };
+              this.render();
+              return;
+            }
+          }
+      }
+      const pts = selected.curve ? [] : pointsOf(selected);
       let index = pts.findIndex((q) => distance(p, q) < 7 / this.scale);
       if (index >= 0) {
         this.node = index;
@@ -708,6 +800,22 @@ export class Stage {
       }
     }
     const selection = selectedLeaves(s, { editable: true });
+    if (
+      s.tool === "select" &&
+      selection.length === 1 &&
+      selection[0].shape?.kind === "rect"
+    ) {
+      const o = selection[0],
+        sh = o.shape,
+        pt = mapPoint(
+          { x: sh.width / 2 - Math.max(sh.radius, 2), y: -sh.height / 2 + 2 },
+          sh.frame,
+        );
+      if (distance(p, pt) < 7 / this.scale) {
+        this.drag = { type: "radius", o, before: JSON.stringify(s.project) };
+        return;
+      }
+    }
     if (s.tool === "select" && selection.length) {
       const b = selectionBounds(selection),
         handle = this.handles(b).find(
@@ -727,13 +835,23 @@ export class Stage {
         return;
       }
     }
-    const hit = this.hit(p);
+    // Existing selection wins on its actual geometry, never on empty bounding-box space.
+    // Alt-click cycles through overlapping eligible leaves; modifiers deliberately retarget.
+    const hits = s.project.objects.filter((o) => this.hit(p, [o])).reverse();
+    const current = selectedLeaves(s, { editable: true, visible: true });
+    const at = hits.findIndex((o) => current.includes(o));
+    const hit =
+      e.altKey && hits.length
+        ? hits[(at + 1) % hits.length]
+        : !e.shiftKey && !e.ctrlKey && !e.metaKey
+          ? this.hit(p, current) || hits[0]
+          : hits[0];
     this.node = null;
     if (hit) {
       const id = this.canvasTarget(hit, e.altKey || e.ctrlKey || e.metaKey);
       if (e.shiftKey || e.ctrlKey || e.metaKey)
         this.actions.select(id, { toggle: true });
-      else if (!selectedLeaves(s).some((o) => o.id === hit.id))
+      else if (e.altKey || !selectedLeaves(s).some((o) => o.id === hit.id))
         this.actions.select(id);
       const objects = selectedLeaves(s, { editable: true });
       this.drag = {
@@ -870,7 +988,39 @@ export class Stage {
           sx = sy = Math.abs(sx - 1) > Math.abs(sy - 1) ? sx : sy;
         transformSelection(d.objects, { sx, sy, pivot });
       }
+    } else if (d.type === "pen") {
+      const dx = p.x - d.start.x,
+        dy = p.y - d.start.y;
+      d.node.out = { x: p.x, y: p.y };
+      d.node.in = { x: d.start.x - dx, y: d.start.y - dy };
+    } else if (d.type === "radius") {
+      const sh = d.o.shape,
+        q = inversePoint(p, sh.frame);
+      sh.radius = Math.max(
+        0,
+        Math.min(sh.width / 2, sh.height / 2, sh.width / 2 - q.x),
+      );
+      regenerateShape(d.o);
+    } else if (d.type === "curve") {
+      const c = structuredClone(d.original),
+        q = inversePoint(p, c.frame),
+        n = c.nodes[d.index],
+        start = inversePoint(d.start, c.frame),
+        dx = q.x - start.x,
+        dy = q.y - start.y;
+      if (d.key === "anchor") {
+        n.x += dx;
+        n.y += dy;
+        for (const key of ["in", "out"])
+          if (n[key]) {
+            n[key].x += dx;
+            n[key].y += dy;
+          }
+      } else n[d.key] = q;
+      d.o.curve = c;
+      d.o.rings = curveRings(c);
     } else if (d.type === "node") {
+      detachSource(d.o);
       const q = pointsOf(d.o)[d.index];
       q.x = Math.round((d.original.x + p.x - d.start.x) * 10) / 10;
       q.y = Math.round((d.original.y + p.y - d.start.y) * 10) / 10;
@@ -917,13 +1067,14 @@ export class Stage {
     if (this.shape) {
       const shape = this.shape;
       this.shape = null;
-      if (distance(shape.start, shape.end) > 1) this.actions.shape(shape);
+      if (this.state.tool === "eyelet" || distance(shape.start, shape.end) > 1)
+        this.actions.shape(shape);
       this.render();
     }
     if (this.drag) {
       const d = this.drag;
       this.drag = null;
-      if (d.type !== "pan") this.actions.changed(d.before);
+      if (!["pan", "pen"].includes(d.type)) this.actions.changed(d.before);
       this.render();
     }
   }
@@ -947,12 +1098,57 @@ export class Stage {
       (o) => o.id === this.state.selection,
     );
     if (!o || o.type === "manual" || isLocked(this.state.project, o)) return;
+    if (o.curve) {
+      const c = o.curve;
+      let best = 8 / this.scale,
+        found = null;
+      for (let i = 0; i < c.nodes.length - (c.closed ? 0 : 1); i++) {
+        const a = c.nodes[i],
+          b = c.nodes[(i + 1) % c.nodes.length],
+          u = a.out || a,
+          v = b.in || b;
+        for (let j = 1; j < 40; j++) {
+          const t = j / 40,
+            k = 1 - t,
+            q = mapPoint(
+              {
+                x:
+                  k * k * k * a.x +
+                  3 * k * k * t * u.x +
+                  3 * k * t * t * v.x +
+                  t * t * t * b.x,
+                y:
+                  k * k * k * a.y +
+                  3 * k * k * t * u.y +
+                  3 * k * t * t * v.y +
+                  t * t * t * b.y,
+              },
+              c.frame,
+            ),
+            d = distance(p, q);
+          if (d < best) {
+            best = d;
+            found = { i, t };
+          }
+        }
+      }
+      if (found)
+        this.actions.mutate(() => {
+          splitCurve(c, found.i, found.t);
+          o.rings = curveRings(c);
+        });
+      return;
+    }
     let best = 8 / this.scale,
       found = null;
     for (const r of o.rings)
-      for (let i = 1; i < r.length; i++) {
+      for (
+        let i = 1;
+        i < r.length + (o.type === "fill" || o.closed ? 1 : 0);
+        i++
+      ) {
         const a = r[i - 1],
-          b = r[i],
+          b = r[i % r.length],
           l = distance(a, b) ** 2,
           t = l
             ? Math.max(
@@ -972,7 +1168,11 @@ export class Stage {
           found = { r, i };
         }
       }
-    if (found) this.actions.mutate(() => found.r.splice(found.i, 0, p));
+    if (found)
+      this.actions.mutate(() => {
+        detachSource(o);
+        found.r.splice(found.i, 0, p);
+      });
   }
   restoreGeometry(d) {
     d.objects.forEach((o, i) => {
@@ -980,6 +1180,10 @@ export class Stage {
       if (o.type === "manual") o.commands = structuredClone(original.commands);
       else o.rings = structuredClone(original.rings);
       o.angle = original.angle;
+      for (const key of ["shape", "textSource", "rounding", "curve"]) {
+        if (original[key]) o[key] = structuredClone(original[key]);
+        else delete o[key];
+      }
       if (original.operations)
         o.operations = structuredClone(original.operations);
     });

@@ -1,0 +1,100 @@
+.creative-settings details {
+  border: 1px solid var(--border, #435648);
+  border-radius: 6px;
+  padding: 8px;
+  margin: 10px 0;
+}
+.creative-settings summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 12px;
+  padding: 4px 0;
+}
+.creative-settings details[open] > summary {
+  margin-bottom: 10px;
+}
+.creative-settings textarea {
+  width: 100%;
+  resize: vertical;
+  min-height: 58px;
+  background: var(--input, #182a23);
+  color: inherit;
+  border: 1px solid #526455;
+  border-radius: 4px;
+  padding: 8px;
+  font: inherit;
+}
+.creative-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 5px;
+  margin: 8px 0;
+}
+.creative-grid button {
+  padding: 8px 3px;
+  min-height: 36px;
+  font-size: 11px;
+}
+.creative-settings button {
+  max-width: 100%;
+  white-space: normal;
+}
+.font-sample {
+  font-size: 24px;
+  padding: 8px;
+  background: #ffffff08;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.tree-rename {
+  width: 100%;
+  min-width: 0;
+  padding: 8px;
+  background: #14271f;
+  color: #fff4dd;
+  border: 2px solid #e7b784;
+  border-radius: 4px;
+}
+.trace-compare {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.trace-compare figure {
+  margin: 0;
+  min-width: 0;
+}
+.trace-compare img,
+.trace-compare canvas {
+  display: block;
+  width: 100%;
+  height: 210px;
+  object-fit: contain;
+  background: repeating-conic-gradient(#d6dbcf 0 25%, #eff0e5 0 50%) 0/16px 16px;
+  border-radius: 6px;
+}
+.trace-compare figcaption {
+  font-size: 12px;
+  margin-bottom: 5px;
+}
+.trace-status {
+  font-size: 12px;
+  min-height: 2em;
+}
+.trace-settings {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 12px;
+}
+.trace-settings label {
+  min-width: 0;
+}
+@media (max-width: 500px) {
+  .trace-compare img,
+  .trace-compare canvas {
+    height: 150px;
+  }
+  .creative-grid button {
+    min-height: 42px;
+  }
+}

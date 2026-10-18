@@ -1,3 +1,4 @@
+import { mapPoint, identity } from "./smart-geometry.js";
 import { object, bounds, translate, uid } from "./model.js";
 import { parseSVGPath, segmentPath, SVGPathError } from "./svg-path.js";
 export function simplify(points, tolerance = 0.12) {
@@ -491,7 +492,7 @@ export function importSVG(text, filename = "Imported SVG") {
   return fitted;
 }
 // Boundary tracing of quantized pixels; oriented loops retain holes and disconnected islands.
-export function traceLabels(labels, w, h, label, scale = 1) {
+export function traceLabels(labels, w, h, label, scale = 1, options = {}) {
   const edges = new Map();
   const key = (x, y) => y * (w + 1) + x;
   function edge(x, y, x2, y2, dir) {
@@ -533,7 +534,7 @@ export function traceLabels(labels, w, h, label, scale = 1) {
     let area = 0;
     for (let i = 1; i < loop.length; i++)
       area += loop[i - 1].x * loop[i].y - loop[i].x * loop[i - 1].y;
-    if (Math.abs(area) >= 4) {
+    if (Math.abs(area) >= (options.preservePixels ? 2 : 4)) {
       const points = loop
         .filter(
           (p, i) =>
@@ -543,7 +544,8 @@ export function traceLabels(labels, w, h, label, scale = 1) {
               (p.y - loop[i - 1].y) * (loop[i + 1].x - p.x),
         )
         .map((p) => ({ x: p.x * scale, y: p.y * scale }));
-      if (points.length >= 4) loops.push(simplify(points, scale * 0.35));
+      if (points.length >= 4)
+        loops.push(simplify(points, options.simplify ?? scale * 0.35));
     }
   }
   return loops;
@@ -553,11 +555,12 @@ export function vectorizePixels(
   colors = 5,
   removeBackground = true,
   widthMM = 70,
+  options = {},
 ) {
   const { data, width: w, height: h } = image,
     pixels = [];
   for (let i = 0; i < w * h; i++)
-    if (data[i * 4 + 3] > 100)
+    if (data[i * 4 + 3] > (options.alpha ?? 100))
       pixels.push([data[i * 4], data[i * 4 + 1], data[i * 4 + 2]]);
   if (!pixels.length) throw Error("Image is empty.");
   // Deterministic farthest-point initialization avoids collapsing flat-color artwork.
@@ -592,13 +595,39 @@ export function vectorizePixels(
   }
   const labels = new Int16Array(w * h).fill(-1);
   for (let i = 0; i < labels.length; i++)
-    if (data[i * 4 + 3] > 100) {
+    if (data[i * 4 + 3] > (options.alpha ?? 100)) {
       const p = [data[i * 4], data[i * 4 + 1], data[i * 4 + 2]];
       let j = 0;
       for (let k = 1; k < palette.length; k++)
         if (dist(p, palette[k]) < dist(p, palette[j])) j = k;
       labels[i] = j;
     }
+  if (options.minArea > 0) {
+    const minimum = options.minArea / (widthMM / w) ** 2,
+      visited = new Uint8Array(w * h);
+    for (let start = 0; start < labels.length; start++)
+      if (labels[start] >= 0 && !visited[start]) {
+        const label = labels[start],
+          queue = [start];
+        visited[start] = 1;
+        for (let at = 0; at < queue.length; at++) {
+          const i = queue[at],
+            x = i % w,
+            y = Math.floor(i / w);
+          for (const j of [
+            x ? i - 1 : -1,
+            x < w - 1 ? i + 1 : -1,
+            y ? i - w : -1,
+            y < h - 1 ? i + w : -1,
+          ])
+            if (j >= 0 && !visited[j] && labels[j] === label) {
+              visited[j] = 1;
+              queue.push(j);
+            }
+        }
+        if (queue.length < minimum) for (const i of queue) labels[i] = -1;
+      }
+  }
   const border = palette.map(() => 0);
   for (let x = 0; x < w; x++) {
     if (labels[x] >= 0) border[labels[x]]++;
@@ -614,7 +643,22 @@ export function vectorizePixels(
     result = [];
   palette.forEach((p, i) => {
     if (i === background) return;
-    const rings = traceLabels(labels, w, h, i, widthMM / w);
+    let rings = traceLabels(labels, w, h, i, widthMM / w, options);
+    if (options.smoothing)
+      rings = rings.map((r) => {
+        const points = r.slice(0, -1),
+          out = [];
+        for (let j = 0; j < points.length; j++) {
+          const a = points[j],
+            b = points[(j + 1) % points.length];
+          out.push(
+            { x: a.x * 0.75 + b.x * 0.25, y: a.y * 0.75 + b.y * 0.25 },
+            { x: a.x * 0.25 + b.x * 0.75, y: a.y * 0.25 + b.y * 0.75 },
+          );
+        }
+        out.push({ ...out[0] });
+        return simplify(out, options.simplify || 0.03);
+      });
     if (rings.length)
       result.push(
         object(`Image color ${i + 1}`, rings, {
@@ -655,28 +699,90 @@ export async function rasterObjects(file, colors, removeBackground, widthMM) {
     widthMM,
   );
 }
-export function lettering(text, height, color, font = "serif") {
+export const FONTS = {
+  serif: "Classic serif",
+  "sans-serif": "Modern sans",
+  monospace: "Geometric mono",
+  cursive: "Script · device font",
+};
+export function lettering(text, height, color, font = "serif", options = {}) {
   if (!text.trim()) throw Error("Enter some lettering.");
+  if (text.length > 120 || !FONTS[font])
+    throw Error("Use at most 120 characters and a supported font.");
+  const tracking = options.tracking || 0,
+    lineSpacing = options.lineSpacing || 1.3,
+    align = options.align || "center";
   const c = document.createElement("canvas"),
     ctx = c.getContext("2d");
   ctx.font = `bold 110px ${font}`;
-  c.width = Math.ceil(ctx.measureText(text).width + 24);
-  c.height = 150;
-  if (c.width > 2400) throw Error("Use a shorter phrase.");
+  const cap = ctx.measureText("M").actualBoundingBoxAscent || 80,
+    scale = height / cap,
+    gap = tracking / scale;
+  const lines = text.split("\n");
+  const widths = lines.map(
+    (line) =>
+      [...line].reduce((n, char) => n + ctx.measureText(char).width + gap, 0) -
+      gap,
+  );
+  const width = Math.max(1, ...widths),
+    lineHeight = cap * lineSpacing;
+  c.width = Math.ceil(width + 60);
+  c.height = Math.ceil((lines.length - 1) * lineHeight + 180);
+  if (c.width > 4096 || c.height > 2400)
+    throw Error(
+      "Lettering is too large. Use fewer characters or less spacing.",
+    );
   ctx.font = `bold 110px ${font}`;
-  ctx.fillText(text, 12, 115);
+  lines.forEach((line, i) => {
+    let x =
+      30 +
+      (align === "right"
+        ? width - widths[i]
+        : align === "center"
+          ? (width - widths[i]) / 2
+          : 0);
+    for (const char of line) {
+      ctx.fillText(char, x, 120 + i * lineHeight);
+      x += ctx.measureText(char).width + gap;
+    }
+  });
   const d = ctx.getImageData(0, 0, c.width, c.height),
     labels = new Int16Array(c.width * c.height).fill(-1);
   for (let i = 0; i < labels.length; i++)
     if (d.data[i * 4 + 3] > 128) labels[i] = 0;
   const rings = traceLabels(labels, c.width, c.height, 0, 1);
   if (!rings.length) throw Error("No glyph outlines available.");
-  const o = object(text, rings, { color, angle: 0, fillRule: "nonzero" });
-  const b = bounds(rings.flat()),
-    s = height / (b.height || 1);
+  const b = bounds(rings.flat());
   for (const p of rings.flat()) {
-    p.x = (p.x - (b.minX + b.maxX) / 2) * s;
-    p.y = (p.y - (b.minY + b.maxY) / 2) * s;
+    p.x = (p.x - (b.minX + b.maxX) / 2) * scale;
+    p.y = (p.y - (b.minY + b.maxY) / 2) * scale;
   }
-  return o;
+  return object(text.replace(/\n/g, " ").slice(0, 100), rings, {
+    color,
+    angle: 0,
+    fillRule: "nonzero",
+    textSource: {
+      content: text,
+      height,
+      font,
+      tracking,
+      lineSpacing,
+      align,
+      frame: identity(),
+    },
+  });
+}
+export function updateLettering(o, changes) {
+  const source = { ...o.textSource, ...changes },
+    made = lettering(
+      source.content,
+      source.height,
+      o.color,
+      source.font,
+      source,
+    );
+  const frame = source.frame || identity();
+  o.rings = made.rings.map((r) => r.map((p) => mapPoint(p, frame)));
+  o.textSource = { ...made.textSource, frame };
+  delete o.rounding;
 }

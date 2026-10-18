@@ -1,3 +1,4 @@
+import { designIssues } from "./design-issues.js";
 import { quantizeColumnPaths } from "./column-routing.js";
 import { bounds, MACHINES } from "./model.js";
 import { inside, distance, safeConnector, simplifyPath } from "./geometry.js";
@@ -588,7 +589,7 @@ export function generate(project) {
       (o.operations || [o]).some(
         (op) =>
           op.enabled !== false &&
-          ["fill", "satin", "border"].includes(op.type) &&
+          ["fill", "column", "satin", "border"].includes(op.type) &&
           op.spacing < 0.25,
       ),
   );
@@ -631,6 +632,7 @@ export function generate(project) {
     events,
     stats,
     warnings,
+    issues: designIssues(project, warnings, diagnostics),
     diagnostics,
     order: prepared.units.map((o) => ({
       objectId: o.id,

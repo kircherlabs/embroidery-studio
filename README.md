@@ -13,6 +13,24 @@ software has been tested in browsers and through independent file decoding.
 The PES origin repair matches a file verified by the owner on a physical SE700;
 new exports and sew-out quality still need machine testing.
 
+## Properties and construction
+
+The selection-aware inspector separates **Artwork**, **Embroidery method**,
+**Construction steps** and **Advanced digitizing**. Choose a simple stitching style
+or edit individual operations sharing one source geometry. Open paths expose
+compatible methods with explicit closure guidance.
+
+**Construction presets** checks the fabric boundary before replacing any steps.
+For an illustration, create a surrounding rectangle, rounded rectangle, circle or
+oval patch. One editable boundary sews preparation, then the original decorative
+objects, then finishing. It does not turn every illustration region into a separate
+fabric piece. Manual fabric-piece construction remains available after preflight.
+
+**Design Issues** distinguishes errors, warnings and notices and locates affected
+artwork/steps. Invalid steps preserve the rest of the preview but block export
+until repaired or explicitly disabled. See [Properties audit and construction
+workflow](docs/PROPERTIES.md) for applicability, testing and limitations.
+
 ## What works
 
 - SVG vector import (including transforms and holes), PNG/JPG color-region

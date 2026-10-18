@@ -203,7 +203,7 @@ try {
   assert.deepEqual(await actual(), [b, c, a]);
   await page.waitForFunction(
     () =>
-      JSON.parse(localStorage.getItem("embroidery-studio-v1")).sequencing
+      JSON.parse(localStorage.getItem("embroidery-studio-v1"))?.sequencing
         ?.order[0] === window.studio.getProject().sequencing.order[0],
   );
   await page.reload();
@@ -356,11 +356,13 @@ try {
     type: "touchStart",
     touchPoints: [{ x, y, id: 1 }],
   });
-  for (let i = 1; i <= 8; i++)
+  for (let i = 1; i <= 8; i++) {
+    await mobile.evaluate(() => new Promise(requestAnimationFrame));
     await touch.send("Input.dispatchTouchEvent", {
       type: "touchMove",
       touchPoints: [{ x, y: y + ((to - y) * i) / 8, id: 1 }],
     });
+  }
   await touch.send("Input.dispatchTouchEvent", {
     type: "touchEnd",
     touchPoints: [],

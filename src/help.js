@@ -1,4 +1,12 @@
 const descriptions = {
+  "embroidery-style":
+    "Configure outline, fill or combined stitching with existing editable operations. Replacing a multi-step stack requires confirmation; source geometry stays unchanged.",
+  "draw-style":
+    "Choose the initial stitching style for new closed shapes. Change it later in Properties; open paths and construction tools keep their dedicated methods.",
+  "construction-stage":
+    "For a linked patch boundary, place this operation before or after the decorative artwork. Within a phase, listed step order is preserved.",
+  "close-artwork":
+    "Explicitly close the selected source geometry so it can define a filled region or fabric piece. Undo restores the open source. This is different from sewing one operation's closing segment.",
   "live-text":
     "Edit this lettering object's content, including line breaks. Its identity, position and shared operation stack remain intact.",
   "live-font":
@@ -138,13 +146,13 @@ const descriptions = {
   "bulk-scope":
     "Choose whether bulk settings affect each region's primary operation or all its sewing operations. Other operation settings stay independent.",
   "stitch-type":
-    "Choose how selected artwork is sewn. For multiple manufacturing steps on the same geometry, add operations below.",
+    "Change the active step's stitch method, preserving source geometry and independent colors. This changes an existing step; Add step creates an additional operation.",
   "thread-color":
     "Assign the selected thread color to applicable operations. Color changes affect batching and machine thread-change instructions.",
   spacing:
     "Row spacing in millimeters. Smaller spacing gives denser fill or satin coverage, more thread and greater puckering risk. Artwork size stays unchanged.",
   length:
-    "Target sewing stitch length in millimeters. Shorter stitches follow detail more closely and increase needle penetrations. Travel moves are separate.",
+    "Maximum segment length in millimeters for fill, or target length along a running path. Satin columns use it only when wide spans need splitting. Travel moves are separate.",
   angle:
     "Tatami or filled-region satin direction in degrees. Changes needle spans, not artwork orientation. Split complex branches into separate regions for different directions.",
   "fill-pattern":
@@ -178,7 +186,7 @@ const descriptions = {
   proportional:
     "Keep the selection's width-to-height ratio while resizing. Shift temporarily toggles this during handle dragging.",
   rotate:
-    "Rotate selected artwork together by this angle in degrees, then regenerate stitches. Fill directions rotate with artwork.",
+    "Rotate the selection BY this angle in degrees, relative to its current orientation. The field resets to zero after applying. Fill directions rotate with artwork.",
   "sequence-locked":
     "Pin this object's position during automatic sequencing. Other objects cannot cross it; a pinned group protects all its descendants.",
   "convert-manual":
@@ -190,7 +198,7 @@ const descriptions = {
   "operation-name":
     "Name this embroidery step independently of its source artwork.",
   "applique-recipe":
-    "Replace selected operation stacks with placement, stop for fabric, tackdown, stop for trimming and satin border. Undo restores existing steps.",
+    "Check fabric-piece suitability, then choose direct construction or a surrounding editable patch. Complex artwork stays decorative; stacks are replaced only after an explicit choice.",
   "manual-index":
     "Choose the individual machine command to inspect or edit. Indices include jumps, trims and stops.",
   "manual-cmd":

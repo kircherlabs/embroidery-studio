@@ -1,3 +1,4 @@
+import { roundChecked } from "./creative.js";
 import { mapPoint, identity } from "./smart-geometry.js";
 import { object, bounds, translate, uid } from "./model.js";
 import { parseSVGPath, segmentPath, SVGPathError } from "./svg-path.js";
@@ -773,6 +774,7 @@ export function lettering(text, height, color, font = "serif", options = {}) {
   });
 }
 export function updateLettering(o, changes) {
+  const radius = o.rounding?.radius;
   const source = { ...o.textSource, ...changes },
     made = lettering(
       source.content,
@@ -785,4 +787,5 @@ export function updateLettering(o, changes) {
   o.rings = made.rings.map((r) => r.map((p) => mapPoint(p, frame)));
   o.textSource = { ...made.textSource, frame };
   delete o.rounding;
+  if (radius) roundChecked(o, radius);
 }

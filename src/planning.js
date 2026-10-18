@@ -261,7 +261,7 @@ function prepareArtwork(project) {
   };
 }
 
-export function preparePlan(project) {
+function prepareBasicPlan(project) {
   if (isManualOrder(project)) {
     const byId = new Map(project.objects.map((o) => [o.id, o]));
     project = {
@@ -308,7 +308,7 @@ export function preparePlan(project) {
   const references = objects.map((o) => {
     if (!o.operations) return o;
     const fill = o.operations.find(
-      (op) => op.enabled !== false && op.type === "fill",
+      (op) => op.enabled !== false && ["fill", "column"].includes(op.type),
     );
     return { ...o, type: fill ? "fill" : "run", color: fill?.color || o.color };
   });
@@ -340,16 +340,32 @@ export function preparePlan(project) {
         });
         continue;
       }
-      const view = operationObject(o, op),
-        part = prepareArtwork({
-          ...project,
-          objects: [view],
-          planning: {
-            ...project.planning,
-            optimizeColors: false,
-            skipSvgOutlines: false,
-          },
+      let view;
+      try {
+        view = operationObject(o, op);
+      } catch (e) {
+        (prepared.diagnostics.operationIssues ||= []).push({
+          code: "invalid-operation",
+          severity: "error",
+          objectId: o.id,
+          objectName: o.name,
+          operationId: op.id,
+          operationName: op.name,
+          message: e.message,
+          action:
+            "Repair or close the source geometry, choose a compatible method, or disable this step.",
         });
+        continue;
+      }
+      const part = prepareArtwork({
+        ...project,
+        objects: [view],
+        planning: {
+          ...project.planning,
+          optimizeColors: false,
+          skipSvgOutlines: false,
+        },
+      });
       for (const key of [
         "skippedDetails",
         "skippedOutlines",
@@ -389,4 +405,78 @@ export function preparePlan(project) {
   ).length;
   prepared.diagnostics.sourceObjects = project.objects.length;
   return prepared;
+}
+
+// Explicit construction dependencies intentionally span one shared boundary.
+// Ordinary artwork still completes object by object; only the boundary has a
+// preparation and finishing phase, surrounding its linked decorative objects.
+export function preparePlan(project) {
+  const result = prepareBasicPlan(project);
+  const boundaries = project.objects.filter(
+    (o) => o.constructionArtworkIds?.length && isVisible(project, o),
+  );
+  if (!boundaries.length) return result;
+  let units = result.units;
+  const claimed = new Set();
+  for (const boundary of boundaries) {
+    const ids = new Set(
+      boundary.constructionArtworkIds.filter((id) =>
+        project.objects.some((o) => o.id === id),
+      ),
+    );
+    if ([boundary.id, ...ids].some((id) => claimed.has(id)))
+      throw Error(
+        "Overlapping construction links: an artwork object may belong to only one fabric boundary.",
+      );
+    [boundary.id, ...ids].forEach((id) => claimed.add(id));
+    const boundaryUnits = units.filter((u) => u.id === boundary.id);
+    if (!boundaryUnits.length) continue;
+    const stages = new Map(
+      operationsOf(boundary).map((op) => [
+        op.id,
+        op.constructionStage || (op.type === "border" ? "finish" : "prepare"),
+      ]),
+    );
+    const inner = prepareBasicPlan({
+      ...project,
+      objects: project.objects.filter((o) => ids.has(o.id)),
+    });
+    const sequence = [
+      ...boundaryUnits.filter((u) => stages.get(u.operationId) !== "finish"),
+      ...inner.units,
+      ...boundaryUnits.filter((u) => stages.get(u.operationId) === "finish"),
+    ];
+    const at = units.findIndex((u) => u.id === boundary.id || ids.has(u.id));
+    const before = units
+      .slice(0, at)
+      .filter((u) => u.id !== boundary.id && !ids.has(u.id));
+    const after = units
+      .slice(at)
+      .filter((u) => u.id !== boundary.id && !ids.has(u.id));
+    const next = [...before, ...sequence, ...after];
+    for (const pin of project.objects.filter(
+      (o) =>
+        !ids.has(o.id) &&
+        o.id !== boundary.id &&
+        (o.sequenceLocked ||
+          ancestors(project, o).some((g) => g.sequenceLocked)),
+    )) {
+      const oldAt = units.findIndex((u) => u.id === pin.id),
+        newAt = next.findIndex((u) => u.id === pin.id);
+      if (oldAt < 0 || newAt < 0) continue;
+      const oldBefore = new Set(units.slice(0, oldAt).map((u) => u.id)),
+        newBefore = new Set(next.slice(0, newAt).map((u) => u.id));
+      if (
+        oldBefore.size !== newBefore.size ||
+        [...oldBefore].some((id) => !newBefore.has(id))
+      )
+        throw Error(
+          `Patch dependencies conflict with pinned sewing object “${pin.name}”. Review manual order or unpin deliberately.`,
+        );
+    }
+    units = next;
+  }
+  result.units = units;
+  result.diagnostics.constructionBoundaries = boundaries.length;
+  return result;
 }

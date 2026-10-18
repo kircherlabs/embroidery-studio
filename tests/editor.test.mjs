@@ -345,6 +345,6 @@ test("explicit trim steps own their actual command and do not invent extra sewin
     event = plan.events.find((e) => e.operationId === o.operations[1].id);
   assert(event);
   assert.equal(event.cmd, "trim");
-  assert.equal(event.operationName, "Manual trim");
+  assert.equal(event.operationName, "Thread trim");
   assert.equal(plan.stats.trims, 2);
 });

@@ -1,3 +1,5 @@
+import { createSurroundingPatch } from "../src/construction.js";
+import { smartShape } from "../src/creative.js";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
@@ -302,4 +304,29 @@ test("repair rejects malformed lengths and missing origin prefixes", () => {
     });
     assert.notEqual(r.status, 0);
   }
+});
+
+test("surrounding patch preparation, decoration and finishing survive independent PES decoding at full dimensions", () => {
+  const artwork = smartShape("rect", 30, 16, { radius: 0 });
+  artwork.color = "#0099bb";
+  const p = { version: 1, name: "Patch", machine: "se700", objects: [artwork] };
+  const { boundary } = createSurroundingPatch(p, [artwork.id], {
+    kind: "rectangle",
+    width: 40,
+    height: 26,
+    border: 2.5,
+    color: "#000000",
+  });
+  const plan = generate(p),
+    { result, dec } = check(plan.events);
+  assert.equal(plan.stats.stops, 2);
+  assert.equal(result.preview.filter((e) => e.cmd === "stop").length, 2);
+  assert.deepEqual(modelMachineSizeMm(dec.pec), { widthMm: 40, heightMm: 26 });
+  const input = plan.events.filter((e) => e.cmd === "stitch"),
+    finish = boundary.operations.at(-1).id;
+  assert(input.findIndex((e) => e.objectId === artwork.id) > 0);
+  assert(
+    input.findLastIndex((e) => e.objectId === artwork.id) <
+      input.findIndex((e) => e.operationId === finish),
+  );
 });

@@ -236,8 +236,8 @@
               ><span></span>
               <button
                 data-tool="polygon"
-                title="Fill polygon (P)"
-                aria-label="Draw fill polygon"
+                title="Draw closed polygon (P)"
+                aria-label="Draw closed polygon"
               >
                 ⬡
               </button>
@@ -373,6 +373,23 @@
                 stitches</label
               >
             </div>
+          </details>
+          <details class="drawing-style">
+            <summary>Drawing style</summary>
+            <label
+              >New closed shapes<select id="draw-style">
+                <option value="auto">Default · tatami fill</option>
+                <option value="run">Outline · running</option>
+                <option value="border">Outline · satin</option>
+                <option value="fill">Filled · tatami</option>
+                <option value="combined">Fill + running outline</option>
+              </select></label
+            >
+            <p>
+              Applies to rectangles, ellipses, polygons, stars and closed Bézier
+              paths. Open running paths, manual stitches and eyelets keep their
+              dedicated methods. Edit any object's style in Properties.
+            </p>
           </details>
           <button id="arrange-selection" aria-haspopup="menu">Arrange ▾</button>
           <label><input type="checkbox" id="snap-grid" />Grid</label>
@@ -514,7 +531,7 @@
     <footer class="status-bar">
       <span id="status">Ready</span
       ><span
-        >40 wt thread presets <i>·</i> v0.3.1 <i>·</i>
+        >40 wt thread presets <i>·</i> v0.4.0 <i>·</i>
         <a
           href="https://github.com/kircherlabs/embroidery-studio"
           target="_blank"

@@ -96,7 +96,13 @@ try {
   await page.locator("#patch-border").fill("2");
   await page.screenshot({ path: "test-results/properties-patch-wizard.png" });
   await page.locator("#dialog-submit").click();
-  await ready();
+  await page.waitForFunction(
+    () =>
+      window.studio
+        .getProject()
+        .objects.some((o) => o.constructionArtworkIds?.length) &&
+      window.studio.getPlan(),
+  );
   let p = await project(),
     boundary = p.objects.find((o) => o.constructionArtworkIds);
   assert.equal(p.objects.length, 12);
@@ -194,7 +200,11 @@ try {
   await page.locator("#applique-recipe").click();
   assert.equal(await page.locator("#construction-mode").inputValue(), "direct");
   await page.locator("#dialog-submit").click();
-  await ready();
+  await page.waitForFunction(
+    () =>
+      window.studio.getProject().objects[0].operations?.length === 5 &&
+      window.studio.getPlan()?.stats.stops === 2,
+  );
   assert.equal((await plan()).stats.stops, 2);
   await page.locator("#undo").click();
   await ready();
@@ -203,10 +213,18 @@ try {
   await pick(simple.id);
   await page.locator("#applique-recipe").click();
   await page.locator("#dialog-submit").click();
-  await ready();
+  await page.waitForFunction(
+    () =>
+      window.studio.getProject().objects[0].operations?.length === 5 &&
+      window.studio.getPlan()?.stats.stops === 2,
+  );
   await page.locator("#embroidery-style").selectOption("combined");
   await page.locator("#dialog-submit").click();
-  await ready();
+  await page.waitForFunction(
+    () =>
+      window.studio.getProject().objects[0].operations?.length === 2 &&
+      window.studio.getPlan()?.stats.stops === 0,
+  );
   assert.deepEqual(
     (await project()).objects[0].operations.map((o) => o.type),
     ["fill", "run"],

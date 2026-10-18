@@ -273,7 +273,11 @@ try {
   await page.locator("#applique-recipe").click();
   await page.locator("#construction-mode").selectOption("direct");
   await page.locator("#dialog-submit").click();
-  await ready();
+  await page.waitForFunction(
+    () =>
+      window.studio.getProject().objects[0].operations?.length === 5 &&
+      window.studio.getPlan()?.stats.stops === 2,
+  );
   p = await project();
   const ops = p.objects[0].operations;
   assert.equal(ops.length, 5);

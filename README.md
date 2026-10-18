@@ -28,6 +28,10 @@ new exports and sew-out quality still need machine testing.
   sewing order with an explicit Automatic/Manual switch.
 - Hover/focus descriptions and an **Explain** mode for tap-to-read control help.
   The compact Machine & hoop panel sits above the canvas.
+- Resizable Objects, Properties and Sequence panels, a temporary canvas maximize
+  mode, saved workspace layout and an adaptive scrolling tool rail.
+- Mouse/trackpad/touch navigation, fit/center commands and contextual alignment,
+  size matching and drag guides that preserve physical stitch settings.
 - Shared canvas resize/rotation handles, proportional scaling, box selection,
   bulk editing with mixed values, alignment/distribution, grid snapping and
   touch zoom/pan.
@@ -58,7 +62,7 @@ new exports and sew-out quality still need machine testing.
    stays in the tree; actual optimized sewing order appears in the preview.
    Add independent operations in the inspector, or use the appliqué recipe on
    closed patch shapes. Read the [editing and operation guide](docs/EDITING.md).
-4. Open **Stitch preview**, scrub or play the sequence, and enable **Jumps** to
+4. Open **Stitch preview**, scrub or play the sequence, and enable **Display → Jumps** to
    inspect travel. Click a stitch or color block to inspect its position.
 5. Choose **Export → PES** for the SE700. The first conversion loads its local
    WebAssembly engine. Save the file to your usual machine transfer medium.
@@ -103,6 +107,7 @@ node tests/digitizing-browser.mjs
 node tests/travel-browser.mjs
 node tests/editor-browser.mjs
 node tests/ux-browser.mjs
+node tests/workspace-browser.mjs
 # Include the actual CDN/WASM export/import path:
 TEST_MACHINE=1 node tests/browser.mjs
 TEST_MACHINE=1 node tests/digitizing-browser.mjs

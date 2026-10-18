@@ -39,6 +39,46 @@ Use the separate selection boxes to add/remove rows without a keyboard; clicking
 row text selects normally. The eye hides artwork from canvas and manufacture;
 locks protect edits while leaving embroidery enabled.
 
+## Workspace and navigation
+
+Objects, Properties and Sequence in the workspace bar hide or show each panel.
+Drag a boundary to resize, or focus the boundary and use arrow keys (Shift makes
+larger steps). Home/End set its size limits; double-click restores its default
+size. Escape cancels an active resize. **Canvas** temporarily hides all panels;
+**Restore** or Escape returns to the previous layout. The reset-layout arrow
+restores default sizes and fits the hoop. Workspace preferences are saved locally,
+separately from project files and artwork undo history.
+
+Compact screens use side drawers, with only one side drawer open at a time.
+The Sequence panel starts collapsed there; opening Stitch preview reveals it.
+Timeline and playback remain outside the scrolling sequence details. Drawing
+tools scroll in a bounded rail, vertically on a roomy desktop or horizontally on
+smaller screens. Rail arrows expose additional tools; keyboard focus also scrolls
+the focused tool into view. No tool is removed at a smaller viewport size.
+
+Choose **Auto**, **Mouse** or **Trackpad** navigation. Auto distinguishes notched
+wheel zoom from small pixel/horizontal trackpad panning; use an explicit mode if
+your device reports different wheel events. Ctrl/Command-scroll and pinch zoom
+around the pointer. Middle-drag, Space-drag and the H hand tool pan without moving
+artwork. Two-finger touch pans and pinches. Zoom buttons and +/− work without a
+wheel. **Design** fits all visible artwork; **Hoop** or Home fits the machine field.
+**View** offers Fit Selection, Fit Design, Fit Hoop, Center View (keep zoom), and
+Reset View (Fit Hoop). Resizing or navigating does not alter physical dimensions.
+
+**Arrange** opens the same contextual actions as canvas right-click or Shift F10.
+Center a selection together in the hoop, center on one axis, or center the entire
+visible unlocked design. Multiselection adds alignment/distribution and matching
+width/height to the first selected object or group. Matching width changes only
+width; matching height changes only height. Groups retain editable child geometry,
+locked artwork stays protected, and density, stitch length and satin width remain
+in millimeters. All these artwork edits regenerate stitches and support Undo.
+
+**Guides** snaps dragging to the hoop center or visible artwork edges/centers,
+within seven screen pixels. Dashed lines mark the snapped axes. Hold Alt to bypass
+both guides and grid snapping. Numeric position fields remain available for exact
+coordinates. Display options affect only the canvas; they do not remove jumps,
+underlay, trims or other commands from export.
+
 ## Artwork layers and sewing order
 
 The tree lists artwork layers from bottom to top. **Object sewing order** shows

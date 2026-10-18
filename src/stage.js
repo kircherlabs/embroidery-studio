@@ -1,6 +1,7 @@
-import { objectBounds, pointsOf, MACHINES } from "./model.js";
+import { objectBounds, pointsOf, bounds, MACHINES } from "./model.js";
 import { inside, distance } from "./engine.js";
 import { movementSegments } from "./preview.js";
+import { snapTranslation } from "./arrange.js";
 import {
   selectedLeaves,
   selectionIds,
@@ -32,7 +33,26 @@ export class Stage {
       "wheel",
       (e) => {
         e.preventDefault();
-        this.zoomAt(Math.exp(-e.deltaY * 0.001), e.offsetX, e.offsetY);
+        const dy =
+            e.deltaY *
+            (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? this.h : 1),
+          dx = e.deltaX * (e.deltaMode === 1 ? 16 : 1),
+          trackpad =
+            this.navigationMode === "trackpad" ||
+            (this.navigationMode !== "mouse" &&
+              e.deltaMode === 0 &&
+              (dx !== 0 || Math.abs(dy) < 40));
+        if (e.ctrlKey || e.metaKey || !trackpad)
+          this.zoomAt(
+            Math.exp(-dy * (e.ctrlKey ? 0.01 : 0.001)),
+            e.offsetX,
+            e.offsetY,
+          );
+        else {
+          this.pan.x -= dx;
+          this.pan.y -= dy;
+          this.render();
+        }
       },
       { passive: false },
     );
@@ -50,7 +70,34 @@ export class Stage {
         }
       }
     });
-    canvas.addEventListener("contextmenu", (e) => e.preventDefault());
+    canvas.addEventListener("contextmenu", (e) => {
+      e.preventDefault();
+      const hit = this.hit(this.toWorld(e));
+      if (hit && !selectedLeaves(this.state).some((o) => o.id === hit.id))
+        this.actions.select(this.canvasTarget(hit, e.altKey));
+      this.actions.contextMenu?.({ x: e.clientX, y: e.clientY });
+    });
+    canvas.addEventListener("keydown", (e) => {
+      if (e.key === "Home" && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault();
+        e.stopPropagation();
+        this.fit();
+      }
+      if (e.key === "ContextMenu" || (e.shiftKey && e.key === "F10")) {
+        e.preventDefault();
+        e.stopPropagation();
+        const r = canvas.getBoundingClientRect();
+        this.actions.contextMenu?.({
+          x: r.x + r.width / 2,
+          y: r.y + r.height / 2,
+        });
+      }
+      if (["+", "=", "-"].includes(e.key) && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault();
+        e.stopPropagation();
+        this.zoomAt(e.key === "-" ? 0.8 : 1.25);
+      }
+    });
   }
   resize() {
     const r = this.canvas.getBoundingClientRect();
@@ -65,13 +112,13 @@ export class Stage {
     const m = MACHINES[this.state.project.machine];
     return (
       Math.min(
-        (this.w - 105) / (m.width + 12),
-        (this.h - 100) / (m.height + 12),
+        Math.max(20, this.w - 40) / (m.width + 12),
+        Math.max(20, this.h - 40) / (m.height + 12),
       ) * this.zoom
     );
   }
   get center() {
-    return { x: this.w / 2 + 18 + this.pan.x, y: this.h / 2 + 19 + this.pan.y };
+    return { x: this.w / 2 + this.pan.x, y: this.h / 2 + this.pan.y };
   }
   toWorld(e) {
     const r = this.canvas.getBoundingClientRect(),
@@ -89,25 +136,59 @@ export class Stage {
   fitSelection() {
     const selected = selectedLeaves(this.state);
     if (!selected.length) {
+      this.fitDesign();
+      return;
+    }
+    this.fitObjects(selected);
+  }
+  fitDesign() {
+    const objects = this.state.project.objects.filter((o) =>
+      isVisible(this.state.project, o),
+    );
+    if (!objects.length) {
       this.fit();
       return;
     }
-    const b = selectionBounds(selected);
+    this.fitObjects(objects, true);
+  }
+  fitObjects(objects, all = false) {
+    const b = selectionBounds(objects),
+      ids = new Set(objects.map((o) => o.id)),
+      stitches = (this.state.plan?.events || []).filter(
+        (e) => e.cmd === "stitch" && (all || ids.has(e.objectId)),
+      );
+    // Include generated borders/offsets without excluding retained source details.
+    if (stitches.length) {
+      const sewn = bounds(stitches);
+      b.minX = Math.min(b.minX, sewn.minX);
+      b.maxX = Math.max(b.maxX, sewn.maxX);
+      b.minY = Math.min(b.minY, sewn.minY);
+      b.maxY = Math.max(b.maxY, sewn.maxY);
+      b.width = b.maxX - b.minX;
+      b.height = b.maxY - b.minY;
+    }
+    this.fitBounds(b);
+  }
+  centerView() {
+    this.pan = { x: 0, y: 0 };
+    this.render();
+  }
+  fitBounds(b) {
     this.zoom = 1;
     const base = this.scale;
     this.zoom = Math.max(
-      0.3,
+      0.02,
       Math.min(
-        10,
+        32,
         Math.min(
-          (this.w - 140) / (b.width + 4),
-          (this.h - 100) / (b.height + 4),
+          Math.max(20, this.w - 48) / (b.width + 4),
+          Math.max(20, this.h - 48) / (b.height + 4),
         ) / base,
       ),
     );
     this.pan = {
-      x: -18 - ((b.minX + b.maxX) / 2) * this.scale,
-      y: -19 - ((b.minY + b.maxY) / 2) * this.scale,
+      x: -((b.minX + b.maxX) / 2) * this.scale,
+      y: -((b.minY + b.maxY) / 2) * this.scale,
     };
     this.render();
   }
@@ -135,7 +216,7 @@ export class Stage {
   zoomAt(f, x = this.w / 2, y = this.h / 2) {
     const old = this.scale,
       c = this.center;
-    this.zoom = Math.max(0.3, Math.min(10, this.zoom * f));
+    this.zoom = Math.max(0.02, Math.min(32, this.zoom * f));
     const ratio = this.scale / old;
     this.pan.x += (x - c.x) * (1 - ratio);
     this.pan.y += (y - c.y) * (1 - ratio);
@@ -419,6 +500,24 @@ export class Stage {
         }
       }
     }
+    if (this.guides?.length) {
+      ctx.save();
+      ctx.strokeStyle = "#a95636";
+      ctx.lineWidth = 1.3 / scale;
+      ctx.setLineDash([5 / scale, 3 / scale]);
+      for (const guide of this.guides) {
+        ctx.beginPath();
+        if (guide.axis === "x") {
+          ctx.moveTo(guide.position, -c.y / scale);
+          ctx.lineTo(guide.position, (this.h - c.y) / scale);
+        } else {
+          ctx.moveTo(-c.x / scale, guide.position);
+          ctx.lineTo((this.w - c.x) / scale, guide.position);
+        }
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
     if (this.draft.length) {
       ctx.strokeStyle = "#3d5b40";
       ctx.fillStyle = "#59794d25";
@@ -449,9 +548,26 @@ export class Stage {
     }
     document.getElementById("zoom-value").textContent =
       Math.round(this.zoom * 100) + "%";
+    document.getElementById("navigation-hint").textContent =
+      this.drag?.type === "pan"
+        ? "Panning view · artwork stays in place"
+        : s.space
+          ? "Pan view · release Space to return to editing"
+          : s.tool === "pan"
+            ? "Hand tool · drag to pan · + / − to zoom"
+            : this.navigationMode === "trackpad"
+              ? "Scroll to pan · pinch or Ctrl-scroll to zoom"
+              : this.navigationMode === "mouse"
+                ? "Wheel zoom · Space-drag to pan · F fits selection"
+                : "Wheel zoom · trackpad scroll pan · pinch to zoom";
+    document
+      .querySelector('[data-tool="pan"]')
+      ?.classList.toggle("temporary", Boolean(s.space));
     this.canvas.style.cursor =
-      s.tool === "pan" || s.space
-        ? "grab"
+      s.tool === "pan" || s.space || this.drag?.type === "pan"
+        ? this.drag
+          ? "grabbing"
+          : "grab"
         : ["select", "node"].includes(s.tool)
           ? "default"
           : "crosshair";
@@ -504,11 +620,13 @@ export class Stage {
   }
   down(e) {
     if (e.button !== 0 && e.button !== 1) return;
+    if (e.button === 1) e.preventDefault();
     this.canvas.focus();
     const s = this.state,
       p = this.toWorld(e);
     this.canvas.setPointerCapture(e.pointerId);
     if (e.pointerType === "touch") {
+      if (!this.pointers.size) this.touchDraft = structuredClone(this.draft);
       this.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
       if (this.pointers.size === 2) {
         if (this.drag?.before)
@@ -516,6 +634,8 @@ export class Stage {
         this.drag = null;
         this.shape = null;
         this.marquee = null;
+        this.draft = this.touchDraft || [];
+        this.actions.draft();
         this.actions.refresh();
         const [a, b] = [...this.pointers.values()];
         this.gesture = {
@@ -624,6 +744,14 @@ export class Stage {
         start: p,
         last: p,
         before: JSON.stringify(s.project),
+        snapTargets: s.project.objects
+          .filter(
+            (o) =>
+              isVisible(s.project, o) &&
+              !objects.includes(o) &&
+              (!s.isolation || within(s.project, o, s.isolation)),
+          )
+          .map(objectBounds),
       };
     } else
       this.marquee = {
@@ -672,9 +800,26 @@ export class Stage {
     } else if (d.type === "move") {
       let dx = p.x - d.start.x,
         dy = p.y - d.start.y;
+      if (!d.active && Math.hypot(dx, dy) * this.scale < 3) return;
+      d.active = true;
+      this.guides = [];
+      if (this.state.snapObjects && !e.altKey) {
+        const snapped = snapTranslation(
+          d.b,
+          dx,
+          dy,
+          d.snapTargets || [],
+          7 / this.scale,
+        );
+        dx = snapped.dx;
+        dy = snapped.dy;
+        this.guides = snapped.guides;
+      }
       if (this.state.snapGrid && !e.altKey) {
-        dx = Math.round(d.b.minX + dx) - d.b.minX;
-        dy = Math.round(d.b.minY + dy) - d.b.minY;
+        if (!this.guides.some((g) => g.axis === "x"))
+          dx = Math.round(d.b.minX + dx) - d.b.minX;
+        if (!this.guides.some((g) => g.axis === "y"))
+          dy = Math.round(d.b.minY + dy) - d.b.minY;
       }
       this.restoreGeometry(d);
       transformSelection(d.objects, { dx, dy });
@@ -733,6 +878,7 @@ export class Stage {
     this.render();
   }
   up(e) {
+    this.guides = [];
     this.pointers.delete(e.pointerId);
     if (this.gesture) {
       this.gesture = null;
@@ -782,6 +928,11 @@ export class Stage {
     }
   }
   cancelDrag() {
+    this.guides = [];
+    if (this.pointers.size && this.touchDraft) {
+      this.draft = this.touchDraft;
+      this.actions.draft();
+    }
     if (this.drag?.before) this.state.project = JSON.parse(this.drag.before);
     this.drag = null;
     this.shape = null;

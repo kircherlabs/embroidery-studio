@@ -35,6 +35,7 @@ jobs:
           node tests/travel-browser.mjs
           node tests/editor-browser.mjs
           node tests/ux-browser.mjs
+          node tests/workspace-browser.mjs
           node tests/pes-browser.mjs
       - run: node scripts/build.mjs
       - uses: actions/upload-pages-artifact@v3

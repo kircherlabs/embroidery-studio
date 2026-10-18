@@ -112,11 +112,12 @@ try {
   });
   const frame = () =>
     page.evaluate(() => {
-      const r = document.getElementById("stage").getBoundingClientRect();
+      const r = document.getElementById("stage").getBoundingClientRect(),
+        v = window.studio.getView();
       return {
-        x: r.x + r.width / 2 + 18,
-        y: r.y + r.height / 2 + 19,
-        scale: Math.min((r.width - 105) / 112, (r.height - 100) / 112),
+        x: r.x + v.center.x,
+        y: r.y + v.center.y,
+        scale: v.scale,
       };
     });
   await page.locator("#zoom-fit").click();
@@ -333,6 +334,7 @@ try {
   const sequence = await page.evaluate(() =>
     JSON.stringify(window.studio.getPlan().events),
   );
+  await page.locator(".display-options > summary").click();
   await page.locator("#preview-selection").check();
   assert.equal(
     await page.evaluate(() => JSON.stringify(window.studio.getPlan().events)),

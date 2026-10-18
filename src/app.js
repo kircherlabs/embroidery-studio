@@ -44,6 +44,8 @@ import {
 } from "./sequencing.js";
 import { installReordering } from "./reorder-ui.js";
 import { installHelp } from "./help.js";
+import { installWorkspace } from "./workspace-layout.js";
+import { arrangeArtwork, installArrangeMenu } from "./arrange.js";
 const icon = (name) =>
   `<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${{ eye: '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>', hidden: '<path d="m3 3 18 18M9.5 5.3A12 12 0 0 1 12 5c6.5 0 10 7 10 7a18 18 0 0 1-3.1 3.7M6 6.4A20 20 0 0 0 2 12s3.5 7 10 7a12 12 0 0 0 5.4-1.3M10 10a3 3 0 0 0 4 4"/>', lock: '<rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>', unlock: '<rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 7.5-2"/>', grip: '<path d="M9 5h.01M15 5h.01M9 12h.01M15 12h.01M9 19h.01M15 19h.01" stroke-width="3"/>' }[name]}</svg>`;
 const $ = (id) => document.getElementById(id),
@@ -69,6 +71,7 @@ const state = {
   isolation: null,
   proportional: true,
   snapGrid: false,
+  snapObjects: true,
   activeOperationId: null,
   mode: "design",
   tool: "select",
@@ -104,6 +107,7 @@ let history = [],
   machinePlan = false;
 const pendingFormats = new Map();
 let clipboard = null;
+let workspaceLayout, arrangeMenu;
 const worker = new Worker(new URL("./digitize-worker.js", import.meta.url), {
   type: "module",
 });
@@ -116,6 +120,7 @@ const stage = new Stage($("stage"), state, {
   draft: updateDraft,
   shape: addShape,
   scrub,
+  contextMenu: ({ x, y }) => arrangeMenu?.open(x, y),
 });
 function toast(message) {
   $("toast").textContent = message;
@@ -252,8 +257,7 @@ function setMode(mode) {
     mode === "design"
       ? "Select an object to refine its stitches"
       : "Scrub the timeline or click a stitch to inspect";
-  document.querySelector(".drawing-tools").style.display =
-    mode === "design" ? "flex" : "none";
+  document.querySelector(".tool-rail").hidden = mode !== "design";
   renderProperties();
   stage.render();
 }
@@ -263,9 +267,13 @@ function setTool(tool) {
   stage.node = null;
   updateDraft();
   state.tool = tool;
+  document.querySelectorAll("[data-tool]").forEach((b) => {
+    b.classList.toggle("active", b.dataset.tool === tool);
+    b.setAttribute("aria-pressed", String(b.dataset.tool === tool));
+  });
   document
-    .querySelectorAll("[data-tool]")
-    .forEach((b) => b.classList.toggle("active", b.dataset.tool === tool));
+    .querySelector(`[data-tool="${tool}"]`)
+    ?.scrollIntoView({ block: "nearest", inline: "nearest" });
   const hints = {
     select: "Drag objects to position them in the hoop",
     node: "Drag nodes · double-click an edge to add a node",
@@ -275,7 +283,7 @@ function setTool(tool) {
     manual: "Click each needle point · Enter to finish stitches",
     rect: "Drag to draw a rectangle",
     ellipse: "Drag to draw an ellipse",
-    pan: "Drag to pan · scroll to zoom",
+    pan: "Drag to pan the view · + / − to zoom",
   };
   $("stage-hint").textContent = hints[tool];
   stage.render();
@@ -1111,8 +1119,8 @@ $("object-list").onclick = (e) => {
         toggle: Boolean(check) || e.shiftKey || e.ctrlKey || e.metaKey,
       },
     );
-    if (innerWidth <= 680 && !check && !e.shiftKey && !e.ctrlKey && !e.metaKey)
-      $("layers-panel").classList.remove("open");
+    if (innerWidth < 1100 && !check && !e.shiftKey && !e.ctrlKey && !e.metaKey)
+      workspaceLayout?.close("left");
   }
 };
 $("object-list").onkeydown = (e) => {
@@ -1189,7 +1197,10 @@ $("design-tab").onclick = () => {
     scheduleGenerate();
   }
 };
-$("preview-tab").onclick = () => setMode("preview");
+$("preview-tab").onclick = () => {
+  setMode("preview");
+  workspaceLayout?.show("bottom");
+};
 document
   .querySelectorAll("[data-tool]")
   .forEach((b) => (b.onclick = () => setTool(b.dataset.tool)));
@@ -1286,6 +1297,10 @@ $("order-mode").onchange = (e) =>
       };
   });
 installHelp();
+document.addEventListener("pointerdown", (e) => {
+  if (!e.target.closest(".display-options"))
+    document.querySelector(".display-options").open = false;
+});
 const compactSequence = matchMedia("(max-height: 740px)");
 const collapseCompactSequence = () => {
   if (compactSequence.matches)
@@ -1305,6 +1320,33 @@ function editCommand(command) {
   }
   const ids = selectionIds(state),
     selected = selectedLeaves(state, { editable: true });
+  if (
+    [
+      "center",
+      "hoop-x",
+      "hoop-y",
+      "match-width",
+      "match-height",
+      "center-design",
+    ].includes(command)
+  ) {
+    mutate(() =>
+      arrangeArtwork(
+        state.project,
+        command === "center-design"
+          ? state.project.objects
+              .filter((o) => isVisible(state.project, o))
+              .map((o) => o.id)
+          : ids,
+        command === "center-design" ? "center" : command,
+      ),
+    );
+    return;
+  }
+  if (command === "duplicate") {
+    $("duplicate").click();
+    return;
+  }
   if (command === "all") {
     select(state.isolation || PROJECT);
     return;
@@ -1373,16 +1415,6 @@ function editCommand(command) {
   }
   if (command === "fit") {
     stage.fitSelection();
-    return;
-  }
-  if (command === "center") {
-    const b = selectionBounds(selected);
-    mutate(() =>
-      transformSelection(selected, {
-        dx: -(b.minX + b.maxX) / 2,
-        dy: -(b.minY + b.maxY) / 2,
-      }),
-    );
     return;
   }
   if (command === "lock" || command === "unlock" || command === "hide") {
@@ -1485,6 +1517,7 @@ $("exit-isolation").onclick = () => {
   stage.render();
 };
 $("snap-grid").onchange = (e) => (state.snapGrid = e.target.checked);
+$("snap-objects").onchange = (e) => (state.snapObjects = e.target.checked);
 $("preview-selection").onchange = (e) => {
   state.previewSelection = e.target.checked;
   stage.render();
@@ -1498,6 +1531,28 @@ $("cancel-draw").onclick = () => {
 $("zoom-fit").onclick = () => stage.fit();
 $("zoom-in").onclick = () => stage.zoomAt(1.25);
 $("zoom-out").onclick = () => stage.zoomAt(0.8);
+$("fit-design").onclick = () => stage.fitDesign();
+$("view-command").onchange = (e) => {
+  ({
+    selection: () => stage.fitSelection(),
+    design: () => stage.fitDesign(),
+    hoop: () => stage.fit(),
+    center: () => stage.centerView(),
+    reset: () => stage.fit(),
+  })[e.target.value]?.();
+  e.target.value = "";
+};
+try {
+  $("navigation-mode").value =
+    localStorage.getItem("embroidery-navigation") || "auto";
+} catch {}
+stage.navigationMode = $("navigation-mode").value || "auto";
+$("navigation-mode").onchange = (e) => {
+  stage.navigationMode = e.target.value;
+  try {
+    localStorage.setItem("embroidery-navigation", e.target.value);
+  } catch {}
+};
 for (const [id, key] of [
   ["show-stitches", "showStitches"],
   ["show-jumps", "showJumps"],
@@ -1539,18 +1594,47 @@ $("rewind").onclick = () => scrub(0);
 $("step-back").onclick = () => scrub(state.cursor - 1);
 $("step-next").onclick = () => scrub(state.cursor + 1);
 $("end").onclick = () => scrub(state.plan?.events.length || 0);
-$("toggle-layers").onclick = () => {
-  $("layers-panel").classList.toggle("open");
-  $("inspector-panel").classList.remove("open");
+workspaceLayout = installWorkspace({ fit: () => stage.fit() });
+arrangeMenu = installArrangeMenu({
+  state,
+  command: editCommand,
+  fitDesign: () => stage.fitDesign(),
+  fitHoop: () => stage.fit(),
+});
+$("arrange-selection").onclick = () => {
+  const r = $("arrange-selection").getBoundingClientRect();
+  arrangeMenu.open(r.left, r.top, $("arrange-selection"));
 };
-$("toggle-inspector").onclick = () => {
-  $("inspector-panel").classList.toggle("open");
-  $("layers-panel").classList.remove("open");
+const rail = document.querySelector(".drawing-tools");
+function toolOverflow() {
+  const horizontal = getComputedStyle(rail).flexDirection === "row",
+    position = horizontal ? rail.scrollLeft : rail.scrollTop,
+    maximum = horizontal
+      ? rail.scrollWidth - rail.clientWidth
+      : rail.scrollHeight - rail.clientHeight;
+  $("tools-prev").disabled = position < 1;
+  $("tools-next").disabled = position >= maximum - 1;
+}
+$("tools-prev").onclick = () => {
+  rail.scrollBy(
+    getComputedStyle(rail).flexDirection === "row"
+      ? { left: -150, behavior: "smooth" }
+      : { top: -150, behavior: "smooth" },
+  );
 };
+$("tools-next").onclick = () => {
+  rail.scrollBy(
+    getComputedStyle(rail).flexDirection === "row"
+      ? { left: 150, behavior: "smooth" }
+      : { top: 150, behavior: "smooth" },
+  );
+};
+rail.addEventListener("scroll", toolOverflow);
+new ResizeObserver(toolOverflow).observe(rail);
 $("help").onclick = () =>
   ask(
     "Your embroidery workbench",
-    '<p><strong>Artwork tree:</strong> Imported SVGs contain their original regions and nested groups. Select a parent to edit the whole SVG; expand it to edit a child. Shift/Ctrl-click or drag a box to multiselect. Drag corner/edge handles to resize, or the round handle to rotate. Ctrl A selects all, Ctrl G groups, Ctrl Shift G ungroups, Ctrl D duplicates, and F fits selection. Locked artwork still sews; focus mode changes only the view.</p><p><strong>Operations:</strong> Add independent steps in the inspector. The appliqué recipe creates placement, stop, tackdown, stop and satin finishing steps on closed regions. Stops require operator action; test pauses and clearance on your machine.</p><p><strong>Draw:</strong> Use polygon for filled regions, running path for outlines, and satin for narrow columns. Click points, then press <kbd>Enter</kbd> or Finish path. Drag to create rectangles and ellipses.</p><p><strong>Edit:</strong> Select and drag objects. The node tool lets you move individual points; double-click an edge to insert a node. Use the properties panel for exact dimensions, angles and stitch settings. Automatic sequencing completes each object and batches compatible colors while preserving construction order. Drag grips in the artwork tree to change layers and set manual sewing order. Drag grips in Object sewing order to change sewing order only. Switch back to Automatic to resume optimization; Keep sequence position pins an object. Alt+arrow keys on a grip are the keyboard equivalent.</p><p><strong>Simulate:</strong> Open Stitch preview. Play, step through, scrub, click a stitch, or click a color block. Command positions, underlay and jump paths are inspectable. Export replaces the preview with commands decoded from the saved file.</p><p><strong>Manual editing:</strong> Make a vector object’s stitches editable, then adjust needle points with the node tool or command index editor. Imported embroidery files are editable stitch blocks.</p><p><strong>Shortcuts:</strong> <kbd>V</kbd> select · <kbd>N</kbd> nodes · <kbd>P</kbd> fill · <kbd>R</kbd> run · <kbd>S</kbd> satin · <kbd>T</kbd> text · <kbd>E</kbd> ellipse · <kbd>H</kbd> pan · <kbd>Space</kbd> temporary pan / preview playback · <kbd>Ctrl Z</kbd> undo · <kbd>Ctrl Shift Z</kbd> redo · <kbd>Delete</kbd> selected object / vector node.</p><p>SVG import supports paths, basic shapes, transforms, holes and inline solid paints. Convert text to paths and expand clipping or effects first. Image digitizing is intended for flat artwork. Core editing works locally; machine conversion loads a pinned Python/WASM runtime from jsDelivr on first use. Thread colors are visual approximations.</p><p><a href="https://github.com/kircherlabs/embroidery-studio#readme" target="_blank" rel="noreferrer">Documentation & known limitations ↗</a></p>',
+    '<p><strong>Workspace:</strong> Drag panel boundaries to resize. Objects, Properties and Sequence toggle each panel. Canvas temporarily maximizes the workspace; Restore or Escape brings back the previous layout. Drawing tools scroll within their rail. Arrange opens positioning actions, also available with right-click or Shift F10.</p><p><strong>Navigation:</strong> Choose Auto, Mouse or Trackpad beside the canvas. Trackpad scrolling pans; pinch or Ctrl/Command-scroll zooms. H or Space-drag pans, +/− zooms, F fits selected artwork, and Home fits the hoop. View offers Fit Design, Fit Selection, Center and Reset. Guides snap dragging to artwork edges/centers and hoop center; Alt bypasses snapping.</p><p><strong>Artwork tree:</strong> Imported SVGs contain their original regions and nested groups. Select a parent to edit the whole SVG; expand it to edit a child. Shift/Ctrl-click or drag a box to multiselect. Drag corner/edge handles to resize, or the round handle to rotate. Ctrl A selects all, Ctrl G groups, Ctrl Shift G ungroups, Ctrl D duplicates, and F fits selection. Locked artwork still sews; focus mode changes only the view.</p><p><strong>Operations:</strong> Add independent steps in the inspector. The appliqué recipe creates placement, stop, tackdown, stop and satin finishing steps on closed regions. Stops require operator action; test pauses and clearance on your machine.</p><p><strong>Draw:</strong> Use polygon for filled regions, running path for outlines, and satin for narrow columns. Click points, then press <kbd>Enter</kbd> or Finish path. Drag to create rectangles and ellipses.</p><p><strong>Edit:</strong> Select and drag objects. The node tool lets you move individual points; double-click an edge to insert a node. Use the properties panel for exact dimensions, angles and stitch settings. Automatic sequencing completes each object and batches compatible colors while preserving construction order. Drag grips in the artwork tree to change layers and set manual sewing order. Drag grips in Object sewing order to change sewing order only. Switch back to Automatic to resume optimization; Keep sequence position pins an object. Alt+arrow keys on a grip are the keyboard equivalent.</p><p><strong>Simulate:</strong> Open Stitch preview. Play, step through, scrub, click a stitch, or click a color block. Command positions, underlay and jump paths are inspectable. Export replaces the preview with commands decoded from the saved file.</p><p><strong>Manual editing:</strong> Make a vector object’s stitches editable, then adjust needle points with the node tool or command index editor. Imported embroidery files are editable stitch blocks.</p><p><strong>Shortcuts:</strong> <kbd>V</kbd> select · <kbd>N</kbd> nodes · <kbd>P</kbd> fill · <kbd>R</kbd> run · <kbd>S</kbd> satin · <kbd>T</kbd> text · <kbd>E</kbd> ellipse · <kbd>H</kbd> pan · <kbd>Space</kbd> temporary pan / preview playback · <kbd>Ctrl Z</kbd> undo · <kbd>Ctrl Shift Z</kbd> redo · <kbd>Delete</kbd> selected object / vector node.</p><p>SVG import supports paths, basic shapes, transforms, holes and inline solid paints. Convert text to paths and expand clipping or effects first. Image digitizing is intended for flat artwork. Core editing works locally; machine conversion loads a pinned Python/WASM runtime from jsDelivr on first use. Thread colors are visual approximations.</p><p><a href="https://github.com/kircherlabs/embroidery-studio#readme" target="_blank" rel="noreferrer">Documentation & known limitations ↗</a></p>',
     "Got it",
   );
 document.addEventListener("keydown", (e) => {
@@ -1666,6 +1750,16 @@ scheduleGenerate();
 if (restored) $("status").textContent = "Restored project from this device";
 // Read-only diagnostic surface for reproducible browser integration checks.
 window.studio = {
+  getView: () => ({
+    center: { ...stage.center },
+    zoom: stage.zoom,
+    scale: stage.scale,
+    pan: { ...stage.pan },
+    width: stage.w,
+    height: stage.h,
+    guides: structuredClone(stage.guides || []),
+  }),
+  getWorkspace: () => workspaceLayout.getState(),
   getProject: () => structuredClone(state.project),
   getPlan: () => structuredClone(state.plan),
   getMode: () => state.mode,

@@ -1,14 +1,16 @@
+import { refitPatch } from "./construction.js";
 import { FONTS, updateLettering } from "./importers.js";
 import { regenerateShape, curveRings } from "./smart-geometry.js";
 import {
   combineArtwork,
   cutEyelet,
   contourArtwork,
-  applyRecipe,
   alignReference,
   roundChecked,
 } from "./creative.js";
 import { selectionIds, nodeById, isLocked } from "./hierarchy.js";
+import { editOperations } from "./styles.js";
+import { CORNER_TYPES } from "./operations.js";
 import { materialize, makeOperation } from "./operations.js";
 const esc = (s) =>
   String(s).replace(
@@ -19,23 +21,13 @@ const esc = (s) =>
       ],
   );
 const field = (label, id, value, min, max, step = 0.1) =>
-  `<label class="field">${label}<input type="number" id="${id}" value="${value}" min="${min}" max="${max}" step="${step}"></label>`;
+  `<label class="field">${label}<input type="number" required id="${id}" value="${value}" placeholder="Mixed" min="${min}" max="${max}" step="${step}"></label>`;
 export function creativeInspector(api, leaf, objects, targets) {
   const { state, mutate, toast } = api,
     p = state.project,
     vectors = objects.filter((o) => o.type !== "manual");
   if (!vectors.length) return;
-  const cornerTypes = new Set([
-    "run",
-    "bean",
-    "triple",
-    "satin",
-    "border",
-    "placement",
-    "tackdown",
-    "basting",
-    "contour",
-  ]);
+  const cornerTypes = CORNER_TYPES;
   const cornerTargets = targets.filter((op) => cornerTypes.has(op.type));
   const box = document.createElement("section");
   box.className = "creative-settings";
@@ -77,9 +69,10 @@ export function creativeInspector(api, leaf, objects, targets) {
        }</details>`
      : ""
  }
- ${targets.some((o) => o.type === "column") ? `<details open><summary>Satin column construction</summary>${field("Maximum satin span · mm", "column-max", targets[0]?.maxSatin || 6, 1, 6.5)}<p class="property-note">Stitches span actual region edges along Stitch direction. Holes stay open. Wide spans use staggered splits. For curved letters and branches, divide regions and adjust directions; this is directional column digitizing, not automatic skeleton tracing.</p></details>` : ""}
- <details><summary>Corner &amp; curve control</summary>${field("Round geometry · radius mm", "round-radius", leaf?.rounding?.radius || 0, 0, 20)}<button id="round-geometry" data-help="Explicitly fillet all compatible selected paths. Original contours are retained while adjusting radius; zero restores them. Undo also restores text and smart shape editability.">Apply geometric rounding</button>${leaf ? `<button id="round-node" data-help="With the Node tool, select one vertex first. Fillet that vertex only. Undo restores the previous contour.">Round active vertex</button>` : ""}<p class="property-note">Rounds actual artwork, including counters. Radius is limited locally to prevent adjacent fillets crossing.</p><label class="check"><input id="corner-adaptive" type="checkbox" ${targets.length && targets.every((o) => o.cornerControl) ? "checked" : ""}>Adaptive needle spacing</label>${field("Minimum corner stitch · mm", "corner-min", targets[0]?.minCornerStitch || 0.3, 0.2, 1)}<p class="property-note">Stitch construction only: retain running-path corners while avoiding close neighboring penetrations; shorten crowded inner satin turns. Does not round artwork. Split very sharp satin corners into separate paths for full control.</p></details>
- <details><summary>Shape tools &amp; construction</summary>${
+ ${leaf?.constructionArtworkIds?.length && shape ? `<details><summary>Patch boundary sizing</summary>${field("Refit margin around artwork · mm", "patch-refit-margin", leaf.patchMargin ?? 3, 0, 50)}<button id="patch-refit" data-help="Resize and reposition this boundary around its linked artwork using the chosen margin. Resets boundary rotation to the hoop axes; decorative artwork and operation settings stay unchanged. Undo restores the previous boundary.">Refit boundary to artwork</button><p class="property-note">Uses the current linked artwork bounds. Keep margin at least as large as the finishing band to avoid covering decorative stitches. Manual size controls remain in Smart shape.</p></details>` : ""}
+ ${targets.some((o) => o.type === "column") ? `<details open><summary>Satin column construction</summary>${field("Maximum satin span · mm", "column-max", targets.filter((o) => o.type === "column").every((o) => o.maxSatin === targets.find((o) => o.type === "column").maxSatin) ? (targets.find((o) => o.type === "column")?.maxSatin ?? 6) : "", 1, 6.5)}<p class="property-note">Stitches span actual region edges along Stitch direction. Holes stay open. Wide spans use staggered splits; Maximum segment length and Fill pattern affect those splits only. Narrow spans remain single satin stitches. For curved letters and branches, divide regions and adjust directions; this is directional column digitizing, not automatic skeleton tracing.</p></details>` : ""}
+ <details><summary>Round shape corners</summary>${shape && ["rect", "regular", "star"].includes(shape.kind) ? '<p class="property-note">Use Corner radius in Smart shape for whole-shape rounding and retained parameters. Below, Round active vertex converts a single polygon vertex to a rounded path; Undo restores the Smart shape.</p>' : ""}${field(shape && ["rect", "regular", "star"].includes(shape.kind) ? "Active vertex radius · mm" : "Artwork rounding radius · mm", "round-radius", leaf?.rounding?.radius || 0, 0, 20)}${shape && ["rect", "regular", "star"].includes(shape.kind) ? "" : `<button id="round-geometry" data-help="Explicitly fillet all compatible selected paths. Original contours are retained while adjusting radius; zero restores them. Smart shape parameters and editable lettering are preserved when supported. Bézier filleting converts to a polygon path; Undo restores curve handles.">Apply geometric rounding</button>`}${leaf ? `<button id="round-node" data-help="With the Node tool, select one vertex first. Fillet that vertex only. This converts editable lettering or a Smart shape to a fixed path; Undo restores its source.">Round active vertex</button>` : ""}<p class="property-note">Rounds actual artwork, including counters. Radius is limited locally to prevent adjacent fillets crossing.</p></details><details data-section="corners"><summary>Optimize corner stitches</summary><label class="check"><input id="corner-adaptive" type="checkbox" ${targets.length && targets.every((o) => o.cornerControl) ? "checked" : ""}>Preserve turns &amp; reduce crowded penetrations</label>${field("Crowded-corner threshold · mm", "corner-min", cornerTargets.every((o) => (o.minCornerStitch ?? 0.3) === (cornerTargets[0]?.minCornerStitch ?? 0.3)) ? (cornerTargets[0]?.minCornerStitch ?? 0.3) : "", 0.2, 1)}<p id="corner-availability" class="property-note"></p><p class="property-note">Stitch construction only: retain running-path corners while avoiding close neighboring penetrations; shorten crowded inner satin turns. Does not round artwork. Split very sharp satin corners into separate paths for full control.</p></details>
+ <details><summary>Geometry tools</summary>${
    vectors.length > 1
      ? `<div class="creative-grid">${[
          ["union", "Union"],
@@ -93,7 +86,7 @@ export function creativeInspector(api, leaf, objects, targets) {
          )
          .join("")}</div>`
      : ""
- }${field("Contour offset · mm", "geometry-offset", 1, -5, 5)}<button id="offset-geometry" data-help="Expand positive or inset negative closed artwork with round joins. Holes contract or expand accordingly. Undo restores source geometry.">Apply contour to artwork</button><label class="field">Create from selection<select id="construction-recipe"><option value="patch">Patch · tackdown + border</option><option value="keychain">Keychain · tackdown + stop + border</option><option value="applique">Appliqué · placement + stops + tackdown + border</option></select></label><button id="construction-apply" data-help="Replace operation stacks on selected closed regions with a construction recipe. Steps share each region's geometry; configure the independent operations afterwards. Undo restores prior stacks.">Apply shared-geometry recipe</button></details>
+ }${field("Contour offset · mm", "geometry-offset", 1, -5, 5)}<button id="offset-geometry" data-help="Expand positive or inset negative closed artwork with round joins. Holes contract or expand accordingly. Undo restores source geometry.">Apply contour to artwork</button></details>
  <details><summary>Align to reference</summary><label class="field">Reference<select id="align-reference"><option value="hoop">Machine hoop</option><option value="selection">Combined selection</option>${[...(p.groups || []), ...p.objects].map((n) => `<option value="${esc(n.id)}">${n.kind ? "Group · " : ""}${esc(n.name)}</option>`).join("")}</select></label><div class="creative-grid">${[
    ["left", "Left"],
    ["center-x", "H center"],
@@ -116,10 +109,15 @@ export function creativeInspector(api, leaf, objects, targets) {
       '<details><summary>Bézier node controls</summary><p class="property-note">Select an anchor with the Node tool. Drag tangent handles to reshape curves; double-click a curve to split it. Delete removes an anchor.</p><button id="node-smooth">Smooth active anchor</button><button id="node-corner">Make active anchor a corner</button></details>',
     );
   const panel = document.getElementById("properties");
-  const anchor =
-    panel.querySelector("label:has(#stitch-type)") || panel.firstChild;
-  panel.insertBefore(box, anchor);
-  const $ = (id) => box.querySelector("#" + id);
+  panel.prepend(box);
+  const $ = (id) => document.getElementById(id);
+  if ($("patch-refit"))
+    $("patch-refit").onclick = () => {
+      const input = $("patch-refit-margin");
+      if (input.checkValidity())
+        mutate(() => refitPatch(p, leaf, Number(input.value)));
+      else toast("Enter a margin from 0 to 50 mm.");
+    };
   if ($("retrace-image")) $("retrace-image").onclick = () => api.retrace(group);
   const safe = (fn) => {
     try {
@@ -138,7 +136,7 @@ export function creativeInspector(api, leaf, objects, targets) {
     .querySelectorAll('input[type="number"]')
     .forEach(
       (el) =>
-        (el.dataset.help = `${el.closest("label").firstChild.textContent.trim()}. Changes artwork geometry in Smart shape; embroidery settings affect generated needle movements. Valid range ${el.min}–${el.max}.`),
+        (el.dataset.help = `${el.closest("label").firstChild.textContent.trim()}. Units and purpose are shown beside the field. Artwork controls regenerate shared geometry; method controls change needle placement only. Valid range ${el.min}–${el.max}.`),
     );
   if (text) {
     for (const [id, key] of [
@@ -197,11 +195,12 @@ export function creativeInspector(api, leaf, objects, targets) {
         safe(() => cutEyelet(p, leaf, [nodeById(p, id)].filter(Boolean)));
       };
   }
-  $("round-geometry").onclick = () => {
-    if (!valid($("round-radius"))) return;
-    const radius = Number($("round-radius").value);
-    safe(() => vectors.forEach((o) => roundChecked(o, radius)));
-  };
+  if ($("round-geometry"))
+    $("round-geometry").onclick = () => {
+      if (!valid($("round-radius"))) return;
+      const radius = Number($("round-radius").value);
+      safe(() => vectors.forEach((o) => roundChecked(o, radius)));
+    };
   if ($("round-node"))
     $("round-node").onclick = () => {
       const index = api.node();
@@ -261,10 +260,6 @@ export function creativeInspector(api, leaf, objects, targets) {
           state.selectionIds = [id];
         })),
   );
-  $("construction-apply").onclick = () => {
-    const recipe = $("construction-recipe").value;
-    safe(() => vectors.forEach((o) => applyRecipe(o, recipe)));
-  };
   box.querySelectorAll("[data-reference-align]").forEach(
     (el) =>
       (el.onclick = () => {
@@ -283,33 +278,27 @@ export function creativeInspector(api, leaf, objects, targets) {
   if (!$("align-reference").value) $("align-reference").value = "hoop";
   $("align-reference").onchange = (e) =>
     (state.alignReference = e.target.value);
-  const applyCorner = (key, value) =>
+  const applyCorner = (key, value) => {
+    let result;
     safe(() => {
-      for (const o of vectors) {
-        const ops = o.operations
-          ? state.activeOperationId
-            ? o.operations.filter((op) => op.id === state.activeOperationId)
-            : state.bulkOperations === "all"
-              ? o.operations
-              : [
-                  o.operations.find(
-                    (op) => !["stop", "trim"].includes(op.type),
-                  ),
-                ].filter(Boolean)
-          : [o];
-        for (const op of ops)
-          if (
-            key === "maxSatin" ? op.type === "column" : cornerTypes.has(op.type)
-          )
-            op[key] = value;
-      }
+      result = editOperations(objects, state, !!leaf, key, value);
     });
+    if (result?.skipped)
+      toast(
+        `${result.changed} compatible operations updated; ${result.skipped} incompatible operations unchanged.`,
+      );
+  };
   if ($("column-max"))
     $("column-max").onchange = (e) => {
       if (valid(e.target)) applyCorner("maxSatin", Number(e.target.value));
     };
   $("corner-adaptive").disabled = cornerTargets.length === 0;
-  $("corner-min").disabled = cornerTargets.length === 0;
+  $("corner-min").disabled = !cornerTargets.some((o) => o.cornerControl);
+  $("corner-availability").textContent = cornerTargets.length
+    ? cornerTargets.some((o) => o.cornerControl)
+      ? "Threshold affects close neighboring running stitches and inner satin turns; it is not a global minimum stitch length."
+      : "Enable corner optimization to adjust the threshold. Applies to running paths and satin borders / centerlines."
+    : "Unavailable for tatami and directional satin columns: those methods place stitches across region spans, not around a contour. Adjust row spacing, direction or split the geometry instead.";
   $("corner-adaptive").checked =
     cornerTargets.length > 0 && cornerTargets.every((op) => op.cornerControl);
   $("corner-adaptive").indeterminate =
@@ -320,4 +309,17 @@ export function creativeInspector(api, leaf, objects, targets) {
   $("corner-min").onchange = (e) => {
     if (valid(e.target)) applyCorner("minCornerStitch", Number(e.target.value));
   };
+  const art = document.getElementById("artwork-settings"),
+    method = document.getElementById("method-settings"),
+    advanced = method.querySelector(".advanced-settings");
+  for (const detail of [...box.children]) {
+    const label = detail.querySelector("summary")?.textContent || "";
+    detail.dataset.section ||= label;
+    if (label === "Satin column construction")
+      method.insertBefore(detail, advanced);
+    else if (label === "Optimize corner stitches")
+      (advanced || method).append(detail);
+    else art.append(detail);
+  }
+  box.remove();
 }

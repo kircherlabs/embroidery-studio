@@ -16,9 +16,62 @@ export const OPERATION_TYPES = {
   basting: "Basting outline",
   contour: "Offset outline",
   stop: "Machine stop",
-  trim: "Manual trim",
+  trim: "Thread trim",
 };
 export const isSewing = (op) => !["stop", "trim"].includes(op.type);
+export const requiresClosed = (type) =>
+  [
+    "fill",
+    "column",
+    "placement",
+    "tackdown",
+    "basting",
+    "border",
+    "contour",
+  ].includes(type);
+export const closedArtwork = (o) =>
+  o.type !== "manual" && (o.type === "fill" || o.closed === true);
+export const supportsMethod = (o, type) =>
+  o.type !== "manual" && (!requiresClosed(type) || closedArtwork(o));
+export const CORNER_TYPES = new Set([
+  "run",
+  "bean",
+  "triple",
+  "satin",
+  "border",
+  "placement",
+  "tackdown",
+  "basting",
+  "contour",
+]);
+// Use the same scope for display and edits. Explicit stop/trim selection is retained.
+export function operationTargets(o, state, single = false) {
+  const ops = operationsOf(o);
+  if (single && state.activeOperationId) {
+    const selected = ops.find((op) => op.id === state.activeOperationId);
+    if (selected) return [selected];
+  }
+  return !single && state.bulkOperations === "all"
+    ? ops.filter(isSewing)
+    : [ops.find(isSewing)].filter(Boolean);
+}
+export function effectiveOperation(o, op) {
+  return {
+    closed: closedArtwork(o),
+    reverse: false,
+    offset: 0,
+    startIndex: 0,
+    outerOnly: false,
+    tieIn: true,
+    tieOff: true,
+    pattern: "quarter",
+    cornerControl: false,
+    minCornerStitch: 0.3,
+    maxSatin: 6,
+    ...o,
+    ...op,
+  };
+}
 export function propertyApplies(type, key) {
   const fill = ["fill", "column"].includes(type),
     satin = ["satin", "border"].includes(type),
@@ -35,9 +88,13 @@ export function propertyApplies(type, key) {
   if (key === "angle" || key === "pattern") return fill;
   if (key === "width") return satin;
   if (key === "length") return fill || (path && !satin);
-  if (key === "reverse" || key === "startIndex") return path;
+  if (key === "cornerControl" || key === "minCornerStitch")
+    return CORNER_TYPES.has(type);
+  if (key === "maxSatin") return type === "column";
+  if (key === "reverse") return path;
+  if (key === "startIndex") return path && type !== "marker";
   if (key === "offset" || key === "outerOnly") return outline;
-  if (key === "closed") return path && !outline;
+  if (key === "closed") return path && !outline && type !== "marker";
   return key === "type" || isSewing({ type });
 }
 const settings = [
@@ -65,6 +122,7 @@ export function defaultOperation(o) {
   return {
     id: "base",
     name: OPERATION_TYPES[o.type] || "Stitches",
+    closed: closedArtwork(o),
     enabled: true,
     ...Object.fromEntries(
       settings.filter((k) => o[k] !== undefined).map((k) => [k, o[k]]),
@@ -83,6 +141,11 @@ export function makeOperation(type, o) {
     name: OPERATION_TYPES[type],
     type,
     enabled: true,
+    offset: 0,
+    reverse: false,
+    startIndex: 0,
+    outerOnly: false,
+    closed: closedArtwork(o),
   };
   if (type === "column") {
     op.maxSatin = 6;
@@ -162,6 +225,10 @@ export function offsetRings(o, delta) {
   return result.map((r) => r.map((p) => ({ x: p.X / 1000, y: p.Y / 1000 })));
 }
 export function operationObject(o, op) {
+  if (!supportsMethod(o, op.type))
+    throw Error(
+      `${o.name}: ${OPERATION_TYPES[op.type]} requires closed artwork.`,
+    );
   let rings = o.rings,
     type = op.type,
     closed = op.closed ?? o.closed,
@@ -230,6 +297,7 @@ export function operationObject(o, op) {
     ...o,
     ...op,
     id: o.id,
+    name: o.name,
     rings,
     type,
     closed,

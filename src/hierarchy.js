@@ -236,6 +236,11 @@ export function pasteSelection(p, clipboard, offset = 3) {
     if (wasRoot) n.name = n.name.slice(0, 195) + " copy";
     if (n.svgFillId) n.svgFillId = ids.get(n.svgFillId) || null;
     if (n.operations) n.operations.forEach((op) => (op.id = uid()));
+    if (n.constructionArtworkIds)
+      n.constructionArtworkIds = n.constructionArtworkIds
+        .map((id) => ids.get(id))
+        .filter(Boolean);
+    if (n.constructionArtworkIds?.length === 0) delete n.constructionArtworkIds;
   }
   copy.objects.forEach((o) => translate(o, offset, offset));
   p.objects.push(...copy.objects);

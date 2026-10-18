@@ -1,3 +1,4 @@
+import { EMBROIDERY_STYLES, setEmbroideryStyle } from "./styles.js";
 import { traceDialog } from "./tracing-ui.js";
 import {
   smartShape,
@@ -144,7 +145,7 @@ function record(before) {
   if (before === JSON.stringify(state.project)) {
     renderPanels();
     stage.render();
-    return;
+    return true;
   }
   try {
     validateProject(state.project);
@@ -152,7 +153,7 @@ function record(before) {
     state.project = JSON.parse(before);
     select(null);
     toast("Could not apply edit: " + e.message);
-    return;
+    return false;
   }
   history.push(before);
   while (
@@ -163,17 +164,19 @@ function record(before) {
     history.shift();
   future = [];
   changed();
+  return true;
 }
 function mutate(fn) {
   const before = JSON.stringify(state.project);
   try {
     fn();
-    record(before);
+    return record(before);
   } catch (e) {
     state.project = JSON.parse(before);
     renderPanels();
     stage.render();
     toast("Could not apply edit: " + e.message);
+    return false;
   }
 }
 function changed() {
@@ -223,14 +226,17 @@ worker.onmessage = ({ data }) => {
   if (data.id !== generation) return;
   if (data.error) {
     state.plan = null;
+    state.generationError = data.error;
     $("status").textContent = data.error;
     toast(data.error);
     renderStats();
     return;
   }
+  state.generationError = null;
   state.plan = data;
   state.cursor = data.events.length;
-  $("export").disabled = false;
+  $("export").disabled =
+    data.issues?.some((i) => i.severity === "error") || false;
   renderStats();
   renderTimeline();
   renderPlayback();
@@ -321,14 +327,14 @@ function finishPath() {
   if (type === "pen" && pts.length >= 2) {
     const closed = $("pen-closed").checked,
       curve = { nodes: structuredClone(pts), closed, frame: identity() };
-    addObjects([
-      object("Bézier path", curveRings(curve), {
-        curve,
-        type: closed ? "fill" : "run",
-        closed,
-        underlay: false,
-      }),
-    ]);
+    const made = object("Bézier path", curveRings(curve), {
+      curve,
+      type: closed ? "fill" : "run",
+      closed,
+      underlay: false,
+    });
+    if (closed) applyDrawingStyle(made);
+    addObjects([made]);
     stage.draft = [];
     updateDraft();
     setTool("select");
@@ -354,10 +360,15 @@ function finishPath() {
     o.commands = pts.map((p, i) => ({ ...p, cmd: i ? "stitch" : "jump" }));
     o.rings = [];
   }
+  if (type === "polygon") applyDrawingStyle(o);
   addObjects([o]);
   stage.draft = [];
   updateDraft();
   setTool("select");
+}
+function applyDrawingStyle(o) {
+  const style = $("draw-style").value;
+  if (style !== "auto") setEmbroideryStyle(o, style);
 }
 function addShape({ start: a, end: b }) {
   const w = Math.abs(a.x - b.x),
@@ -373,6 +384,7 @@ function addShape({ start: a, end: b }) {
   );
   o.color = selected()?.color || PALETTE[0];
   if (kind === "eyelet") for (const op of o.operations) op.color = o.color;
+  else applyDrawingStyle(o);
   addObjects([o]);
   setTool("select");
 }
@@ -524,6 +536,7 @@ function renderProperties() {
       state,
       mutate,
       toast,
+      ask,
       refresh: renderProperties,
       palette: PALETTE,
       manualEditor,
@@ -669,9 +682,40 @@ function renderStats() {
       : "! Design exceeds hoop"
     : "Generate a design to check fit";
   $("fit-status").classList.toggle("bad", !!stats && !stats.fits);
-  $("warnings").innerHTML = (state.plan?.warnings || [])
-    .map((w) => `<p>${esc(w)}</p>`)
-    .join("");
+  const issues = state.generationError
+    ? [
+        {
+          severity: "error",
+          message: state.generationError,
+          action:
+            "Repair the affected artwork or undo the last edit, then regenerate.",
+        },
+      ]
+    : state.plan?.issues ||
+      (state.plan?.warnings || []).map((message) => ({
+        severity: "warning",
+        message,
+      }));
+  const wasOpen = $("warnings").querySelector("details")?.open;
+  const count = (severity) =>
+    issues.filter((i) => i.severity === severity).length;
+  $("warnings").innerHTML =
+    `<details class="design-issues" ${wasOpen || count("error") ? "open" : ""}><summary>Design issues <span>${issues.length ? [count("error") ? count("error") + " errors" : "", count("warning") ? count("warning") + " warnings" : "", count("info") ? count("info") + " notices" : ""].filter(Boolean).join(" · ") : "No issues"}</span></summary>${issues.map((i, index) => `<article class="design-issue ${i.severity}"><strong>${esc(i.severity)}${i.objectName ? " · " + esc(i.objectName) : ""}${i.operationName ? " / " + esc(i.operationName) : ""}</strong><p>${esc(i.message)}</p><p class="issue-action">${esc(i.action || "")}</p>${i.objectId ? `<button data-issue="${index}">Locate artwork &amp; step</button>` : ""}</article>`).join("")}</details>`;
+  $("warnings")
+    .querySelectorAll("[data-issue]")
+    .forEach(
+      (el) =>
+        (el.onclick = () => {
+          const issue = issues[Number(el.dataset.issue)];
+          state.selection = issue.objectId;
+          state.selectionIds = [issue.objectId];
+          state.activeOperationId =
+            issue.operationId === "base" ? null : issue.operationId;
+          setMode("design");
+          renderPanels();
+          stage.render();
+        }),
+    );
   if (state.plan?.diagnostics?.duplicates?.length) {
     $("warnings").insertAdjacentHTML(
       "beforeend",
@@ -736,7 +780,7 @@ function renderTimeline() {
     ? objects
         .map(
           (r, i) =>
-            `<div class="sewing-object" data-reorder-id="${esc(r.id)}" style="--thread:${r.color}"><button class="drag-grip" data-sew-grip aria-label="Reorder ${esc(names.get(r.id) || "Object")}">${icon("grip")}</button><button data-object-step="${r.start}"><strong>${i + 1}. ${esc(names.get(r.id) || "Object")}</strong><small>${r.steps.length > 1 ? `${r.steps.length} ordered steps` : r.name ? esc(r.name) : "Complete object"}</small></button><span class="object-color-key">${[...new Set(r.steps.map((s) => s.color))].map((c) => `<i style="background:${c}"></i>`).join("")}</span></div>`,
+            `<div class="sewing-object" data-reorder-id="${esc(r.id)}" style="--thread:${r.color}">${state.project.objects.find((o) => o.id === r.id)?.constructionArtworkIds?.length && objects.findIndex((o) => o.id === r.id) !== i ? '<span class="construction-phase" aria-label="Finishing depends on decorative artwork">↳</span>' : `<button class="drag-grip" data-sew-grip aria-label="Reorder ${esc(names.get(r.id) || "Object")}" ${state.project.objects.find((o) => o.id === r.id)?.constructionArtworkIds?.length ? 'data-help="Move this entire patch construction, including its linked artwork. Preparation stays before artwork and finishing stays after it."' : ""}>${icon("grip")}</button>`}<button data-object-step="${r.start}"><strong>${i + 1}. ${esc(names.get(r.id) || "Object")}</strong><small>${state.project.objects.find((o) => o.id === r.id)?.constructionArtworkIds?.length ? (objects.findIndex((o) => o.id === r.id) === i ? "Prepare fabric · " : "Finish patch · ") + r.steps.length + " steps" : r.steps.length > 1 ? `${r.steps.length} ordered steps` : r.name ? esc(r.name) : "Complete object"}</small></button><span class="object-color-key">${[...new Set(r.steps.map((s) => s.color))].map((c) => `<i style="background:${c}"></i>`).join("")}</span></div>`,
         )
         .join("")
     : '<span class="property-note">Machine files do not retain source object boundaries.</span>';
@@ -869,9 +913,11 @@ const filename = () =>
     .slice(0, 60) || "design";
 async function ask(title, html, submit = "Continue") {
   pause();
+  $("dialog-submit").disabled = false;
   $("dialog-title").textContent = title;
   $("dialog-content").innerHTML = html;
   $("dialog-submit").textContent = submit;
+  $("dialog").returnValue = "";
   $("dialog").showModal();
   return new Promise((resolve) =>
     $("dialog").addEventListener(
@@ -966,6 +1012,12 @@ function formatRequest(data) {
 async function exportDialog() {
   if (busy || !state.plan) return;
   const plan = state.plan;
+  if (plan?.issues?.some((i) => i.severity === "error")) {
+    toast(
+      "Resolve Design Issues errors, or explicitly disable invalid steps before exporting.",
+    );
+    return;
+  }
   if (!plan.stats.stitches) {
     toast("Add some stitches before exporting.");
     return;

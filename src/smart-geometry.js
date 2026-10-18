@@ -121,6 +121,15 @@ export function regenerateShape(o) {
   delete o.rounding;
 }
 export function roundArtwork(o, radius, vertices = null) {
+  if (
+    !vertices &&
+    o.shape &&
+    ["rect", "regular", "star"].includes(o.shape.kind)
+  ) {
+    o.shape.radius = radius;
+    regenerateShape(o);
+    return;
+  }
   if (!o.rounding) o.rounding = { rings: structuredClone(o.rings), radius: 0 };
   o.rounding.radius = radius;
   o.rings = o.rounding.rings.map((r, i) =>
@@ -133,7 +142,7 @@ export function roundArtwork(o, radius, vertices = null) {
   );
   // Explicit rounding converts a parametric primitive to an editable rounded path.
   delete o.shape;
-  delete o.textSource;
+  if (vertices) delete o.textSource;
   delete o.curve;
 }
 // Cubic control points remain editable; adaptive flattening stays within .025 mm.

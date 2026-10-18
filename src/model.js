@@ -294,6 +294,26 @@ export function validateProject(p) {
       seen.add(at);
       at = groupMap.get(at).parentId;
     }
+    if (
+      n.patchMargin !== undefined &&
+      (!Number.isFinite(n.patchMargin) ||
+        n.patchMargin < 0 ||
+        n.patchMargin > 50)
+    )
+      throw Error("Invalid patch refit margin.");
+    if (
+      n.constructionArtworkIds !== undefined &&
+      (n.kind ||
+        n.type === "manual" ||
+        !Array.isArray(n.constructionArtworkIds) ||
+        n.constructionArtworkIds.length > 1000 ||
+        new Set(n.constructionArtworkIds).size !==
+          n.constructionArtworkIds.length ||
+        n.constructionArtworkIds.some(
+          (id) => typeof id !== "string" || id === n.id,
+        ))
+    )
+      throw Error("Invalid construction artwork links.");
     if (n.operations !== undefined) {
       if (
         n.kind ||
@@ -307,6 +327,8 @@ export function validateProject(p) {
       for (const op of n.operations) {
         if (
           !op ||
+          (op.constructionStage !== undefined &&
+            !["prepare", "finish"].includes(op.constructionStage)) ||
           typeof op.id !== "string" ||
           typeof op.name !== "string" ||
           op.name.length > 100 ||

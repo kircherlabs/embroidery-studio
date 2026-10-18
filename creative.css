@@ -98,3 +98,194 @@
     min-height: 42px;
   }
 }
+
+/* Intent-based inspector sections, without widening the workspace. */
+#properties .inspector-section {
+  border-top: 1px solid var(--line, #405044);
+  padding: 16px 0;
+  margin: 0;
+}
+#properties .inspector-section > summary,
+#properties h3 {
+  font: 600 15px var(--font, sans-serif);
+  color: var(--text, #eee2c9);
+  margin: 0 0 14px;
+  cursor: pointer;
+}
+#properties .inspector-section:not([open]) > summary {
+  margin-bottom: 0;
+}
+#properties details details {
+  margin: 12px 0;
+}
+#properties details details > summary {
+  padding: 9px 0;
+  cursor: pointer;
+  font-size: 13px;
+}
+#properties .active-operation {
+  background: #344637;
+  border-left: 3px solid #e9b580;
+  padding: 10px 12px;
+  line-height: 1.6;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+#properties .operation-row.active {
+  outline: 1px solid #e9b580;
+}
+#properties .operation-row {
+  gap: 3px;
+}
+#properties .operation-row button {
+  min-width: 25px;
+  padding-inline: 5px;
+}
+#properties .operation-row [data-operation] {
+  white-space: normal;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+#properties .operation-row input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  margin: 4px;
+}
+#properties input:disabled {
+  cursor: not-allowed;
+}
+#properties .construction-link {
+  border-left: 2px solid #e9b580;
+  padding-left: 10px;
+}
+.warnings .design-issues {
+  border: 1px solid #61715b;
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 12px;
+}
+.design-issues > summary {
+  cursor: pointer;
+  line-height: 1.6;
+  font-weight: 600;
+}
+.design-issues > summary span {
+  display: block;
+  color: #bcc8ae;
+  font-weight: 400;
+}
+.design-issue {
+  border-left: 3px solid #a7ba96;
+  padding: 8px 10px;
+  margin-top: 12px;
+  overflow-wrap: anywhere;
+}
+.design-issue.warning {
+  border-color: #e5b871;
+}
+.design-issue.error {
+  border-color: #e68b78;
+}
+.warnings .design-issue p {
+  background: none;
+  border: 0;
+  padding: 0;
+  margin: 6px 0;
+  color: inherit;
+}
+.design-issue .issue-action {
+  opacity: 0.85;
+}
+.design-issue button {
+  margin-top: 5px;
+  font-size: 12px;
+}
+.patch-layout {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) minmax(160px, 1fr);
+  gap: 20px;
+}
+#patch-preview {
+  width: 100%;
+  height: 240px;
+  background: #d9ddcd;
+  border-radius: 8px;
+}
+.preflight-issues {
+  padding-left: 18px;
+  font-size: 12px;
+  line-height: 1.7;
+}
+.preflight-issues li {
+  margin-bottom: 9px;
+}
+.drawing-style {
+  position: relative;
+}
+.drawing-style summary {
+  cursor: pointer;
+  white-space: nowrap;
+  padding: 8px;
+}
+.drawing-style[open] {
+  position: absolute;
+  z-index: 12;
+  bottom: 48px;
+  left: 15px;
+  width: min(300px, calc(100% - 30px));
+  padding: 12px;
+  background: #203129;
+  border: 1px solid #61715b;
+  border-radius: 8px;
+  box-shadow: 0 8px 25px #0005;
+}
+.drawing-style label {
+  display: block;
+  font-size: 12px;
+}
+.drawing-style select {
+  width: 100%;
+  margin-top: 6px;
+}
+.drawing-style p {
+  font-size: 12px;
+  line-height: 1.7;
+}
+@media (max-width: 600px) {
+  .patch-layout {
+    grid-template-columns: 1fr;
+  }
+  #patch-preview {
+    height: 180px;
+  }
+}
+
+dialog:has(.patch-layout) {
+  max-width: 780px;
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+}
+#dialog-content .patch-layout label.check {
+  flex-direction: row;
+  align-items: center;
+  gap: 9px;
+  margin: 12px 0;
+}
+#dialog-content .patch-layout label.check input {
+  flex-shrink: 0;
+  width: 17px;
+  height: 17px;
+}
+#dialog-content .patch-layout label {
+  margin: 10px 0;
+}
+#properties .operation-row small {
+  display: block;
+  color: #b9c7ad;
+  font-size: 10px;
+  margin-top: 3px;
+}
+.construction-phase {
+  padding: 8px;
+  color: #e9b580;
+}

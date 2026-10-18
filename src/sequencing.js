@@ -38,6 +38,15 @@ export function moveItems(order, ids, target, after = false) {
   return [...rest.slice(0, index), ...moving, ...rest.slice(index)];
 }
 export function moveSewingObjects(p, ids, target, after, currentOrder) {
+  // Dragging a construction boundary moves its complete manufacturing block.
+  // Individual decorative objects can still be ordered within that block.
+  const moving = new Set(ids);
+  for (const boundary of p.objects.filter(
+    (o) => o.constructionArtworkIds?.length,
+  ))
+    if (moving.has(boundary.id))
+      boundary.constructionArtworkIds.forEach((id) => moving.add(id));
+  ids = [...moving];
   const order = isManualOrder(p)
       ? sewingIds(p)
       : [...new Set([...(currentOrder || []), ...p.objects.map((o) => o.id)])],

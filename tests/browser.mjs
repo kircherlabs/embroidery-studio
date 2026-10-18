@@ -34,19 +34,28 @@ try {
   await page.waitForFunction(
     () =>
       window.studio.getPlan() &&
-      window.studio.getProject().objects.at(-1).spacing === 0.6,
+      (
+        window.studio.getProject().objects.at(-1).operations?.[0] ||
+        window.studio.getProject().objects.at(-1)
+      ).spacing === 0.6,
   );
   await page.locator("#undo").click();
   await page.waitForFunction(
     () =>
       window.studio.getPlan() &&
-      window.studio.getProject().objects.at(-1).spacing === 0.4,
+      (
+        window.studio.getProject().objects.at(-1).operations?.[0] ||
+        window.studio.getProject().objects.at(-1)
+      ).spacing === 0.4,
   );
   await page.locator("#redo").click();
   await page.waitForFunction(
     () =>
       window.studio.getPlan() &&
-      window.studio.getProject().objects.at(-1).spacing === 0.6,
+      (
+        window.studio.getProject().objects.at(-1).operations?.[0] ||
+        window.studio.getProject().objects.at(-1)
+      ).spacing === 0.6,
   );
   await page.locator("#preview-tab").click();
   await page.locator("#rewind").click();

@@ -38,6 +38,7 @@ jobs:
           node tests/workspace-browser.mjs
           node tests/creative-browser.mjs
           node tests/pes-browser.mjs
+          node tests/properties-browser.mjs
       - run: node scripts/build.mjs
       - uses: actions/upload-pages-artifact@v3
         if: github.event_name != 'pull_request'

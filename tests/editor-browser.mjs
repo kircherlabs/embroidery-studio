@@ -70,7 +70,11 @@ try {
   await page.locator("#spacing").press("Tab");
   await ready();
   p = await project();
-  assert(p.objects.slice(0, 3).every((o) => o.spacing === 0.6));
+  assert(
+    p.objects
+      .slice(0, 3)
+      .every((o) => (o.operations?.[0] || o).spacing === 0.6),
+  );
   assert.equal(p.objects[3].spacing, 0.42);
   const before = p.objects
     .slice(0, 3)
@@ -80,14 +84,20 @@ try {
   assert.equal((await selection()).objects.length, 4);
   await page.locator('[data-color="#e6ab43"]').click();
   await ready();
-  assert((await project()).objects.every((o) => o.color === "#e6ab43"));
+  assert(
+    (await project()).objects.every(
+      (o) => (o.operations?.[0] || o).color === "#e6ab43",
+    ),
+  );
   await page.locator("#undo").click();
   await ready();
   await page.locator("#stage").focus();
   await page.keyboard.press("Control+a");
   await page.locator("#stitch-type").selectOption("run");
   await ready();
-  assert((await project()).objects.every((o) => o.type === "run"));
+  assert(
+    (await project()).objects.every((o) => o.operations?.[0].type === "run"),
+  );
   await page.locator("#undo").click();
   await ready();
   await pick(a);
@@ -97,8 +107,8 @@ try {
   await page.locator("#spacing").fill(".8");
   await page.locator("#spacing").press("Tab");
   await ready();
-  assert.equal((await project()).objects[0].spacing, 0.6);
-  assert.equal((await project()).objects[3].spacing, 0.8);
+  assert.equal((await project()).objects[0].operations[0].spacing, 0.6);
+  assert.equal((await project()).objects[3].operations[0].spacing, 0.8);
   await page.locator("#undo").click();
   await ready();
   await page.locator("#undo").click();
@@ -195,9 +205,9 @@ try {
   await page.locator("#spacing").press("Tab");
   await ready();
   p = await project();
-  assert.equal(p.objects[0].spacing, 0.7);
-  assert.equal(p.objects[3].spacing, 0.7);
-  assert.equal(p.objects[1].spacing, 0.6);
+  assert.equal((p.objects[0].operations?.[0] || p.objects[0]).spacing, 0.7);
+  assert.equal((p.objects[3].operations?.[0] || p.objects[3]).spacing, 0.7);
+  assert.equal((p.objects[1].operations?.[0] || p.objects[1]).spacing, 0.6);
   await page.locator("#undo").click();
   await ready();
   await pick(first);
@@ -261,7 +271,13 @@ try {
   assert.equal((await project()).objects.length, 4);
   await pick(a);
   await page.locator("#applique-recipe").click();
-  await ready();
+  await page.locator("#construction-mode").selectOption("direct");
+  await page.locator("#dialog-submit").click();
+  await page.waitForFunction(
+    () =>
+      window.studio.getProject().objects[0].operations?.length === 5 &&
+      window.studio.getPlan()?.stats.stops === 2,
+  );
   p = await project();
   const ops = p.objects[0].operations;
   assert.equal(ops.length, 5);
@@ -409,7 +425,9 @@ try {
   await mobile.waitForFunction(() => window.studio.getPlan());
   assert(
     await mobile.evaluate(() =>
-      window.studio.getProject().objects.every((o) => o.spacing === 0.6),
+      window.studio
+        .getProject()
+        .objects.every((o) => (o.operations?.[0] || o).spacing === 0.6),
     ),
   );
   assert(await mobile.evaluate(() => document.body.scrollWidth <= innerWidth));

@@ -52,7 +52,7 @@ const descriptions = {
   "view-command":
     "Fit selection, all artwork or the hoop; center the hoop view at the current zoom, or reset to Fit Hoop. Panel resizing never changes source artwork.",
   "context-help":
-    "Explain controls: turn this on, then tap any control to read its description without changing the design. Tap Explain again or press Escape to resume editing.",
+    "Turn hover and keyboard-focus hints on or off. On touch, hold a control to read its hint. Ordinary taps still operate controls. Your preference is remembered on this device.",
   help: "Open the workflow guide and keyboard shortcuts.",
   "new-project":
     "Start an empty design. You can save your current editable project before replacing it.",
@@ -283,7 +283,18 @@ export function installHelp() {
   let active,
     timer,
     suppressFocus = false,
-    explain = false;
+    enabled = false,
+    hold = null,
+    blockedClick = null;
+  const preferenceKey = "embroidery-hints-v1";
+  try {
+    enabled = localStorage.getItem(preferenceKey) === "true";
+  } catch {}
+  const button = document.getElementById("context-help");
+  const cancelHold = () => {
+    if (hold) clearTimeout(hold.timer);
+    hold = null;
+  };
   function hide() {
     clearTimeout(timer);
     tip.hidden = true;
@@ -292,6 +303,7 @@ export function installHelp() {
   }
   function show(el) {
     if (
+      !enabled ||
       !el ||
       !el.isConnected ||
       !el.getClientRects().length ||
@@ -334,84 +346,140 @@ export function installHelp() {
     if (active && !active.isConnected) hide();
   }).observe(document.body, { childList: true, subtree: true });
   document.addEventListener("pointerover", (e) => {
-    if (e.pointerType === "touch" || explain) return;
+    if (!enabled || e.pointerType === "touch") return;
     const el = e.target.closest(selector);
     if (!el || el === active || el.tagName === "CANVAS") return;
     hide();
     timer = setTimeout(() => show(el), 400);
   });
   document.addEventListener("pointerout", (e) => {
+    if (e.pointerType === "touch") return;
     const el = e.target.closest(selector);
-    if (
-      !explain &&
-      !el?.contains(e.relatedTarget) &&
-      active !== document.activeElement
-    )
+    if (!el?.contains(e.relatedTarget) && active !== document.activeElement)
       hide();
   });
   document.addEventListener("focusin", (e) => {
-    if (!suppressFocus && e.target.tagName !== "CANVAS")
+    if (enabled && !suppressFocus && e.target.tagName !== "CANVAS")
       show(e.target.closest(selector));
   });
-  document.addEventListener("focusout", () => {
-    if (!explain) hide();
-  });
+  document.addEventListener("focusout", hide);
   document.addEventListener(
     "pointerdown",
     (e) => {
+      cancelHold();
+      hide();
       suppressFocus = e.pointerType === "touch";
-      setTimeout(() => {
-        suppressFocus = false;
-      }, 0);
+      blockedClick = null;
       const el = e.target.closest(selector);
-      if (explain && el && !["context-help", "help"].includes(el.id)) {
-        e.preventDefault();
-        e.stopImmediatePropagation();
+      if (
+        !enabled ||
+        e.pointerType !== "touch" ||
+        !el ||
+        el.id === button.id ||
+        el.matches("canvas,[data-tree-grip],[data-sew-grip]")
+      )
+        return;
+      const pending = {
+        el,
+        id: e.pointerId,
+        x: e.clientX,
+        y: e.clientY,
+        shown: false,
+      };
+      hold = pending;
+      pending.timer = setTimeout(() => {
+        if (hold !== pending || !enabled || !el.isConnected) return;
         show(el);
-      } else hide();
+        pending.shown = !tip.hidden;
+      }, 500);
+    },
+    true,
+  );
+  document.addEventListener(
+    "pointermove",
+    (e) => {
+      if (
+        hold?.id === e.pointerId &&
+        Math.hypot(e.clientX - hold.x, e.clientY - hold.y) > 8
+      ) {
+        cancelHold();
+        hide();
+      }
+    },
+    true,
+  );
+  document.addEventListener(
+    "pointerup",
+    (e) => {
+      if (hold?.id !== e.pointerId) return;
+      if (hold.shown) blockedClick = { el: hold.el, until: Date.now() + 1000 };
+      cancelHold();
+    },
+    true,
+  );
+  document.addEventListener(
+    "pointercancel",
+    () => {
+      cancelHold();
+      hide();
+    },
+    true,
+  );
+  document.addEventListener(
+    "contextmenu",
+    (e) => {
+      // Keep native long-press menus from covering a touch hint. Canvas context
+      // menus and ordinary mouse right-clicks retain their normal behavior.
+      if (
+        hold?.el.contains(e.target) ||
+        (blockedClick?.until > Date.now() && blockedClick.el.contains(e.target))
+      )
+        e.preventDefault();
     },
     true,
   );
   document.addEventListener(
     "click",
     (e) => {
-      const el = e.target.closest(selector);
-      if (explain && el && !["context-help", "help"].includes(el.id)) {
+      if (
+        blockedClick?.until > Date.now() &&
+        blockedClick.el.contains(e.target)
+      ) {
         e.preventDefault();
         e.stopImmediatePropagation();
-        show(el);
       }
+      blockedClick = null;
     },
     true,
   );
-  const button = document.getElementById("context-help");
-  function setMode(value) {
-    explain = value;
+  function setEnabled(value, persist = true) {
+    enabled = value;
     button.setAttribute("aria-pressed", String(value));
-    document.body.classList.toggle("explain-mode", value);
-    button.textContent = value ? "Done explaining" : "Explain";
+    button.textContent = value ? "Hints: On" : "Hints: Off";
+    cancelHold();
+    blockedClick = null;
     hide();
-    if (value) show(button);
+    if (persist)
+      try {
+        localStorage.setItem(preferenceKey, String(value));
+      } catch {}
   }
-  button.onclick = () => setMode(!explain);
+  setEnabled(enabled, false);
+  button.onclick = () => setEnabled(!enabled);
   document.addEventListener("keydown", (e) => {
     suppressFocus = false;
-    if (e.key === "Escape") {
-      if (explain || !tip.hidden) {
-        e.preventDefault();
-        e.stopImmediatePropagation();
-      }
-      setMode(false);
+    if (e.key === "Escape" && !tip.hidden) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
       hide();
+      cancelHold();
     }
   });
-  document.addEventListener(
-    "scroll",
-    () => {
-      if (!explain) hide();
-    },
-    true,
-  );
-  window.addEventListener("resize", hide);
-  document.addEventListener("close", hide, true);
+  const dismiss = () => {
+    cancelHold();
+    hide();
+  };
+  document.addEventListener("scroll", dismiss, true);
+  window.addEventListener("resize", dismiss);
+  document.addEventListener("close", dismiss, true);
 }

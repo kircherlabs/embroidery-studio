@@ -11,7 +11,7 @@ All project edits use the existing atomic mutation, Undo/Redo and JSON persisten
 path. Operation settings now resolve the same target for display and change. A
 single object shows its active step, including disabled steps and real stop/trim
 commands. Group/bulk editing chooses the first sewing step or all sewing steps;
-stops are not accidentally recolored or changed by bulk sewing settings. An edit
+command-only stacks retain real stops/trims as sequencing barriers; stops are not accidentally recolored or changed by bulk sewing settings. An edit
 reports incompatible targets. Locked descendants are excluded explicitly.
 
 | Control                                                    | Actual effect and applicability                                                             | Verification / correction                                                                                                                                                                |

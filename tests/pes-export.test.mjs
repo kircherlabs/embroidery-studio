@@ -16,7 +16,7 @@ import { generate } from "../src/engine.js";
 import { demo } from "../src/model.js";
 import { useTreeOrder } from "../src/sequencing.js";
 import { object } from "../src/model.js";
-import { applique } from "../src/operations.js";
+import { applique, makeOperation } from "../src/operations.js";
 mkdirSync(new URL("../test-results/", import.meta.url), { recursive: true });
 const python = process.env.PYTHON || "python",
   adapter = fileURLToPath(new URL("./pes-codec-adapter.py", import.meta.url));
@@ -329,4 +329,20 @@ test("surrounding patch preparation, decoration and finishing survive independen
     input.findLastIndex((e) => e.objectId === artwork.id) <
       input.findIndex((e) => e.operationId === finish),
   );
+});
+
+test("a stand-alone operator stop between decorative objects survives actual PES export", () => {
+  const a = smartShape("rect", 8, 6, { frame: [1, 0, 0, 1, -12, 0] }),
+    b = smartShape("rect", 8, 6, { frame: [1, 0, 0, 1, 12, 0] }),
+    pause = smartShape("rect", 2, 2);
+  pause.operations = [makeOperation("stop", pause)];
+  const plan = generate({
+    version: 1,
+    name: "Pause",
+    machine: "se700",
+    objects: [a, pause, b],
+  });
+  const { result } = check(plan.events);
+  assert.equal(plan.stats.stops, 1);
+  assert.equal(result.preview.filter((e) => e.cmd === "stop").length, 1);
 });

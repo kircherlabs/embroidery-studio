@@ -380,3 +380,41 @@ test("post-creation margin refit follows transformed artwork and retains indepen
   assert.deepEqual(art.rings, geometry);
   assert.equal(generate(p).stats.stops, 2);
 });
+
+test("command-only operation stacks emit actual stops and remain barriers between complete sewing objects", () => {
+  const a = smartShape("rect", 8, 6, { frame: [1, 0, 0, 1, -15, 0] }),
+    c = smartShape("ellipse", 8, 6, { frame: [1, 0, 0, 1, 15, 0] }),
+    pause = smartShape("rect", 4, 4);
+  pause.operations = [
+    makeOperation("stop", pause),
+    makeOperation("trim", pause),
+  ];
+  const p = project([a, pause, c]),
+    plan = generate(p),
+    stop = plan.events.findIndex(
+      (e) => e.operationId === pause.operations[0].id,
+    );
+  assert.equal(plan.stats.stops, 1);
+  assert.equal(plan.events[stop].cmd, "stop");
+  assert(
+    stop >
+      plan.events.findLastIndex(
+        (e) => e.objectId === a.id && e.cmd === "stitch",
+      ),
+  );
+  assert(
+    stop <
+      plan.events.findIndex((e) => e.objectId === c.id && e.cmd === "stitch"),
+  );
+  assert(
+    !plan.events.some((e) => e.objectId === pause.id && e.cmd === "stitch"),
+  );
+  // A trim immediately after a stop is correctly redundant because the stop
+  // already secures/cuts thread. A trim-only stack must still own a real command.
+  pause.operations = [makeOperation("trim", pause)];
+  assert(
+    generate(p).events.some(
+      (e) => e.operationId === pause.operations[0].id && e.cmd === "trim",
+    ),
+  );
+});

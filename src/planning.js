@@ -288,15 +288,17 @@ function prepareBasicPlan(project) {
   // Expansion happens afterwards, so optimization cannot interleave its steps.
   const proxy = objects
     .filter(
-      (o) =>
-        !o.operations ||
-        o.operations.some((op) => op.enabled !== false && isSewing(op)),
+      (o) => !o.operations || o.operations.some((op) => op.enabled !== false),
     )
     .map((o) =>
       o.operations
         ? {
             ...o,
-            type: "run",
+            type: o.operations.some(
+              (op) => op.enabled !== false && isSewing(op),
+            )
+              ? "run"
+              : "command",
             closed: false,
             underlay: false,
             color:

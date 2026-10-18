@@ -211,6 +211,7 @@ test("satin column creates boundary-to-boundary variable widths and preserves co
   o.operations = [
     {
       ...makeOperation("column", o),
+      columnMode: "directional",
       angle: 0,
       underlay: false,
       compensation: 0,
@@ -241,6 +242,7 @@ test("wide satin spans split with staggered penetrations and machine-safe comman
   o.operations = [
     {
       ...makeOperation("column", o),
+      columnMode: "directional",
       underlay: false,
       maxSatin: 5,
       compensation: 0,
@@ -344,6 +346,7 @@ test("machine-grid validation retains every complete required satin row", () => 
   o.operations = [
     {
       ...makeOperation("column", o),
+      columnMode: "directional",
       angle: 0,
       underlay: false,
       compensation: 0,

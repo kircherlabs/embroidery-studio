@@ -346,3 +346,48 @@ test("a stand-alone operator stop between decorative objects survives actual PES
   assert.equal(plan.stats.stops, 1);
   assert.equal(result.preview.filter((e) => e.cmd === "stop").length, 1);
 });
+
+test("stroke columns preserve mixed-operation stops, colors, dimensions and every needle through PES encoding", () => {
+  const a = smartShape("rect", 4, 18, { radius: 1 }),
+    b = smartShape("ellipse", 12, 20);
+  b.rings.push(...smartShape("ellipse", 8, 15).rings);
+  b.fillRule = "evenodd";
+  for (const ring of a.rings) for (const q of ring) q.x -= 15;
+  for (const ring of b.rings) for (const q of ring) q.x += 12;
+  a.color = "#000000";
+  b.color = "#dd3344";
+  a.operations = [
+    makeOperation("column", a),
+    makeOperation("stop", a),
+    makeOperation("run", a),
+  ];
+  b.operations = [makeOperation("column", b)];
+  const plan = generate({
+      version: 1,
+      name: "Satin construction",
+      machine: "se700",
+      objects: [a, b],
+      planning: { smallDetail: 0 },
+    }),
+    { result, dec } = check(plan.events);
+  assert(plan.diagnostics.satin.every((d) => !d.fallback));
+  assert(plan.events.some((e) => e.phase === "satin-stroke"));
+  assert.equal(plan.stats.stops, 1);
+  assert.equal(result.preview.filter((e) => e.cmd === "stop").length, 1);
+  assert.equal(
+    result.preview.filter((e) => e.cmd === "color").length,
+    plan.stats.changes,
+  );
+  assert.equal(dec.pec.declaredWidth / 10, plan.stats.bounds.width);
+  assert.equal(dec.pec.declaredHeight / 10, plan.stats.bounds.height);
+  const opIds = a.operations.map((op) => op.id),
+    sewn = plan.events.filter((e) => e.objectId === a.id);
+  assert(
+    sewn.findIndex((e) => e.operationId === opIds[1]) >
+      sewn.findLastIndex((e) => e.operationId === opIds[0]),
+  );
+  assert(
+    sewn.findIndex((e) => e.operationId === opIds[2]) >
+      sewn.findIndex((e) => e.operationId === opIds[1]),
+  );
+});

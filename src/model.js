@@ -526,6 +526,35 @@ function validateSource(o) {
   )
     throw Error("Invalid rounding source.");
   for (const v of [o, ...(o.operations || [])]) {
+    if (
+      v.columnMode !== undefined &&
+      !["stroke", "directional"].includes(v.columnMode)
+    )
+      throw Error("Invalid satin column mode.");
+    if (
+      v.columnFallback !== undefined &&
+      !["tatami", "manual"].includes(v.columnFallback)
+    )
+      throw Error("Invalid satin fallback.");
+    if (
+      v.satinGuides !== undefined &&
+      (!Array.isArray(v.satinGuides) ||
+        v.satinGuides.length > 64 ||
+        v.satinGuides.some(
+          (g) =>
+            !g ||
+            ![g.a, g.b].every(
+              (p) =>
+                p &&
+                Number.isFinite(p.x) &&
+                Number.isFinite(p.y) &&
+                Math.abs(p.x) < 10000 &&
+                Math.abs(p.y) < 10000,
+            ) ||
+            Math.hypot(g.a.x - g.b.x, g.a.y - g.b.y) < 0.1,
+        ))
+    )
+      throw Error("Invalid satin direction guides.");
     if (v.cornerControl !== undefined && typeof v.cornerControl !== "boolean")
       throw Error("Invalid corner control.");
     if (v.minCornerStitch !== undefined && !number(v.minCornerStitch, 0.2, 1))

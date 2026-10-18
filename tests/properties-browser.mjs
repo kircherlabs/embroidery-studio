@@ -347,7 +347,7 @@ try {
   await page.locator("#stitch-type").selectOption("column");
   await ready();
   await openDetails(page.locator("#corner-adaptive"));
-  assert(await page.locator("#corner-adaptive").isDisabled());
+  assert(!(await page.locator("#corner-adaptive").isDisabled()));
   assert(await page.locator("#column-max").count());
   // Keyboard-accessible explanations remain present when hover hints are off, including in a compact touch layout.
   await page.setViewportSize({ width: 390, height: 844 });

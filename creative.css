@@ -289,3 +289,9 @@ dialog:has(.patch-layout) {
   padding: 8px;
   color: #e9b580;
 }
+
+#satin-guide-edit[aria-pressed="true"] {
+  background: var(--accent, #e7b784);
+  color: #1c3025;
+  border-color: #e7b784;
+}

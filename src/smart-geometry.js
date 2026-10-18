@@ -15,6 +15,12 @@ export function compose(a, b) {
   ];
 }
 export function sourceTransform(o, m) {
+  for (const op of [o, ...(o.operations || [])])
+    if (op.satinGuides)
+      op.satinGuides = op.satinGuides.map((g) => ({
+        a: mapPoint(g.a, m),
+        b: mapPoint(g.b, m),
+      }));
   for (const key of ["shape", "textSource", "curve"])
     if (o[key]) o[key].frame = compose(m, o[key].frame || identity());
   if (o.rounding)

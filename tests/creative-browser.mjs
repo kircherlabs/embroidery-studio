@@ -80,6 +80,11 @@ try {
     ),
   });
   await ready();
+  await page.waitForFunction(
+    () =>
+      window.studio.getProject().objects.length === 2 &&
+      window.studio.getPlan(),
+  );
   let p = await project(),
     under = p.objects[0],
     over = p.objects[1],
@@ -185,6 +190,8 @@ try {
   assert.equal(text.textSource.font, "sans-serif");
   assert.deepEqual(text.textSource.frame, frame);
   await page.locator("#stitch-type").selectOption("column");
+  await ready();
+  await page.locator("#column-mode").selectOption("directional");
   await ready();
   await fill("angle", 85);
   await page.locator("#underlay").uncheck();
@@ -297,6 +304,7 @@ try {
       o.operations = [
         {
           ...makeOperation("column", o),
+          columnMode: "directional",
           angle: 0,
           compensation: 0,
           underlay: false,

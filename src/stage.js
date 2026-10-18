@@ -21,6 +21,20 @@ import {
   within,
 } from "./hierarchy.js";
 export class Stage {
+  satinGuideTarget() {
+    const selection = selectedLeaves(this.state, { editable: true });
+    if (selection.length !== 1 || !isVisible(this.state.project, selection[0]))
+      return null;
+    const o = selection[0],
+      op = o.operations?.find(
+        (op) =>
+          op.id === this.state.satinGuideEdit &&
+          op.type === "column" &&
+          op.columnMode === "stroke",
+      );
+    return op ? { o, op } : null;
+  }
+
   constructor(canvas, state, actions) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d");
@@ -65,6 +79,7 @@ export class Stage {
       { passive: false },
     );
     canvas.addEventListener("dblclick", (e) => {
+      if (this.satinGuideTarget()) return;
       if (this.draft.length) {
         this.draft.pop();
         this.actions.finish();
@@ -549,6 +564,45 @@ export class Stage {
         }
       }
     }
+    if (s.satinStructure || s.satinGuideEdit) {
+      ctx.save();
+      ctx.lineWidth = 1.1 / scale;
+      const ids = new Set(selection.map((o) => o.id));
+      if (s.satinStructure)
+        for (const result of s.plan?.diagnostics?.satin || [])
+          if (ids.has(result.objectId))
+            for (const stroke of result.strokes) {
+              ctx.strokeStyle = result.fallback ? "#9d6446" : "#597bac";
+              this.path(ctx, [stroke.center], false);
+              ctx.stroke();
+              ctx.globalAlpha = 0.55;
+              for (let i = 0; i < stroke.sections.length; i += 3) {
+                const q = stroke.sections[i];
+                this.path(ctx, [[q.a, q.b]], false);
+                ctx.stroke();
+              }
+              ctx.globalAlpha = 1;
+            }
+      for (const o of selection)
+        for (const op of o.operations || [])
+          if (
+            op.type === "column" &&
+            (!s.activeOperationId || op.id === s.activeOperationId)
+          )
+            for (const g of op.satinGuides || []) {
+              ctx.strokeStyle = "#a24779";
+              this.path(ctx, [[g.a, g.b]], false);
+              ctx.stroke();
+              for (const p of [g.a, g.b]) {
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 5 / scale, 0, Math.PI * 2);
+                ctx.fillStyle = "#fff4e3";
+                ctx.fill();
+                ctx.stroke();
+              }
+            }
+      ctx.restore();
+    }
     if (this.guides?.length) {
       ctx.save();
       ctx.strokeStyle = "#a95636";
@@ -623,9 +677,11 @@ export class Stage {
         ? this.drag
           ? "grabbing"
           : "grab"
-        : ["select", "node"].includes(s.tool)
-          ? "default"
-          : "crosshair";
+        : this.satinGuideTarget()
+          ? "crosshair"
+          : ["select", "node"].includes(s.tool)
+            ? "default"
+            : "crosshair";
   }
   roundRect(ctx, x, y, w, h, r) {
     ctx.beginPath();
@@ -730,6 +786,31 @@ export class Stage {
         }
       });
       if (index >= 0) this.actions.scrub(index + 1);
+      return;
+    }
+    const guideTarget = this.satinGuideTarget();
+    if (guideTarget) {
+      const { op } = guideTarget,
+        before = JSON.stringify(s.project);
+      op.satinGuides ||= [];
+      let index = -1,
+        nearest = 9 / this.scale,
+        side = "b";
+      for (let i = 0; i < op.satinGuides.length; i++)
+        for (const key of ["a", "b"])
+          if (distance(p, op.satinGuides[i][key]) < nearest) {
+            nearest = distance(p, op.satinGuides[i][key]);
+            index = i;
+            side = key;
+          }
+      const added = index < 0;
+      if (added) {
+        if (op.satinGuides.length >= 64) return;
+        index = op.satinGuides.length;
+        op.satinGuides.push({ a: p, b: p });
+      }
+      this.drag = { type: "satin-guide", op, index, side, before, added };
+      this.render();
       return;
     }
     if (s.tool === "pen") {
@@ -915,6 +996,8 @@ export class Stage {
     if (!d) return;
     if (d.type === "pan") {
       this.pan = { x: d.pan.x + e.clientX - d.x, y: d.pan.y + e.clientY - d.y };
+    } else if (d.type === "satin-guide") {
+      d.op.satinGuides[d.index][d.side] = p;
     } else if (d.type === "move") {
       let dx = p.x - d.start.x,
         dy = p.y - d.start.y;
@@ -1074,7 +1157,14 @@ export class Stage {
     if (this.drag) {
       const d = this.drag;
       this.drag = null;
-      if (!["pan", "pen"].includes(d.type)) this.actions.changed(d.before);
+      if (
+        d.type === "satin-guide" &&
+        distance(d.op.satinGuides[d.index].a, d.op.satinGuides[d.index].b) < 0.2
+      ) {
+        this.state.project = JSON.parse(d.before);
+        this.actions.refresh();
+      } else if (!["pan", "pen"].includes(d.type))
+        this.actions.changed(d.before);
       this.render();
     }
   }

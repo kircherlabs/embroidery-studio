@@ -31,6 +31,16 @@ artwork/steps. Invalid steps preserve the rest of the preview but block export
 until repaired or explicitly disabled. See [Properties audit and construction
 workflow](docs/PROPERTIES.md) for applicability, testing and limitations.
 
+## Stroke-following satin lettering
+
+New Satin column steps follow individual letter strokes with variable-width rails,
+branch sections, curve-aware spacing, center underlay and local direction guides.
+Select **Embroidery method → Satin column construction** to inspect rails, edit
+cross-stroke guides, or choose the legacy directional mode. Unsuitable regions
+report an explicit tatami or unsewn fallback. Text and fonts remain editable.
+See [satin construction, validation and limits](docs/SATIN.md), including the
+remaining physical SE700 sew-out checks.
+
 ## What works
 
 - SVG vector import (including transforms and holes), PNG/JPG color-region
@@ -190,9 +200,9 @@ Machine conversion lazily downloads pinned Pyodide 0.27.7 from jsDelivr. Network
 access is required on first conversion; this release is not a fully offline PWA.
 
 Image digitizing targets flat artwork, not photographic embroidery. Satin columns,
-borders and centerlines are separate operations; directional columns preserve
-counters and split overly wide spans. Curved/branched lettering still needs
-manual region and direction refinement. SVG filters,
+borders and centerlines are separate operations. Stroke-following columns preserve
+counters and split overly wide spans; difficult junctions and fonts can require
+manual region/direction refinement or an explicit fallback. SVG filters,
 clipping, masks, symbols, CSS style sheets and text should be expanded to plain
 paths before import; unsupported content is skipped with a notice. Underlay and
 pull compensation are intentionally simple and documented in

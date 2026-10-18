@@ -52,3 +52,8 @@ format capabilities and algorithm concepts. No source from either is included.
 The studio scanline fill, centerline satin, tracing, sequencing, interface and
 simulation code are original; boolean operations use polygon-clipping as noted
 above. See `docs/RESEARCH.md` for the engineering rationale.
+
+The stroke-satin topology, branch partition, rails and travel algorithms are
+original implementations. Ink/Stitch documentation, topology-thinning descriptions
+and the MIT MAT/SAT project were reviewed conceptually; no source from those
+projects is bundled. See `docs/SATIN.md` for references and limits.

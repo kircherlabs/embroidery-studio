@@ -331,6 +331,24 @@ try {
       await mobile.locator("#resize-left").focus();
       await mobile.keyboard.press("ArrowRight");
       assert(await mobile.locator("#layers-panel").isVisible());
+      if (height <= 600) {
+        const lastRow = await mobile
+            .locator(".object-row")
+            .last()
+            .boundingBox(),
+          actions = await mobile.locator(".layer-actions").boundingBox();
+        assert(lastRow.y + lastRow.height <= actions.y);
+        await mobile.locator(".layer-actions").scrollIntoViewIfNeeded();
+        const visibleActions = await mobile
+            .locator(".layer-actions")
+            .boundingBox(),
+          drawer = await mobile.locator("#layers-panel").boundingBox();
+        assert(
+          visibleActions.y >= drawer.y &&
+            visibleActions.y + visibleActions.height <=
+              drawer.y + drawer.height + 1,
+        );
+      }
       if (width === 390) {
         const touch = await mobile.context().newCDPSession(mobile),
           grip = await mobile.locator("#resize-left").boundingBox(),

@@ -22,13 +22,36 @@ const esc = (s) =>
   );
 const field = (label, id, value, min, max, step = 0.1) =>
   `<label class="field">${label}<input type="number" required id="${id}" value="${value}" placeholder="Mixed" min="${min}" max="${max}" step="${step}"></label>`;
+export function satinSummary(results) {
+  if (!results.length) return "Analyzing stroke structure…";
+  return `${results.reduce((n, d) => n + d.strokes.length, 0)} stroke sections · ${results.some((d) => d.fallback) ? "Some regions use the selected fallback. Review Design Issues." : "Automatic rails generated."} ${results.some((d) => d.wide) ? "Wide spans have split penetrations. " : ""}Test small serifs, joins and material coverage with a sew-out.`;
+}
 export function creativeInspector(api, leaf, objects, targets) {
   const { state, mutate, toast } = api,
     p = state.project,
     vectors = objects.filter((o) => o.type !== "manual");
   if (!vectors.length) return;
   const cornerTypes = CORNER_TYPES;
-  const cornerTargets = targets.filter((op) => cornerTypes.has(op.type));
+  const cornerTargets = targets.filter(
+    (op) =>
+      cornerTypes.has(op.type) &&
+      (op.type !== "column" || op.columnMode === "stroke"),
+  );
+  const columns = targets.filter((o) => o.type === "column"),
+    column = columns[0];
+  const mode = columns.every(
+    (o) =>
+      (o.columnMode || "directional") === (column?.columnMode || "directional"),
+  )
+    ? column?.columnMode || "directional"
+    : "";
+  const guideTarget =
+    leaf && targets.length === 1 && column?.columnMode === "stroke"
+      ? column
+      : null;
+  const satinInfo = (state.plan?.diagnostics?.satin || []).filter(
+    (d) => d.objectId === leaf?.id && d.operationId === column?.id,
+  );
   const box = document.createElement("section");
   box.className = "creative-settings";
   const shape = leaf?.shape,
@@ -70,7 +93,8 @@ export function creativeInspector(api, leaf, objects, targets) {
      : ""
  }
  ${leaf?.constructionArtworkIds?.length && shape ? `<details><summary>Patch boundary sizing</summary>${field("Refit margin around artwork · mm", "patch-refit-margin", leaf.patchMargin ?? 3, 0, 50)}<button id="patch-refit" data-help="Resize and reposition this boundary around its linked artwork using the chosen margin. Resets boundary rotation to the hoop axes; decorative artwork and operation settings stay unchanged. Undo restores the previous boundary.">Refit boundary to artwork</button><p class="property-note">Uses the current linked artwork bounds. Keep margin at least as large as the finishing band to avoid covering decorative stitches. Manual size controls remain in Smart shape.</p></details>` : ""}
- ${targets.some((o) => o.type === "column") ? `<details open><summary>Satin column construction</summary>${field("Maximum satin span · mm", "column-max", targets.filter((o) => o.type === "column").every((o) => o.maxSatin === targets.find((o) => o.type === "column").maxSatin) ? (targets.find((o) => o.type === "column")?.maxSatin ?? 6) : "", 1, 6.5)}<p class="property-note">Stitches span actual region edges along Stitch direction. Holes stay open. Wide spans use staggered splits; Maximum segment length and Fill pattern affect those splits only. Narrow spans remain single satin stitches. For curved letters and branches, divide regions and adjust directions; this is directional column digitizing, not automatic skeleton tracing.</p></details>` : ""}
+ ${columns.length ? `<details open><summary>Satin column construction</summary><label class="field">Column construction<select id="column-mode">${!mode ? '<option value="" disabled selected>Mixed</option>' : ""}<option value="stroke">Follow individual strokes</option><option value="directional">Directional spans · legacy / manual</option></select></label>${field("Maximum satin span · mm", "column-max", columns.every((o) => o.maxSatin === column.maxSatin) ? (column.maxSatin ?? 6) : "", 1, 6.5)}${mode === "stroke" ? `<p class="property-note">Branches become separate variable-width columns. Stitches cross each stroke and turn with curves. Center-walk underlay follows those strokes. Wide floats use staggered splits.</p><label class="field">When automatic rails are unsuitable<select id="column-fallback"><option value="tatami">Tatami fallback + Design Issue</option><option value="manual">Leave unsewn + Design Issue</option></select></label><label class="check"><input type="checkbox" id="satin-structure" ${state.satinStructure ? "checked" : ""}>Show stroke rails and directions</label>${guideTarget ? `<button id="satin-guide-edit" aria-pressed="${state.satinGuideEdit === column.id}" data-help="Drag across a stroke on the canvas to add a local needle-direction guide. Drag endpoint handles to edit. This changes satin construction without changing artwork. Escape exits guide editing.">${state.satinGuideEdit === column.id ? "Finish direction guides" : "Edit direction guides on canvas"}</button><p class="property-note">${(column.satinGuides || []).length} local guides · drag across a stroke, not along it. Guides remain editable when switching fonts; review their positions afterward.</p><div class="creative-grid">${(column.satinGuides || []).map((g, i) => `<button data-remove-satin-guide="${i}" aria-label="Remove direction guide ${i + 1}">Remove guide ${i + 1}</button>`).join("")}</div>` : '<p class="property-note">Select one artwork object and one column step to edit its direction guides.</p>'}<p id="satin-analysis" class="property-note" data-object="${esc(leaf?.id || "")}" data-operation="${esc(column.id)}">${leaf ? satinSummary(satinInfo) : "Select one artwork object to inspect its stroke analysis."}</p>` : '<p class="property-note">Legacy construction spans region edges along Stitch direction. Holes stay open. It does not automatically follow letter strokes. Fill pattern controls wide-span splits.</p>'}</details>` : ""}
+
  <details><summary>Round shape corners</summary>${shape && ["rect", "regular", "star"].includes(shape.kind) ? '<p class="property-note">Use Corner radius in Smart shape for whole-shape rounding and retained parameters. Below, Round active vertex converts a single polygon vertex to a rounded path; Undo restores the Smart shape.</p>' : ""}${field(shape && ["rect", "regular", "star"].includes(shape.kind) ? "Active vertex radius · mm" : "Artwork rounding radius · mm", "round-radius", leaf?.rounding?.radius || 0, 0, 20)}${shape && ["rect", "regular", "star"].includes(shape.kind) ? "" : `<button id="round-geometry" data-help="Explicitly fillet all compatible selected paths. Original contours are retained while adjusting radius; zero restores them. Smart shape parameters and editable lettering are preserved when supported. Bézier filleting converts to a polygon path; Undo restores curve handles.">Apply geometric rounding</button>`}${leaf ? `<button id="round-node" data-help="With the Node tool, select one vertex first. Fillet that vertex only. This converts editable lettering or a Smart shape to a fixed path; Undo restores its source.">Round active vertex</button>` : ""}<p class="property-note">Rounds actual artwork, including counters. Radius is limited locally to prevent adjacent fillets crossing.</p></details><details data-section="corners"><summary>Optimize corner stitches</summary><label class="check"><input id="corner-adaptive" type="checkbox" ${targets.length && targets.every((o) => o.cornerControl) ? "checked" : ""}>Preserve turns &amp; reduce crowded penetrations</label>${field("Crowded-corner threshold · mm", "corner-min", cornerTargets.every((o) => (o.minCornerStitch ?? 0.3) === (cornerTargets[0]?.minCornerStitch ?? 0.3)) ? (cornerTargets[0]?.minCornerStitch ?? 0.3) : "", 0.2, 1)}<p id="corner-availability" class="property-note"></p><p class="property-note">Stitch construction only: retain running-path corners while avoiding close neighboring penetrations; shorten crowded inner satin turns. Does not round artwork. Split very sharp satin corners into separate paths for full control.</p></details>
  <details><summary>Geometry tools</summary>${
    vectors.length > 1
@@ -292,6 +316,61 @@ export function creativeInspector(api, leaf, objects, targets) {
     $("column-max").onchange = (e) => {
       if (valid(e.target)) applyCorner("maxSatin", Number(e.target.value));
     };
+  if ($("column-mode")) {
+    $("column-mode").value = mode;
+    $("column-mode").onchange = (e) => {
+      state.satinGuideEdit = null;
+      applyCorner("columnMode", e.target.value);
+    };
+  }
+  if ($("column-fallback")) {
+    $("column-fallback").value = column.columnFallback || "tatami";
+    $("column-fallback").onchange = (e) =>
+      applyCorner("columnFallback", e.target.value);
+    $("satin-structure").onchange = (e) => {
+      state.satinStructure = e.target.checked;
+      api.draw();
+    };
+  }
+  if ($("satin-guide-edit"))
+    $("satin-guide-edit").onclick = () => {
+      state.satinGuideEdit =
+        state.satinGuideEdit === column.id ? null : column.id;
+      state.satinStructure = true;
+      state.tool = "select";
+      api.refresh();
+      api.draw();
+    };
+  box.querySelectorAll("[data-remove-satin-guide]").forEach(
+    (el) =>
+      (el.onclick = () =>
+        applyCorner(
+          "satinGuides",
+          column.satinGuides.filter(
+            (_, i) => i !== Number(el.dataset.removeSatinGuide),
+          ),
+        )),
+  );
+  if (guideTarget && column.satinGuides?.length) {
+    const coords = document.createElement("details");
+    coords.innerHTML = `<summary>Direction guide coordinates · mm</summary>${column.satinGuides.map((g, i) => `<fieldset><legend>Guide ${i + 1}</legend>${["a", "b"].map((side) => `<div class="two-col">${["x", "y"].map((axis) => `<label class="field">${side === "a" ? "Start" : "End"} ${axis.toUpperCase()}<input type="number" min="-500" max="500" step="0.1" data-guide-index="${i}" data-guide-side="${side}" data-guide-axis="${axis}" value="${Number(g[side][axis].toFixed(3))}"></label>`).join("")}</div>`).join("")}</fieldset>`).join("")}`;
+    $("satin-guide-edit").closest("details").append(coords);
+    coords.querySelectorAll("input").forEach(
+      (el) =>
+        (el.onchange = () => {
+          if (!valid(el)) return;
+          const guides = structuredClone(column.satinGuides),
+            g = guides[Number(el.dataset.guideIndex)];
+          g[el.dataset.guideSide][el.dataset.guideAxis] = Number(el.value);
+          if (Math.hypot(g.a.x - g.b.x, g.a.y - g.b.y) < 0.1) {
+            toast("Keep direction guide endpoints at least 0.1 mm apart.");
+            api.refresh();
+            return;
+          }
+          applyCorner("satinGuides", guides);
+        }),
+    );
+  }
   $("corner-adaptive").disabled = cornerTargets.length === 0;
   $("corner-min").disabled = !cornerTargets.some((o) => o.cornerControl);
   $("corner-availability").textContent = cornerTargets.length

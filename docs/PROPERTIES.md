@@ -32,7 +32,7 @@ reports incompatible targets. Locked descendants are excluded explicitly.
 | Stitch direction                                           | Rotates fill scanline construction, not the artwork                                         | Tatami and column coordinate tests                                                                                                                                                       |
 | Fill pattern                                               | Staggers interior fill penetrations; columns use it only for wide-span splitting            | Observable penetration tests; narrow columns have no interior splits                                                                                                                     |
 | Satin band width                                           | Width of boundary/explicit-centerline band, not region-derived column width                 | Actual geometry/spans tested; column span derived from artwork                                                                                                                           |
-| Maximum satin span                                         | Threshold for splitting directional region spans; split size also bounded by segment length | Wide-column span/penetration tests; directional digitizing, not automatic letter skeleton tracing                                                                                        |
+| Maximum satin span                                         | Threshold for splitting satin floats; split size also bounded by segment length             | Wide-column span/penetration tests; new steps support stroke-following rails with local guides; legacy directional mode remains                                                          |
 | Pull compensation                                          | Extends fill/satin coverage; irrelevant to running lines                                    | Actual needle-coordinate tests; does not reshape source artwork                                                                                                                          |
 | Light underlay / preliminary outline pass                  | Fill support or path-following preliminary pass                                             | Real underlay and sequence tests; label distinguishes an extra outline pass from fill underlay                                                                                           |
 | Sew closing segment; reverse direction; vertex start       | Changes the active path operation's closure/direction/seam, preserving source geometry      | Real path coordinate tests; marker has no closure or vertex selector                                                                                                                     |
@@ -114,8 +114,9 @@ stabilizer, thread weight, clipping clearance and the suitability of border widt
 still need user judgment and a scrap-fabric test. Preflight detects collapsed and
 split insets, not every locally narrow neck or physical fabric interaction. It
 does not automatically remove overlapping decorative fills or infer custom fabric
-silhouettes. Curved/branching lettering still needs deliberate directional satin
-regions where appropriate.
+silhouettes. Stroke-following satin lettering now has separate automatic rails and
+local guide controls; difficult branches can still need manual refinement. See
+[stroke satin construction](SATIN.md) for validation and fallback behavior.
 
 Construction references: [Ink/Stitch appliqué tutorial](https://inkstitch.org/tutorials/applique/),
 [Ink/Stitch commands](https://inkstitch.org/docs/commands/) and

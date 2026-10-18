@@ -1,3 +1,4 @@
+import { strokeSatin } from "./stroke-satin.js";
 import { designIssues } from "./design-issues.js";
 import { quantizeColumnPaths } from "./column-routing.js";
 import { bounds, MACHINES } from "./model.js";
@@ -190,7 +191,28 @@ export function satin(
   cornerControl = false,
   minimum = 0.3,
 ) {
-  const center = resample(path, spacing / 2, closed);
+  let center = resample(path, spacing / 2, closed);
+  if (closed && path.length > 2) {
+    // An even, uniformly spaced station loop closes on the opposite rail.
+    // Per-edge resampling could leave an odd count and a same-rail seam float.
+    const ring = [...path];
+    if (distance(ring[0], ring.at(-1)) > 1e-9) ring.push(ring[0]);
+    const lengths = [0];
+    for (let i = 1; i < ring.length; i++)
+      lengths.push(lengths.at(-1) + distance(ring[i - 1], ring[i]));
+    const total = lengths.at(-1),
+      count = Math.max(4, Math.ceil(total / spacing) * 2);
+    let edge = 1;
+    center = Array.from({ length: count }, (_, i) => {
+      const s = (total * i) / count;
+      while (edge < ring.length - 1 && lengths[edge] < s) edge++;
+      const t =
+          (s - lengths[edge - 1]) / (lengths[edge] - lengths[edge - 1] || 1),
+        a = ring[edge - 1],
+        b = ring[edge];
+      return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
+    });
+  }
   if (closed && center.length > 1 && distance(center[0], center.at(-1)) < 1e-9)
     center.pop();
   if (center.length < 2) return [];
@@ -226,6 +248,22 @@ export function satin(
   return subdivide(closed ? [...pts, pts[0]] : pts, length);
 }
 function pathsFor(o, from, to) {
+  if (o.satinColumn && o.columnMode === "stroke") {
+    const result = strokeSatin(o, from);
+    o.strokeAnalysis = result;
+    if (result.paths) return result.paths;
+    if (o.columnFallback === "manual") return [];
+    const fallbackPaths = quantizeColumnPaths(
+      pathsFor(
+        { ...o, satinColumn: false, type: "fill", columnMode: undefined },
+        from,
+        to,
+      ),
+      o,
+    );
+    result.unsewn = !fallbackPaths.some((path) => path.p.length > 1);
+    return fallbackPaths;
+  }
   const paths = [];
   if (o.underlay) {
     if (o.type === "fill") {
@@ -334,6 +372,34 @@ function pathsFor(o, from, to) {
 export function generate(project) {
   const prepared = preparePlan(project),
     diagnostics = prepared.diagnostics;
+  for (const o of project.objects)
+    for (const op of o.operations || [])
+      if (
+        op.type === "column" &&
+        op.columnMode === "stroke" &&
+        op.enabled !== false &&
+        prepared.units.some((u) => u.id === o.id && u.operationId === op.id) &&
+        (op.satinGuides || []).some(
+          (g) =>
+            !inside(
+              { x: (g.a.x + g.b.x) / 2, y: (g.a.y + g.b.y) / 2 },
+              o.rings,
+              o.fillRule,
+            ),
+        )
+      )
+        (diagnostics.operationIssues ||= []).push({
+          severity: "warning",
+          code: "satin-orphan-guide",
+          objectId: o.id,
+          objectName: o.name,
+          operationId: op.id,
+          operationName: op.name,
+          message:
+            "A direction guide is outside the current artwork. It does not influence satin stitches.",
+          action:
+            "Reposition or remove the guide after changing text, fonts or geometry.",
+        });
   const events = [],
     warnings = [],
     machine = MACHINES[project.machine];
@@ -391,9 +457,11 @@ export function generate(project) {
   const sew = (p, o, phase) => {
     const d = distance(last, p),
       limit = Math.min(
-        o.type === "satin" || o.satinColumn
-          ? machine.maxStitch
-          : o.length || machine.maxStitch,
+        o.satinColumn && o.columnMode === "stroke"
+          ? Math.min(o.maxSatin || 6, machine.maxStitch)
+          : o.type === "satin" || o.satinColumn
+            ? machine.maxStitch
+            : o.length || machine.maxStitch,
         machine.maxStitch - 0.15,
       ),
       n = Math.max(
@@ -484,6 +552,7 @@ export function generate(project) {
         : null;
     if (
       o.satinColumn &&
+      o.columnMode !== "stroke" &&
       Math.max(o.bounds.width, o.bounds.height) > (o.maxSatin || 6)
     ) {
       const wide = fillRows(
@@ -501,6 +570,51 @@ export function generate(project) {
     }
     const paths = o.type === "manual" ? null : pathsFor(o, last, to);
     if (o.columnGridWarnings) warnings.push(...o.columnGridWarnings);
+    if (o.strokeAnalysis) {
+      const a = o.strokeAnalysis;
+      (diagnostics.satin ||= []).push({
+        objectId: o.id,
+        operationId: o.operationId,
+        regionId: o.regionId,
+        coverage: a.coverage,
+        overlap: a.overlap,
+        grid: a.grid,
+        wide: a.wide || 0,
+        fallback: !!a.reason,
+        reason: a.reason,
+        strokes: (a.strokes || []).map((s) => ({
+          id: s.id,
+          closed: s.closed,
+          center: s.points,
+          sections: s.sections,
+        })),
+      });
+      if (a.wide)
+        warnings.push(
+          `${o.name}: ${a.wide} wide satin floats use staggered split stitches; consider tatami for broad regions.`,
+        );
+      for (const message of a.warnings || [])
+        warnings.push(`${o.name}: ${message}`);
+      if (a.reason)
+        (diagnostics.operationIssues ||= []).push({
+          severity:
+            o.columnFallback === "manual" || a.unsewn ? "error" : "warning",
+          code: "satin-decomposition",
+          objectId: o.id,
+          objectName: o.name,
+          operationId: o.operationId,
+          operationName: o.operationName,
+          message:
+            a.reason +
+            (a.unsewn
+              ? " The tatami fallback also has no stitchable paths."
+              : o.columnFallback === "manual"
+                ? " No satin stitches were generated."
+                : " This region uses an explicit tatami fallback."),
+          action:
+            "Inspect stroke structure, adjust direction guides, enlarge lettering or split this region manually. Directional columns remain available for deliberate manual digitizing.",
+        });
+    }
     if (paths && !paths.length) continue;
     if (lastColor !== o.color) {
       if (lastColor !== null) {

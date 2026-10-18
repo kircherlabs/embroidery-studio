@@ -34,6 +34,7 @@ export const closedArtwork = (o) =>
 export const supportsMethod = (o, type) =>
   o.type !== "manual" && (!requiresClosed(type) || closedArtwork(o));
 export const CORNER_TYPES = new Set([
+  "column",
   "run",
   "bean",
   "triple",
@@ -90,7 +91,8 @@ export function propertyApplies(type, key) {
   if (key === "length") return fill || (path && !satin);
   if (key === "cornerControl" || key === "minCornerStitch")
     return CORNER_TYPES.has(type);
-  if (key === "maxSatin") return type === "column";
+  if (["maxSatin", "columnMode", "columnFallback", "satinGuides"].includes(key))
+    return type === "column";
   if (key === "reverse") return path;
   if (key === "startIndex") return path && type !== "marker";
   if (key === "offset" || key === "outerOnly") return outline;
@@ -116,6 +118,9 @@ const settings = [
   "cornerControl",
   "minCornerStitch",
   "maxSatin",
+  "columnMode",
+  "satinGuides",
+  "columnFallback",
   "outerOnly",
 ];
 export function defaultOperation(o) {
@@ -148,6 +153,9 @@ export function makeOperation(type, o) {
     closed: closedArtwork(o),
   };
   if (type === "column") {
+    op.columnMode = "stroke";
+    op.columnFallback = "tatami";
+    op.cornerControl = true;
     op.maxSatin = 6;
     op.angle = 0;
     op.compensation = 0.1;

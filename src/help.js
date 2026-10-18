@@ -157,6 +157,14 @@ const descriptions = {
     "Tatami or filled-region satin direction in degrees. Changes needle spans, not artwork orientation. Split complex branches into separate regions for different directions.",
   "fill-pattern":
     "Stagger needle penetrations between fill rows to control texture. Spacing still controls coverage density.",
+  "column-mode":
+    "Follow strokes extracts branches and curved rails from filled artwork. Directional spans retain the earlier fixed-angle column method for manual digitizing. Source lettering remains editable.",
+  "column-fallback":
+    "Choose an explicit tatami fallback or leave unsuitable regions unsewn. Both report a Design Issue; unsewn errors block export until reviewed or disabled.",
+  "satin-structure":
+    "Display extracted center rails and cross-stroke directions for selected lettering. This overlay does not add stitches. Draw local direction guides to influence actual needle movements.",
+  "column-max":
+    "Maximum continuous satin float in millimeters. Wider crossings get staggered split penetrations; broad areas may be better suited to tatami.",
   "satin-width":
     "Width of centerline satin or a boundary band in millimeters. Filled-region satin columns derive width from geometry and use Maximum satin span for split control.",
   compensation:

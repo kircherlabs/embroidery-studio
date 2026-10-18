@@ -1,3 +1,4 @@
+import { satinSummary } from "./creative-ui.js";
 import { EMBROIDERY_STYLES, setEmbroideryStyle } from "./styles.js";
 import { traceDialog } from "./tracing-ui.js";
 import {
@@ -234,6 +235,15 @@ worker.onmessage = ({ data }) => {
   }
   state.generationError = null;
   state.plan = data;
+  const satinStatus = $("satin-analysis");
+  if (satinStatus?.dataset.object)
+    satinStatus.textContent = satinSummary(
+      (data.diagnostics?.satin || []).filter(
+        (d) =>
+          d.objectId === satinStatus.dataset.object &&
+          d.operationId === satinStatus.dataset.operation,
+      ),
+    );
   state.cursor = data.events.length;
   $("export").disabled =
     data.issues?.some((i) => i.severity === "error") || false;
@@ -347,7 +357,7 @@ function finishPath() {
       : type === "manual"
         ? "Manual stitches"
         : type === "satin"
-          ? "Satin column"
+          ? "Satin centerline"
           : "Running path",
     [structuredClone(pts)],
     {
@@ -457,7 +467,7 @@ function renderPanels() {
     <button class="drag-grip" data-tree-grip aria-label="Reorder ${esc(o.name)}">${icon("grip")}</button>
     <button class="selection-check" data-check="${esc(o.id)}" aria-label="Select ${esc(o.name)}" aria-pressed="${selectedIds.has(o.id) ? "true" : affected.has(o.id) ? "mixed" : "false"}"><span>${selectedIds.has(o.id) ? "✓" : affected.has(o.id) ? "−" : ""}</span></button>
     ${o.kind ? `<button class="tree-toggle" data-expand="${esc(o.id)}" aria-label="${state.collapsed.has(o.id) ? "Expand" : "Collapse"} ${esc(o.name)}">${state.collapsed.has(o.id) ? "▸" : "▾"}</button>` : '<span class="tree-toggle"></span>'}
-    <button class="object-select" data-select="${esc(o.id)}"><span class="swatch ${o.kind ? "group-icon" : ""}" style="background:${o.color || "transparent"}">${o.kind ? (o.kind === "svg" ? "▧" : "▱") : ""}</span><span class="object-text"><span class="object-title">${esc(o.name)}</span><span class="object-type">${o.kind ? `${leaves(state.project, [o.id]).length} regions · ${o.kind === "svg" ? "Imported SVG" : "Group"}` : o.operations ? `${o.operations.length} operations` : o.svgLabel ? esc(o.svgLabel) : o.type === "fill" ? "Tatami fill" : o.type === "satin" ? "Satin column" : o.type === "manual" ? "Manual stitches" : "Running stitch"}</span></span></button>
+    <button class="object-select" data-select="${esc(o.id)}"><span class="swatch ${o.kind ? "group-icon" : ""}" style="background:${o.color || "transparent"}">${o.kind ? (o.kind === "svg" ? "▧" : "▱") : ""}</span><span class="object-text"><span class="object-title">${esc(o.name)}</span><span class="object-type">${o.kind ? `${leaves(state.project, [o.id]).length} regions · ${o.kind === "svg" ? "Imported SVG" : "Group"}` : o.operations ? `${o.operations.length} operations` : o.svgLabel ? esc(o.svgLabel) : o.type === "fill" ? "Tatami fill" : o.type === "satin" ? "Satin centerline" : o.type === "manual" ? "Manual stitches" : "Running stitch"}</span></span></button>
     <button class="tree-lock" data-lock="${esc(o.id)}" aria-label="${o.locked ? "Unlock" : "Lock"} ${esc(o.name)}" aria-pressed="${isLocked(state.project, o)}">${icon(isLocked(state.project, o) ? "lock" : "unlock")}</button><button class="visibility" data-visibility="${esc(o.id)}" aria-label="${o.visible === false ? "Show" : "Hide"} ${esc(o.name)}" aria-pressed="${!isVisible(state.project, o)}">${icon(isVisible(state.project, o) ? "eye" : "hidden")}</button></div>`;
   $("object-list").setAttribute("role", "tree");
   $("object-list").setAttribute("aria-multiselectable", "true");
@@ -1896,6 +1906,13 @@ document.addEventListener("keydown", (e) => {
     finishPath();
   }
   if (e.key === "Escape") {
+    if (state.satinGuideEdit) {
+      state.satinGuideEdit = null;
+      stage.cancelDrag();
+      renderProperties();
+      stage.render();
+      return;
+    }
     stage.cancelDrag();
     stage.draft = [];
     updateDraft();

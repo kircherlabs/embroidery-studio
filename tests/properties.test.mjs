@@ -111,7 +111,7 @@ test("open artwork cannot acquire closed-region methods accidentally and markers
   assert(!propertyApplies("marker", "closed"));
   assert(!propertyApplies("marker", "startIndex"));
   assert(!propertyApplies("fill", "cornerControl"));
-  assert(!propertyApplies("column", "cornerControl"));
+  assert(propertyApplies("column", "cornerControl")); // Supported by stroke-following columns.
   assert(propertyApplies("border", "cornerControl"));
 });
 test("preflight identifies collapsed insets, holes, disconnected islands, open paths and hoop clearance without mutating artwork", () => {

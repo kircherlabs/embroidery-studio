@@ -59,7 +59,13 @@ export function editOperations(objects, state, single, key, value) {
       continue;
     }
     const selected = operationTargets(o, state, single);
-    const eligible = selected.filter((op) => propertyApplies(op.type, key));
+    const eligible = selected.filter(
+      (op) =>
+        propertyApplies(op.type, key) &&
+        (!["cornerControl", "minCornerStitch"].includes(key) ||
+          op.type !== "column" ||
+          op.columnMode === "stroke"),
+    );
     skipped += selected.length - eligible.length;
     if (!eligible.length) {
       if (!selected.length) skipped++;

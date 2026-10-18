@@ -851,7 +851,7 @@ export class Stage {
       const id = this.canvasTarget(hit, e.altKey || e.ctrlKey || e.metaKey);
       if (e.shiftKey || e.ctrlKey || e.metaKey)
         this.actions.select(id, { toggle: true });
-      else if (!selectedLeaves(s).some((o) => o.id === hit.id))
+      else if (e.altKey || !selectedLeaves(s).some((o) => o.id === hit.id))
         this.actions.select(id);
       const objects = selectedLeaves(s, { editable: true });
       this.drag = {

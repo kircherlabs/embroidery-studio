@@ -118,6 +118,20 @@ try {
   );
   await ready();
   assert.deepEqual((await project()).objects[1], over);
+  const root = (await project()).groups.find((g) => g.kind === "svg");
+  await pick(root.id);
+  const overlap = box(over),
+    overlapPoint = await world(
+      (overlap.minX + overlap.maxX) / 2,
+      (overlap.minY + overlap.maxY) / 2,
+    );
+  await page.keyboard.down("Alt");
+  await page.mouse.click(overlapPoint.x, overlapPoint.y);
+  await page.keyboard.up("Alt");
+  assert.deepEqual(
+    await page.evaluate(() => window.studio.getSelection().ids),
+    [under.id],
+  );
   await pick(under.id);
   await page.locator(`[data-select="${under.id}"] .object-title`).dblclick();
   await page.locator(".tree-rename").fill("Renamed underlying");

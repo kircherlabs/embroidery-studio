@@ -1,3 +1,4 @@
+import { quantizeColumnPaths } from "./column-routing.js";
 import { bounds, MACHINES } from "./model.js";
 import { inside, distance, safeConnector, simplifyPath } from "./geometry.js";
 import { preparePlan } from "./planning.js";
@@ -69,6 +70,8 @@ export function fillRows(
   compensation = 0,
   rule = "evenodd",
   pattern = "quarter",
+  maxSatin = null,
+  counterClearance = maxSatin ? 0.08 : 0,
 ) {
   if (!rings.length) return [];
   const a = (angle * Math.PI) / 180,
@@ -86,6 +89,7 @@ export function fillRows(
           cuts.push({
             x: p.x + ((y - p.y) * (q.x - p.x)) / (q.y - p.y),
             w: q.y > p.y ? 1 : -1,
+            hole: counterClearance > 0 && rs.indexOf(r) > 0,
           });
       }
     cuts.sort((p, q) => p.x - q.x);
@@ -105,17 +109,23 @@ export function fillRows(
         // Compensation must not turn a microscopic span into a full-width speck.
         const extension = Math.min(compensation, (c.x - start) * 0.15),
           x1 =
-            start -
-            Math.min(
-              extension,
-              startIndex ? (start - cuts[startIndex - 1].x) / 3 : Infinity,
-            ),
+            start +
+            (counterClearance && cuts[startIndex].hole
+              ? Math.min(counterClearance, (c.x - start) / 4)
+              : -Math.min(
+                  extension,
+                  startIndex ? (start - cuts[startIndex - 1].x) / 3 : Infinity,
+                )),
           x2 =
             c.x +
-            Math.min(
-              extension,
-              cuts[cutIndex + 1] ? (cuts[cutIndex + 1].x - c.x) / 3 : Infinity,
-            ),
+            (counterClearance && c.hole
+              ? -Math.min(counterClearance, (c.x - start) / 4)
+              : Math.min(
+                  extension,
+                  cuts[cutIndex + 1]
+                    ? (cuts[cutIndex + 1].x - c.x) / 3
+                    : Infinity,
+                )),
           pts = [{ x: x1, y }],
           phase =
             pattern === "aligned"
@@ -125,10 +135,21 @@ export function fillRows(
                 : ((row % 4) * length) / 4;
         for (
           let x = Math.ceil((x1 - phase) / length) * length + phase;
-          x < x2 - 0.08;
+          !maxSatin && x < x2 - 0.08;
           x += length
         )
           if (x > x1 + 0.08) pts.push({ x, y });
+        if (maxSatin && x2 - x1 > maxSatin) {
+          const split = Math.min(maxSatin, length),
+            phase =
+              pattern === "aligned"
+                ? 0
+                : pattern === "half"
+                  ? ((row % 2) * split) / 2
+                  : ((row % 4) * split) / 4;
+          for (let x = x1 + split / 2 + phase; x < x2 - 0.1; x += split)
+            pts.push({ x, y });
+        }
         pts.push({ x: x2, y });
         const inset = Math.min(0.2, (c.x - start) / 4);
         pts.anchors = [
@@ -157,7 +178,15 @@ export function fillRows(
   }
   return rows;
 }
-export function satin(path, width, spacing, length, closed = false) {
+export function satin(
+  path,
+  width,
+  spacing,
+  length,
+  closed = false,
+  cornerControl = false,
+  minimum = 0.3,
+) {
   const center = resample(path, spacing / 2, closed);
   if (closed && center.length > 1 && distance(center[0], center.at(-1)) < 1e-9)
     center.pop();
@@ -180,6 +209,17 @@ export function satin(path, width, spacing, length, closed = false) {
       y: p.y + ((((b.x - a.x) / d) * width) / 2) * sign,
     });
   }
+  if (cornerControl)
+    for (let i = 2; i < pts.length; i++) {
+      const d = distance(pts[i], pts[i - 2]);
+      if (d < minimum) {
+        const t = Math.min(0.6, (1 - d / minimum) * 0.6);
+        pts[i] = {
+          x: pts[i].x + (center[i].x - pts[i].x) * t,
+          y: pts[i].y + (center[i].y - pts[i].y) * t,
+        };
+      }
+    }
   return subdivide(closed ? [...pts, pts[0]] : pts, length);
 }
 function pathsFor(o, from, to) {
@@ -190,7 +230,17 @@ function pathsFor(o, from, to) {
         stride = Math.ceil(spacing / Math.min(0.42, o.spacing));
       paths.push(
         ...routeFill(
-          fillRows(o.rings, spacing / stride, o.angle + 90, 3, 0, o.fillRule),
+          fillRows(
+            o.rings,
+            spacing / stride,
+            o.angle + 90,
+            3,
+            0,
+            o.fillRule,
+            "quarter",
+            null,
+            o.satinColumn ? 0.08 : 0,
+          ),
           o,
           from,
           "underlay",
@@ -212,6 +262,7 @@ function pathsFor(o, from, to) {
           o.compensation,
           o.fillRule,
           o.pattern,
+          o.satinColumn ? o.maxSatin || 6 : null,
         ),
         o,
         paths.at(-1)?.p.at(-1) || from,
@@ -222,6 +273,35 @@ function pathsFor(o, from, to) {
   if (o.type === "run")
     for (const ring of o.rings) {
       let p = resample(ring, o.length, o.closed);
+      if (o.cornerControl) {
+        const minimum = o.minCornerStitch || 0.3,
+          keep = new Set();
+        for (let i = 0; i < ring.length; i++) {
+          if (!o.closed && (i === 0 || i === ring.length - 1)) continue;
+          const a = ring[(i + ring.length - 1) % ring.length],
+            b = ring[i],
+            c = ring[(i + 1) % ring.length],
+            ab = distance(a, b),
+            bc = distance(b, c);
+          if (
+            ab &&
+            bc &&
+            ((a.x - b.x) * (c.x - b.x) + (a.y - b.y) * (c.y - b.y)) /
+              (ab * bc) >
+              -0.85
+          ) {
+            const at = p.findIndex((q) => distance(q, b) < 1e-6);
+            if (at >= 0) keep.add(at);
+          }
+        }
+        p = p.filter(
+          (q, i) =>
+            keep.has(i) ||
+            ![...keep].some(
+              (j) => Math.abs(j - i) === 1 && distance(q, p[j]) < minimum,
+            ),
+        );
+      }
       if (o.runStyle === "bean")
         p = p.flatMap((q, i) => (i ? [q, p[i - 1], q] : [q]));
       else if (o.runStyle === "triple")
@@ -237,10 +317,12 @@ function pathsFor(o, from, to) {
           o.spacing,
           7,
           o.closed,
+          o.cornerControl,
+          o.minCornerStitch || 0.3,
         ),
         phase: "top",
       });
-  return paths.filter(
+  return (o.satinColumn ? quantizeColumnPaths(paths, o) : paths).filter(
     ({ p }) =>
       new Set(p.map((q) => Math.round(q.x * 10) + "," + Math.round(q.y * 10)))
         .size > 1,
@@ -306,7 +388,9 @@ export function generate(project) {
   const sew = (p, o, phase) => {
     const d = distance(last, p),
       limit = Math.min(
-        o.type === "satin" ? machine.maxStitch : o.length || machine.maxStitch,
+        o.type === "satin" || o.satinColumn
+          ? machine.maxStitch
+          : o.length || machine.maxStitch,
         machine.maxStitch - 0.15,
       ),
       n = Math.max(
@@ -395,7 +479,25 @@ export function generate(project) {
             y: (next.bounds.minY + next.bounds.maxY) / 2,
           }
         : null;
+    if (
+      o.satinColumn &&
+      Math.max(o.bounds.width, o.bounds.height) > (o.maxSatin || 6)
+    ) {
+      const wide = fillRows(
+        o.rings,
+        Math.max(0.5, o.spacing),
+        o.angle,
+        10000,
+        0,
+        o.fillRule,
+      ).some((r) => distance(r[0], r.at(-1)) > (o.maxSatin || 6));
+      if (wide)
+        warnings.push(
+          `${o.name}: satin spans wider than ${o.maxSatin || 6} mm use staggered split stitches. Adjust direction or divide branches for controlled turning.`,
+        );
+    }
     const paths = o.type === "manual" ? null : pathsFor(o, last, to);
+    if (o.columnGridWarnings) warnings.push(...o.columnGridWarnings);
     if (paths && !paths.length) continue;
     if (lastColor !== o.color) {
       if (lastColor !== null) {

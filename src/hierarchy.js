@@ -1,3 +1,4 @@
+import { sourceTransform } from "./smart-geometry.js";
 import { uid, bounds, pointsOf, translate } from "./model.js";
 
 // Artwork stays in the existing leaf array. Groups reference it by parentId;
@@ -261,6 +262,16 @@ export function transformSelection(
       p.x = c.x + x * Math.cos(a) - y * Math.sin(a) + dx;
       p.y = c.y + x * Math.sin(a) + y * Math.cos(a) + dy;
     }
+    const ca = Math.cos(a),
+      sa = Math.sin(a);
+    sourceTransform(o, [
+      ca * sx,
+      sa * sx,
+      -sa * sy,
+      ca * sy,
+      c.x - c.x * ca * sx + c.y * sa * sy + dx,
+      c.y - c.x * sa * sx - c.y * ca * sy + dy,
+    ]);
     // Fill direction follows artwork rotation. Physical density and border
     // widths stay in millimeters when resizing, as in embroidery digitizers.
     if (angle) {

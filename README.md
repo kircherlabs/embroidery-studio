@@ -129,6 +129,12 @@ degenerate elements, independent fill/outline points, and the actual file-input
 workflow. It compares normalized paths with native SVG geometry and rasterizes
 both the original artwork and imported fills to detect geometry or color loss.
 
+## Creative editing
+
+Selection-first canvas editing, parametric shapes, Bézier handles, live lettering,
+reference alignment, eyelets, construction templates and repeatable image tracing
+are available in v0.3. See [creative workflows and limits](docs/CREATIVE_EDITING.md).
+
 ## GitHub Pages
 
 `.github/workflows/pages.yml` tests and builds every push to `main`, then uploads
@@ -164,8 +170,10 @@ save a project file for a portable backup. Core editing loads from this site.
 Machine conversion lazily downloads pinned Pyodide 0.27.7 from jsDelivr. Network
 access is required on first conversion; this release is not a fully offline PWA.
 
-Image digitizing targets flat artwork, not photographic embroidery. Satin is
-constant-width centerline satin. Small lettering needs refinement. SVG filters,
+Image digitizing targets flat artwork, not photographic embroidery. Satin columns,
+borders and centerlines are separate operations; directional columns preserve
+counters and split overly wide spans. Curved/branched lettering still needs
+manual region and direction refinement. SVG filters,
 clipping, masks, symbols, CSS style sheets and text should be expanded to plain
 paths before import; unsupported content is skipped with a notice. Underlay and
 pull compensation are intentionally simple and documented in

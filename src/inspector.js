@@ -1,3 +1,4 @@
+import { creativeInspector } from "./creative-ui.js";
 import {
   nodeById,
   selectionIds,
@@ -69,6 +70,7 @@ export function renderInspector(api) {
         reverse: false,
         offset: 0,
         startIndex: 0,
+        outerOnly: false,
         tieIn: true,
         tieOff: true,
         pattern: "quarter",
@@ -87,10 +89,10 @@ export function renderInspector(api) {
         key,
       ),
     mixed = (key) => common(key) === undefined;
-  const hasFill = control.some((o) => o.type === "fill"),
+  const hasFill = control.some((o) => ["fill", "column"].includes(o.type)),
     hasSatin = control.some((o) => ["satin", "border"].includes(o.type)),
     hasPath = control.some(
-      (o) => !["fill", "stop", "trim", "manual"].includes(o.type),
+      (o) => !["fill", "column", "stop", "trim", "manual"].includes(o.type),
     ),
     hasOutline = control.some((o) =>
       ["placement", "tackdown", "basting", "contour", "border"].includes(
@@ -145,7 +147,7 @@ export function renderInspector(api) {
       targets.some(isSewing)
         ? `<div class="section-label">STITCH SETTINGS${active ? " · SELECTED OPERATION" : ""}</div><div class="two-col">${hasFill || hasSatin ? field("Row spacing", "spacing", "spacing", "mm", 0.15, 5) : ""}${control.some((o) => !["satin", "border"].includes(o.type)) ? field("Stitch length", "length", "length", "mm", 0.3, 7) : ""}</div>${hasFill ? field("Stitch direction", "angle", "angle", "°", -360, 360, 1) : ""}${hasFill ? `<label class="field">Fill pattern<select id="fill-pattern">${mixed("pattern") ? '<option value="" disabled selected>Mixed</option>' : ""}<option value="quarter">Quarter stagger</option><option value="half">Half stagger</option><option value="aligned">Aligned penetrations</option></select></label>` : ""}<div class="two-col">${hasSatin ? field("Satin width", "satin-width", "width", "mm", 0.3, 7) : ""}${hasFill || hasSatin ? field("Pull compensation", "compensation", "compensation", "mm", 0, 1) : ""}</div>
     ${check(hasFill || hasSatin ? "Light underlay" : "Preliminary outline pass", "underlay", "underlay")}${hasPath && !hasOutline ? check("Close path", "closed-path", "closed") : ""}${hasPath ? check("Reverse path direction", "reverse-path", "reverse") : ""}
-    <details class="advanced-settings"><summary>Path & construction</summary>${hasOutline ? field("Contour offset", "op-offset", "offset", "mm", -5, 5) : ""}${hasPath && control.some((o) => o.closed || ["placement", "tackdown", "basting", "contour", "border"].includes(o.type)) ? field("First contour vertex", "start-index", "startIndex", "", 0, 500000, 1) : ""}${check("Tie in", "tie-in", "tieIn")}${check("Tie off", "tie-off", "tieOff")}<p class="property-note">Offsets apply to closed outline operations. Start vertex and reversal affect contour paths; fill direction controls tatami. Satin width and spacing stay in millimeters when artwork is resized.</p></details>`
+    <details class="advanced-settings"><summary>Path & construction</summary>${hasOutline ? field("Contour offset", "op-offset", "offset", "mm", -5, 5) + check("Outer boundary only", "outer-only", "outerOnly") : ""}${hasPath && control.some((o) => o.closed || ["placement", "tackdown", "basting", "contour", "border"].includes(o.type)) ? field("First contour vertex", "start-index", "startIndex", "", 0, 500000, 1) : ""}${check("Tie in", "tie-in", "tieIn")}${check("Tie off", "tie-off", "tieOff")}<p class="property-note">Offsets apply to closed outline operations. Start vertex and reversal affect contour paths; fill direction controls tatami. Satin width and spacing stay in millimeters when artwork is resized.</p></details>`
         : ""
     }
     <div class="section-label">POSITION & SIZE · SELECTION</div><div class="two-col">${field("Center X", "pos-x", null, "mm", -1000, 1000, 0.1, (b.minX + b.maxX) / 2)}${field("Center Y", "pos-y", null, "mm", -1000, 1000, 0.1, (b.minY + b.maxY) / 2)}${field("Width", "size-w", null, "mm", 0.1, 500, 0.1, b.width)}${field("Height", "size-h", null, "mm", 0.1, 500, 0.1, b.height)}</div><label class="check"><input id="proportional" type="checkbox" ${state.proportional !== false ? "checked" : ""}>Keep proportions · Shift while dragging to toggle</label>${field("Rotate selection by", "rotate", null, "°", -360, 360, 1, 0)}
@@ -212,9 +214,14 @@ export function renderInspector(api) {
       for (const o of vectors) {
         if (
           key === "type" &&
-          ["placement", "tackdown", "basting", "border", "contour"].includes(
-            value,
-          ) &&
+          [
+            "placement",
+            "tackdown",
+            "basting",
+            "border",
+            "contour",
+            "column",
+          ].includes(value) &&
           !(o.type === "fill" || o.closed)
         ) {
           incompatible++;
@@ -288,6 +295,7 @@ export function renderInspector(api) {
     bind(id, (v) => apply(key, v), min, max);
   for (const [id, key] of [
     ["underlay", "underlay"],
+    ["outer-only", "outerOnly"],
     ["closed-path", "closed"],
     ["reverse-path", "reverse"],
     ["tie-in", "tieIn"],
@@ -405,9 +413,14 @@ export function renderInspector(api) {
       mutate(() =>
         vectors.forEach((o) => {
           if (
-            (["placement", "tackdown", "basting", "border", "contour"].includes(
-              type,
-            ) &&
+            ([
+              "placement",
+              "tackdown",
+              "basting",
+              "border",
+              "contour",
+              "column",
+            ].includes(type) &&
               !(o.type === "fill" || o.closed)) ||
             operationsOf(o).length >= 32
           ) {
@@ -442,5 +455,6 @@ export function renderInspector(api) {
           `${skipped} open paths skipped; appliqué requires closed artwork.`,
         );
     };
+  creativeInspector(api, leaf, objects, targets);
   return true;
 }

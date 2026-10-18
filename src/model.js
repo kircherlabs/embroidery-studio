@@ -1,3 +1,4 @@
+import { sourceTransform } from "./smart-geometry.js";
 export const VERSION = 1;
 export const PALETTE = [
   "#e6ab43",
@@ -76,6 +77,7 @@ export const pointsOf = (o) =>
     : o.rings.flat();
 export const objectBounds = (o) => bounds(pointsOf(o));
 export const translate = (o, dx, dy) => {
+  sourceTransform(o, [1, 0, 0, 1, dx, dy]);
   if (o.type === "manual")
     o.commands.forEach((p) => {
       p.x += dx;
@@ -92,6 +94,16 @@ export function transform(o, sx, sy, degrees = 0) {
     cx = (b.minX + b.maxX) / 2,
     cy = (b.minY + b.maxY) / 2,
     a = (degrees * Math.PI) / 180;
+  const ca = Math.cos(a),
+    sa = Math.sin(a);
+  sourceTransform(o, [
+    ca * sx,
+    sa * sx,
+    -sa * sy,
+    ca * sy,
+    cx - cx * ca * sx + cy * sa * sy,
+    cy - cx * sa * sx - cy * ca * sy,
+  ]);
   pointsOf(o).forEach((p) => {
     const x = (p.x - cx) * sx,
       y = (p.y - cy) * sy;
@@ -228,6 +240,50 @@ export function validateProject(p) {
       )
     )
       throw Error("Invalid artwork node.");
+    if (n.imageSource !== undefined) {
+      const image = n.imageSource;
+      if (
+        !n.kind ||
+        !image ||
+        typeof image.data !== "string" ||
+        image.data.length > 2000000 ||
+        !/^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(image.data) ||
+        typeof image.name !== "string" ||
+        image.name.length > 200 ||
+        !Number.isInteger(image.width) ||
+        !Number.isInteger(image.height) ||
+        image.width < 1 ||
+        image.width > 384 ||
+        image.height < 1 ||
+        image.height > 384
+      )
+        throw Error("Invalid tracing reference image.");
+    }
+    if (n.traceSettings !== undefined) {
+      const t = n.traceSettings;
+      if (
+        !n.imageSource ||
+        !t ||
+        !Number.isInteger(t.colors) ||
+        t.colors < 2 ||
+        t.colors > 10 ||
+        !Number.isFinite(t.width) ||
+        t.width < 5 ||
+        t.width > 200 ||
+        !Number.isFinite(t.minArea) ||
+        t.minArea < 0 ||
+        t.minArea > 5 ||
+        !Number.isFinite(t.simplify) ||
+        t.simplify < 0 ||
+        t.simplify > 0.5 ||
+        !Number.isFinite(t.alpha) ||
+        t.alpha < 0 ||
+        t.alpha > 254 ||
+        typeof t.smoothing !== "boolean" ||
+        typeof t.removeBackground !== "boolean"
+      )
+        throw Error("Invalid tracing settings.");
+    }
     if (n.kind && !["svg", "group"].includes(n.kind))
       throw Error("Invalid group type.");
     let at = n.parentId,
@@ -256,6 +312,8 @@ export function validateProject(p) {
           op.name.length > 100 ||
           ![
             "fill",
+            "column",
+            "marker",
             "run",
             "bean",
             "triple",
@@ -268,9 +326,15 @@ export function validateProject(p) {
             "stop",
             "trim",
           ].includes(op.type) ||
-          ["enabled", "underlay", "closed", "reverse", "tieIn", "tieOff"].some(
-            (k) => op[k] !== undefined && typeof op[k] !== "boolean",
-          ) ||
+          [
+            "enabled",
+            "underlay",
+            "closed",
+            "reverse",
+            "tieIn",
+            "tieOff",
+            "outerOnly",
+          ].some((k) => op[k] !== undefined && typeof op[k] !== "boolean") ||
           (op.color !== undefined && !/^#[0-9a-f]{6}$/i.test(op.color)) ||
           (op.pattern !== undefined &&
             !["quarter", "half", "aligned"].includes(op.pattern))
@@ -345,6 +409,7 @@ export function validateProject(p) {
         if (!Number.isFinite(o[k]) || o[k] < min || o[k] > max)
           throw Error(`Invalid ${k} setting.`);
     }
+    validateSource(o);
     const pts = o.type === "manual" ? o.commands : o.rings.flat();
     total += pts.length;
     if (
@@ -362,4 +427,88 @@ export function validateProject(p) {
   if (new Set(p.objects.map((o) => o.id)).size !== p.objects.length)
     throw Error("Duplicate object identifiers.");
   return p;
+}
+
+function validateSource(o) {
+  const number = (v, a, b) => Number.isFinite(v) && v >= a && v <= b;
+  const points = (rings) =>
+    Array.isArray(rings) &&
+    rings.length <= 5000 &&
+    rings.every(
+      (r) =>
+        Array.isArray(r) &&
+        r.length >= 2 &&
+        r.length <= 50000 &&
+        r.every((p) => number(p.x, -2000, 2000) && number(p.y, -2000, 2000)),
+    ) &&
+    rings.reduce((n, r) => n + r.length, 0) <= 100000;
+  for (const key of ["shape", "textSource", "curve"])
+    if (o[key]) {
+      const m = o[key].frame;
+      if (
+        o.type === "manual" ||
+        !Array.isArray(m) ||
+        m.length !== 6 ||
+        !m.every((v) => number(v, -10000, 10000)) ||
+        Math.abs(m[0] * m[3] - m[1] * m[2]) < 1e-12
+      )
+        throw Error("Invalid editable source transform.");
+    }
+  if (o.shape) {
+    const s = o.shape;
+    if (
+      !["rect", "ellipse", "regular", "star", "eyelet"].includes(s.kind) ||
+      !number(s.width, 0.1, 500) ||
+      !number(s.height, 0.1, 500) ||
+      !number(s.radius, 0, 50) ||
+      !Number.isInteger(s.sides) ||
+      !number(s.sides, 3, 32) ||
+      !number(s.innerRatio, 0.1, 0.9) ||
+      !number(s.diameter, 1, 30) ||
+      !number(s.band, 0.5, 5)
+    )
+      throw Error("Invalid smart shape.");
+  }
+  if (o.textSource) {
+    const t = o.textSource;
+    if (
+      typeof t.content !== "string" ||
+      !t.content.trim() ||
+      t.content.length > 120 ||
+      !["serif", "sans-serif", "monospace", "cursive"].includes(t.font) ||
+      !number(t.height, 3, 80) ||
+      !number(t.tracking, 0, 10) ||
+      !number(t.lineSpacing, 1, 3) ||
+      !["left", "center", "right"].includes(t.align)
+    )
+      throw Error("Invalid editable lettering.");
+  }
+  if (o.curve) {
+    const c = o.curve;
+    if (
+      typeof c.closed !== "boolean" ||
+      !Array.isArray(c.nodes) ||
+      c.nodes.length < 2 ||
+      c.nodes.length > 2000 ||
+      c.nodes.some((n) =>
+        [n, n.in, n.out]
+          .filter(Boolean)
+          .some((p) => !number(p.x, -2000, 2000) || !number(p.y, -2000, 2000)),
+      )
+    )
+      throw Error("Invalid Bézier path.");
+  }
+  if (
+    o.rounding &&
+    (!number(o.rounding.radius, 0, 20) || !points(o.rounding.rings))
+  )
+    throw Error("Invalid rounding source.");
+  for (const v of [o, ...(o.operations || [])]) {
+    if (v.cornerControl !== undefined && typeof v.cornerControl !== "boolean")
+      throw Error("Invalid corner control.");
+    if (v.minCornerStitch !== undefined && !number(v.minCornerStitch, 0.2, 1))
+      throw Error("Invalid corner stitch length.");
+    if (v.maxSatin !== undefined && !number(v.maxSatin, 1, 6.5))
+      throw Error("Invalid maximum satin span.");
+  }
 }

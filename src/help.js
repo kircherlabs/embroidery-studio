@@ -1,4 +1,36 @@
 const descriptions = {
+  "live-text":
+    "Edit this lettering object's content, including line breaks. Its identity, position and shared operation stack remain intact.",
+  "live-font":
+    "Compare font families on the same editable lettering. Generated outlines and stitches update; saved outlines are portable, but device fonts may vary when edited elsewhere.",
+  "live-align":
+    "Align individual text lines within this lettering block. This changes glyph layout, not the object's placement in the hoop.",
+  "align-reference":
+    "Choose the hoop, combined selection bounds, or an object/group as alignment reference. A specific reference stays stationary while selected artwork moves.",
+  "outer-only":
+    "Use only outer contours for this outline operation. Enable to avoid stitching counters as extra finishing borders; disable when inner boundaries also need construction stitching.",
+  "corner-adaptive":
+    "Improve needle placement near turns without rounding artwork. Preserves running-path corners and shortens crowded inner satin stitches. Very sharp junctions still need separate regions.",
+  "eyelet-marker":
+    "Add a real running-stitch reference cross at the hole center before reinforcement. Cutting or punching the fabric is manual.",
+  "node-smooth":
+    "Align the selected Bézier anchor's tangent handles to form a smooth transition. Move handles on canvas for finer control.",
+  "node-corner":
+    "Remove the selected Bézier anchor's tangent handles to create a corner. Undo restores its prior handles.",
+  "pen-closed":
+    "Close the Bézier path and generate a filled artwork region when finishing. Leave off for an open running-stitch curve.",
+  "raster-colors":
+    "Reduce the image to this maximum number of colors before tracing. Fewer colors generally produce fewer regions and thread changes.",
+  "raster-bg":
+    "Omit the palette color most common along the image border. Turn off if that border color belongs to the artwork.",
+  "trace-area":
+    "Discard isolated color components smaller than this area in square millimeters. Set to zero to retain tiny islands. Holes remain boundaries of surviving regions.",
+  "trace-simplify":
+    "Maximum contour simplification tolerance in millimeters. Larger values reduce nodes but can remove fine edge detail; inspect the vector preview.",
+  "trace-smooth":
+    "Apply one corner-cutting smoothing pass to traced boundaries. This changes actual vector geometry; inspect counters and fine details before accepting.",
+  "trace-alpha":
+    "Ignore pixels at or below this opacity threshold, from 0 transparent to 254 nearly opaque. Use the preview to inspect antialiased edges.",
   "toggle-sequence":
     "Show or hide the stitch sequence, timeline and playback panel. Hiding it expands the canvas without changing any generated commands.",
   "maximize-canvas":
@@ -114,11 +146,11 @@ const descriptions = {
   length:
     "Target sewing stitch length in millimeters. Shorter stitches follow detail more closely and increase needle penetrations. Travel moves are separate.",
   angle:
-    "Tatami stitch direction in degrees. Changes fill rows, not the orientation of the artwork.",
+    "Tatami or filled-region satin direction in degrees. Changes needle spans, not artwork orientation. Split complex branches into separate regions for different directions.",
   "fill-pattern":
     "Stagger needle penetrations between fill rows to control texture. Spacing still controls coverage density.",
   "satin-width":
-    "Width of the satin column or border in millimeters. Wide spans need appropriate stabilization and may snag.",
+    "Width of centerline satin or a boundary band in millimeters. Filled-region satin columns derive width from geometry and use Maximum satin span for split control.",
   compensation:
     "Pull compensation in millimeters. Extends coverage to counter thread pull-in; too much creates unwanted overlap. Test on your fabric.",
   underlay:

@@ -31,6 +31,12 @@ located Design Issues. See [corner coverage and validation](docs/CORNER_DENSITY.
 
 ## Properties and construction
 
+Everyday methods are **Running Stitch**, **Tatami Fill**, and **Satin Stitching**.
+Running's **Reinforcement** chooses Single, Bean or Triple without adding actions.
+Satin asks you to choose Centerline, Border or Column explicitly. **Advanced
+Construction** retains placement, tackdown, basting, offset outlines, markers,
+stops and trims. See the [method and construction guide](docs/STITCH_METHODS.md).
+
 Properties now has one **Embroidery** section. Ordered sewing-action cards keep
 each action's method, independent thread color and stitch settings together.
 Expand a card to edit it; **Advanced** holds underlay, compensation, ties, contour

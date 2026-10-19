@@ -448,3 +448,17 @@ dialog:has(.patch-layout) {
   color: #1c3025;
   border-color: #e7b784;
 }
+
+#properties .operation-add-categories {
+  padding: 10px;
+}
+#properties .construction-method-picker {
+  margin-top: 10px;
+}
+#properties .construction-method-picker summary,
+#properties .operation-add-categories details summary {
+  padding: 8px 0;
+}
+#properties #action-method-fields .section-label:first-child {
+  margin-top: 14px;
+}

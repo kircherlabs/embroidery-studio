@@ -184,6 +184,7 @@ function mutate(fn) {
   }
 }
 function changed() {
+  state.satinMethodRequest = null;
   pause();
   $("preview-selection").disabled = false;
   state.selectionIds = selectionIds(state).filter(
@@ -279,6 +280,7 @@ function select(id, options = {}) {
   state.activeOperationId = null;
   state.collapsedActionKey = null;
   state.methodRequest = null;
+  state.satinMethodRequest = null;
   stage.node = null;
   state.manualIndex = 0;
   renderPanels();

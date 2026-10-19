@@ -163,6 +163,12 @@ const descriptions = {
     "Choose the first sewing action of each selected object, or every sewing action. This changes settings on existing actions without replacing or flattening their lists.",
   "stitch-type":
     "Change this sewing action's stitch method. Its identity, color and position in the sewing order stay independent. Add another sewing action creates an additional pass. Fill and border methods require a closed area.",
+  "construction-method":
+    "Change this action's fabric-construction purpose or machine command. Placement marks fabric position, Tackdown holds fabric, Basting stabilizes material, and Offset follows an expanded or inset boundary. Use Add another sewing action to keep the current stitching.",
+  "add-construction":
+    "Add a specialized fabric outline, marker, stop or trim while retaining existing actions. Closed fabric boundaries are required for placement, tackdown, basting and offsets.",
+  "construction-add":
+    "Add the selected construction action to compatible artwork. Existing actions keep their settings, colors and sewing order.",
   "sewing-presets":
     "Configure outline, fill, or fill plus border as editable sewing actions. Replacing multiple existing actions requires confirmation; Undo restores them.",
   "bulk-action-enabled":

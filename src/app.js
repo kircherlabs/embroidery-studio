@@ -1,3 +1,5 @@
+import { railArtwork, railCandidates } from "./rail-ui.js";
+import { splitRailSource, railLayout } from "./manual-satin.js";
 import {
   pencilCurve,
   nearestSegment,
@@ -9,11 +11,12 @@ import {
   joinPaths,
   closeArtwork,
   reverseArtwork,
+  worldCurve,
 } from "./path-editing.js";
 import { fillPolygons, distance } from "./geometry.js";
 import { rasterImport } from "./reference-ui.js";
 import { installDrawingStyle } from "./drawing-style-ui.js";
-import { threadColors } from "./operations.js";
+import { threadColors, operationsOf } from "./operations.js";
 import { satinSummary } from "./creative-ui.js";
 import { EMBROIDERY_STYLES, setEmbroideryStyle } from "./styles.js";
 import { traceDialog } from "./tracing-ui.js";
@@ -23,10 +26,16 @@ import {
   alignReference,
   distributeArtwork,
 } from "./creative.js";
-import { detachSource, curveRings, identity } from "./smart-geometry.js";
+import {
+  detachSource,
+  curveRings,
+  identity,
+  regenerateRails,
+} from "./smart-geometry.js";
 import {
   demo,
   object,
+  uid,
   ellipse,
   PALETTE,
   MACHINES,
@@ -304,6 +313,7 @@ function select(id, options = {}) {
 }
 function setMode(mode) {
   state.mode = mode;
+  stage.railDraftA = null;
   pause();
   stage.draft = [];
   updateDraft();
@@ -325,6 +335,8 @@ function setTool(tool) {
   stage.draft = [];
   stage.node = null;
   state.tool = tool;
+  if (tool !== "select") state.satinGuideEdit = null;
+  stage.railDraftA = null;
   updateDraft();
   stage.pencilPreview = null;
   $("shape-family").open = [
@@ -368,17 +380,29 @@ function setTool(tool) {
     star: "Drag a star · adjust points and inner radius in Smart shape",
     eyelet:
       "Place reinforcement · adjust hole diameter and satin band in Smart eyelet",
+    rails:
+      "Draw rail A · Finish it · draw rail B in the same direction · Create column",
     pen: "Click-drag curve anchors · Enter finishes · edit handles with Node tool",
   };
   $("stage-hint").textContent = hints[tool];
   stage.render();
 }
 function updateDraft() {
-  $("draw-actions").hidden = stage.draft.length === 0;
+  $("rails-closed").disabled = !!stage.railDraftA;
+  $("draw-actions").hidden = stage.draft.length === 0 && !stage.railDraftA;
   $("pen-closed").closest("label").hidden = !["pen", "pencil"].includes(
     state.tool,
   );
-  $("draw-message").textContent = `${stage.draft.length} points placed`;
+  $("draw-message").textContent =
+    state.tool === "rails"
+      ? `Rail ${stage.railDraftA ? "B" : "A"} · ${stage.draft.length} anchors`
+      : `${stage.draft.length} points placed`;
+  $("finish-draw").textContent =
+    state.tool === "rails"
+      ? stage.railDraftA
+        ? "Create column ↵"
+        : "Finish rail A ↵"
+      : "Finish path ↵";
   $("finish-draw").disabled =
     stage.draft.length < (state.tool === "polygon" ? 3 : 2);
 }
@@ -390,7 +414,7 @@ function vectorTargets() {
 function updateVectorOptions() {
   const tool = state.tool,
     active =
-      ["pencil", "node", "knife", "eraser"].includes(tool) &&
+      ["pencil", "node", "knife", "eraser", "rails"].includes(tool) &&
       state.mode === "design";
   $("vector-controls").hidden = !active;
   document
@@ -400,19 +424,36 @@ function updateVectorOptions() {
     );
   const objects = vectorTargets();
   $("sculpt-radius").closest("label").hidden =
-    tool !== "node" || !objects.some((o) => !o.curve);
-  $("join-vectors").disabled = objects.length !== 2;
+    tool !== "node" || !objects.some((o) => !stage.activeCurve(o));
+  const railTarget =
+    objects.length === 1 && selected()?.satinRails ? selected() : null;
+  $("rail-node-controls").hidden = tool !== "node" || !railTarget;
+  $("active-rail").value = state.railSide || "a";
+  $("rail-set-seam").disabled = !railTarget?.satinRails.a.closed;
+  $("rails-from-selection").disabled = !railCandidates(objects);
+  if (tool === "node" && !railCandidates(objects))
+    $("rails-from-selection").hidden = true;
+  $("rails-closed").disabled = !!stage.railDraftA;
+  state.railClosed = $("rails-closed").checked;
+  $("join-vectors").disabled =
+    objects.length !== 2 || objects.some((o) => o.satinRails);
   $("close-vector").disabled = !objects.some(
     (o) => !o.closed && o.type !== "fill",
   );
-  $("reverse-vector").disabled = !objects.length;
-  $("split-node").disabled = objects.length !== 1;
+  $("reverse-vector").disabled =
+    !objects.length || objects.some((o) => o.satinRails);
+  $("split-node").disabled =
+    objects.length !== 1 || objects.some((o) => o.satinRails);
   $("vector-edit-guidance").textContent =
-    tool === "pencil"
-      ? "Smoothing controls trace tolerance in millimeters. Start a new stroke to finish the previous one."
-      : tool === "node"
-        ? "Pull a segment to sculpt; drag handles for precision. Imported contours use a local influence. Vector edits convert Smart Shapes/text to paths; Undo restores them."
-        : "Pieces retain sewing actions; construction stops repeat per piece. Parametric shapes/text become paths; Undo restores them. Erasing keeps small fragments for review.";
+    tool === "rails"
+      ? "Two boundaries define actual satin width. Draw A, finish, then B; both rails remain editable. Closed rails must enclose one opening."
+      : railTarget && tool === "node"
+        ? `Editing rail ${(state.railSide || "a").toUpperCase()}. Drag anchors/handles or pull its curve. Double-click inserts a node; Delete removes one. Source seams and sewing direction are separate controls.`
+        : tool === "pencil"
+          ? "Smoothing controls trace tolerance in millimeters. Start a new stroke to finish the previous one."
+          : tool === "node"
+            ? "Pull a segment to sculpt; drag handles for precision. Imported contours use a local influence. Vector edits convert Smart Shapes/text to paths; Undo restores them."
+            : "Pieces retain sewing actions; construction stops repeat per piece. Parametric shapes/text become paths; Undo restores them. Erasing keeps small fragments for review.";
   state.pencilSmoothing = $("pencil-smoothing").checkValidity()
     ? Number($("pencil-smoothing").value)
     : 0.15;
@@ -564,9 +605,134 @@ function repairPath(command) {
     validateProject(state.project);
   });
 }
+async function createRailsFromSelection() {
+  const objects = vectorTargets(),
+    curves = railCandidates(objects);
+  if (!curves)
+    return toast(
+      "Select two single-contour paths, or one closed shape with exactly two nested contours.",
+    );
+  let made;
+  try {
+    made = railArtwork(curves[0], curves[1], {
+      color: threadColors(objects[0])[0] || objects[0].color,
+      spacing: objects[0].spacing,
+    });
+  } catch (e) {
+    return toast(e.message);
+  }
+  const ok = await ask(
+    "Create manual satin rails?",
+    '<p>Create one independent satin column from these boundaries. Original artwork and sewing actions remain editable.</p><label class="check"><input id="hide-rail-sources" type="checkbox" checked>Hide source artwork to avoid sewing it twice</label><p>Two closed contours form one band across their opening. Rail seams and direction guides stay editable after creation.</p>',
+    "Create satin column",
+  );
+  if (!ok) return;
+  const hide = $("hide-rail-sources").checked;
+  mutate(() => {
+    if (objects.every((o) => o.parentId === objects[0].parentId))
+      made.parentId = objects[0].parentId;
+    const at = Math.max(
+      ...objects.map((o) => state.project.objects.indexOf(o)),
+    );
+    state.project.objects.splice(at + 1, 0, made);
+    if (hide) objects.forEach((o) => (o.visible = false));
+    for (const o of state.project.objects)
+      if (
+        o.constructionArtworkIds?.some((id) => objects.some((s) => s.id === id))
+      )
+        o.constructionArtworkIds.push(made.id);
+    if (state.project.sequencing?.mode === "manual") {
+      const order = state.project.sequencing.order,
+        index = Math.max(...objects.map((o) => order.indexOf(o.id)));
+      order.splice(index + 1, 0, made.id);
+    }
+    state.selectionIds = [made.id];
+    state.selection = made.id;
+    state.activeOperationId = made.operations[0].id;
+  });
+  state.railSide = "a";
+  setTool("node");
+}
+function splitManualRails(leaf, fraction) {
+  if (leaf.constructionArtworkIds?.length)
+    return toast(
+      "This linked patch boundary has manufacturing dependencies. Split an ordinary manual column instead.",
+    );
+  const applied = mutate(() => {
+    const active =
+        operationsOf(leaf).find((op) => op.id === state.activeOperationId) ||
+        operationsOf(leaf).find((op) => op.columnMode === "rails"),
+      parts = splitRailSource(
+        leaf.satinRails,
+        active?.satinGuides || [],
+        fraction,
+      );
+    const pieces = parts.map((source, i) => {
+      const o = structuredClone(leaf);
+      o.id = i ? uid() : leaf.id;
+      o.name = leaf.name.slice(0, 175) + (i ? " · section 2" : " · section 1");
+      o.satinRails = source;
+      regenerateRails(o);
+      for (const op of o.operations || []) {
+        if (i) op.id = uid();
+        if (op.columnMode === "rails")
+          op.satinGuides = (op.satinGuides || []).filter((g) => {
+            try {
+              railLayout(source, [g]);
+              return true;
+            } catch {
+              return false;
+            }
+          });
+      }
+      return o;
+    });
+    state.selectionIds = replaceArtwork(state.project, leaf, pieces);
+    state.selection = pieces[0].id;
+    state.activeOperationId = null;
+  });
+  if (!applied) return;
+  stage.node = null;
+  setTool("node");
+  toast(
+    "Split both rails into two editable columns. Sewing actions were copied; review stops and direction guides.",
+  );
+}
 function finishPath(options = {}) {
   const type = state.tool,
     pts = stage.draft;
+  if (type === "rails") {
+    if (pts.length < 2) return false;
+    try {
+      const curve = {
+        nodes: structuredClone(pts),
+        closed: $("rails-closed").checked,
+        frame: identity(),
+      };
+      if (curve.closed && curve.nodes.length < 3)
+        throw Error("A closed rail needs at least three anchors.");
+      if (!stage.railDraftA) {
+        stage.railDraftA = curve;
+        stage.draft = [];
+        updateDraft();
+        updateVectorOptions();
+        stage.render();
+        return true;
+      }
+      const made = railArtwork(stage.railDraftA, curve, {
+        color: (selected() && threadColors(selected())[0]) || PALETTE[0],
+      });
+      if (!addObjects([made])) return false;
+      stage.railDraftA = null;
+      stage.draft = [];
+      state.railSide = "a";
+      setTool("node");
+      return true;
+    } catch (e) {
+      toast(e.message);
+      return false;
+    }
+  }
   if (type === "pencil") {
     try {
       const closed = $("pen-closed").checked,
@@ -832,6 +998,8 @@ function renderProperties() {
       draw: () => stage.render(),
       selectTool: () => setTool("select"),
       node: () => stage.node,
+      editRails: () => setTool("node"),
+      splitRails: splitManualRails,
       retrace: async (group) => {
         const response = await fetch(group.imageSource.data),
           file = await response.blob();
@@ -1378,6 +1546,9 @@ async function importFile(file) {
     if (["json", "embstudio"].includes(ext)) {
       const p = validateProject(JSON.parse(await file.text()));
       if (await confirmReplace("Open this project?")) {
+        stage.railDraftA = null;
+        stage.draft = [];
+        updateDraft();
         mutate(() => {
           state.project = p;
           state.selection = null;
@@ -1454,11 +1625,20 @@ function removeSelected() {
     !isLocked(state.project, o) &&
     !["manual", "reference"].includes(o.type)
   ) {
-    if (o.curve) {
-      if (o.curve.nodes.length > (o.curve.closed ? 3 : 2))
+    if (stage.activeCurve(o)) {
+      const c = stage.activeCurve(o);
+      if (c.nodes.length > (c.closed ? 3 : 2))
         mutate(() => {
-          o.curve.nodes.splice(stage.node, 1);
-          o.rings = curveRings(o.curve);
+          c.nodes.splice(stage.node, 1);
+          if (o.satinRails) {
+            const key = state.railSide === "b" ? "seamB" : "seamA";
+            o.satinRails[key] =
+              Math.max(
+                0,
+                o.satinRails[key] - (stage.node < o.satinRails[key] ? 1 : 0),
+              ) % c.nodes.length;
+          }
+          stage.updateCurve(o, c);
         });
       stage.node = null;
       return;
@@ -1483,6 +1663,7 @@ function removeSelected() {
   });
 }
 function undo() {
+  stage.railDraftA = null;
   if (!history.length) return;
   pause();
   future.push(JSON.stringify(state.project));
@@ -1495,6 +1676,7 @@ function undo() {
   changed();
 }
 function redo() {
+  stage.railDraftA = null;
   if (!future.length) return;
   history.push(JSON.stringify(state.project));
   state.project = JSON.parse(future.pop());
@@ -2067,9 +2249,32 @@ for (const [id, action] of [
   ["reverse-vector", "reverse"],
 ])
   $(id).onclick = () => repairPath(action);
+$("rails-from-selection").onclick = createRailsFromSelection;
+$("rails-closed").onchange = () => {
+  updateVectorOptions();
+  stage.render();
+};
+$("active-rail").onchange = (e) => {
+  state.railSide = e.target.value;
+  stage.node = null;
+  renderPanels();
+  stage.render();
+};
+$("rail-set-seam").onclick = () => {
+  const o = selected();
+  if (!o?.satinRails || stage.node === null)
+    return toast("Select an anchor on the active rail first.");
+  const key = state.railSide === "b" ? "seamB" : "seamA";
+  mutate(() => {
+    o.satinRails[key] = stage.node;
+    regenerateRails(o);
+  });
+};
 $("finish-draw").onclick = finishPath;
 $("cancel-draw").onclick = () => {
+  stage.railDraftA = null;
   stage.draft = [];
+  updateVectorOptions();
   updateDraft();
   stage.render();
 };
@@ -2258,6 +2463,7 @@ document.addEventListener("keydown", (e) => {
     }
     stage.cancelDrag();
     stage.draft = [];
+    stage.railDraftA = null;
     updateDraft();
     select(null);
     state.isolation = null;

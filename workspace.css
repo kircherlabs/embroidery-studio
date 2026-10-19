@@ -771,8 +771,15 @@
   overflow-y: auto;
 }
 /* Pencil capture must not move the camera when Finish/Closed controls appear. */
-.tool-context:has([data-vector-option="pencil"]:not([hidden])) {
+.tool-context:has([data-vector-option="pencil"]:not([hidden])),
+.tool-context:has([data-vector-option="rails"]:not([hidden])) {
   height: 126px;
+}
+#rail-node-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 .vector-controls {
   display: flex;

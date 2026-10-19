@@ -172,3 +172,11 @@ No Ink/Stitch (GPL) or scikit-image implementation was copied. The stroke topolo
 partition, rails, turning and travel code is original under this repository's
 license. No new runtime dependency was added. Existing licensed geometry and
 PyEmbroidery libraries remain in use; the PES/PEC exporter was not replaced.
+
+## Manual two-rail construction — 0.10.0
+
+The earlier automatic direction guides are supplemented by a genuine editable
+pair of source rails. This explicit Satin Column mode uses transverse rail spans,
+not directional fill rows or a centerline-width approximation. See the
+[manual rail guide](MANUAL_SATIN.md) for creation, rungs, seams and limitations.
+Automatic stroke and legacy directional construction retain their algorithms.

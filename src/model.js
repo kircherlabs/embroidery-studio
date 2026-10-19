@@ -455,6 +455,32 @@ export function validateProject(p) {
 
 function validateSource(o) {
   const number = (v, a, b) => Number.isFinite(v) && v >= a && v <= b;
+  if (o.satinRails) {
+    const r = o.satinRails;
+    if (
+      o.type === "manual" ||
+      o.type === "reference" ||
+      !r.a ||
+      !r.b ||
+      r.a.closed !== r.b.closed ||
+      typeof r.reverseB !== "boolean"
+    )
+      throw Error("Invalid manual satin rail source.");
+    for (const [side, seam] of [
+      ["a", "seamA"],
+      ["b", "seamB"],
+    ]) {
+      const c = r[side];
+      if (
+        !Number.isInteger(r[seam]) ||
+        r[seam] < 0 ||
+        r[seam] >= c.nodes?.length ||
+        (c.closed && c.nodes.length < 3)
+      )
+        throw Error("Invalid satin seam node.");
+      validateSource({ type: "fill", curve: c });
+    }
+  }
   const points = (rings) =>
     Array.isArray(rings) &&
     rings.length <= 5000 &&
@@ -535,7 +561,7 @@ function validateSource(o) {
   for (const v of [o, ...(o.operations || [])]) {
     if (
       v.columnMode !== undefined &&
-      !["stroke", "directional"].includes(v.columnMode)
+      !["stroke", "directional", "rails"].includes(v.columnMode)
     )
       throw Error("Invalid satin column mode.");
     if (
@@ -568,5 +594,12 @@ function validateSource(o) {
       throw Error("Invalid corner stitch length.");
     if (v.maxSatin !== undefined && !number(v.maxSatin, 1, 6.5))
       throw Error("Invalid maximum satin span.");
+    if (v.railScale !== undefined && !number(v.railScale, 0.2, 3))
+      throw Error("Invalid rail width adjustment.");
+    if (
+      v.railUnderlay !== undefined &&
+      !["center", "edge", "both"].includes(v.railUnderlay)
+    )
+      throw Error("Invalid rail underlay.");
   }
 }

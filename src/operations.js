@@ -125,6 +125,8 @@ const settings = [
   "columnMode",
   "satinGuides",
   "columnFallback",
+  "railScale",
+  "railUnderlay",
   "outerOnly",
 ];
 export function defaultOperation(o) {

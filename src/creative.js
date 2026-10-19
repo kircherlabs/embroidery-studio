@@ -49,6 +49,10 @@ export function smartShape(kind, width = 30, height = 20, options = {}) {
   return o;
 }
 export function combineArtwork(p, objects, method) {
+  if (objects.some((o) => o.satinRails))
+    throw Error(
+      "Use rail editing for manual satin columns. Boolean merging would discard their paired boundaries.",
+    );
   if (objects.length < 2 || objects.some((o) => o.type !== "fill" && !o.closed))
     throw Error("Select at least two closed vector regions.");
   const polys = objects.map((o) => fillPolygons(o.rings, o.fillRule));
@@ -79,6 +83,10 @@ export function combineArtwork(p, objects, method) {
   return first.id;
 }
 export function cutEyelet(p, eyelet, targets) {
+  if (targets.some((o) => o.satinRails))
+    throw Error(
+      "Manual satin defines its opening through two rails. Edit those rails instead of subtracting an unrelated hole.",
+    );
   if (eyelet.shape?.kind !== "eyelet")
     throw Error("Select an eyelet reinforcement first.");
   const hole = object("Hole", [eyelet.rings[1]], { fillRule: "evenodd" });
@@ -219,6 +227,10 @@ export function alignReference(p, ids, reference, action) {
   }
 }
 export function contourArtwork(o, delta) {
+  if (o.satinRails)
+    throw Error(
+      "Adjust the rail width in Embroidery, or move the individual rails with Node.",
+    );
   const rings = offsetRings(o, delta);
   if (!rings.length) throw Error("This inset collapses the region.");
   o.rings = rings;

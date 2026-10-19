@@ -29,6 +29,20 @@ Rounded satin borders, centerlines and stroke columns preserve spacing on the
 outer rail of bends. Running outlines follow rounded curves; tight turns report
 located Design Issues. See [corner coverage and validation](docs/CORNER_DENSITY.md).
 
+## Manual satin digitizing
+
+**Manual satin rails** (∥) draws two independent Bézier boundaries. Finish rail A,
+then rail B to create a variable-width satin column. **Closed rails · ring** creates
+one band around an opening. You can also select two existing paths or a hollow
+shape and use **Create satin from selected paths / ring** in the tool dock.
+
+Use **Node** and **Active rail A/B** to edit anchors, handles or curves. Artwork
+holds seam, rail-direction, rounding and split controls. In **Embroidery → Satin
+Column → Manual · two editable rails**, edit direction guides, spacing, local
+width adjustment, underlay and compensation. Invalid correspondence reports a
+located Design Issue and blocks export rather than sewing across a hole.
+See [manual rail workflow, validation and limits](docs/MANUAL_SATIN.md).
+
 ## Properties and construction
 
 Everyday methods are **Running Stitch**, **Tatami Fill**, and **Satin Stitching**.

@@ -46,3 +46,14 @@ Eraser, endpoint joins, closure/reversal and compact Shapes are implemented.
 Controls remain docked above the canvas. See [the user and engineering guide](VECTOR_EDITING.md)
 for algorithms, conversion rules, precision and limits. New tests supplement the
 existing regression suites; milestones 2 and 3 remain deferred.
+
+## Milestone 2 delivered in 0.10.0
+
+Two independent editable Bézier rails, variable-width correspondence, editable
+rungs, closed bands/counters, seams, rail orientation, complete sewing reversal,
+width adjustment, underlay, compensation and paired splitting are implemented.
+Creation reuses existing paths without destroying the originals. Node editing,
+transforms, history, projects, simulation and machine export share the same source.
+See [Manual satin rails](MANUAL_SATIN.md) for controls, reconstruction and limits.
+The baseline table above records the pre-milestone audit, not current availability.
+Milestone 3 remains deferred. Physical sew-outs remain required for the new satin.

@@ -1,3 +1,4 @@
+import { railArtwork } from "../src/rail-ui.js";
 import { addReference } from "../src/references.js";
 import { arrangeArtwork } from "../src/arrange.js";
 import { createSurroundingPatch } from "../src/construction.js";
@@ -22,6 +23,49 @@ import { applique, makeOperation } from "../src/operations.js";
 mkdirSync(new URL("../test-results/", import.meta.url), { recursive: true });
 const python = process.env.PYTHON || "python",
   adapter = fileURLToPath(new URL("./pes-codec-adapter.py", import.meta.url));
+
+test("manual rail satin retains its complete needle sequence, action order, stops and corrected PES origin", () => {
+  const rail = (y) => ({
+      nodes: [
+        { x: -20, y, out: { x: -10, y: y - 10 } },
+        { x: 20, y, in: { x: 10, y: y - 10 } },
+      ],
+      closed: false,
+      frame: [1, 0, 0, 1, 0, 0],
+    }),
+    o = railArtwork(rail(-2), rail(3), { color: "#000000" });
+  o.operations.push(makeOperation("stop", o), {
+    ...makeOperation("run", o),
+    color: "#dd3344",
+  });
+  const plan = generate({
+      version: 1,
+      name: "Manual rail construction",
+      machine: "se700",
+      objects: [o],
+      planning: { smallDetail: 0 },
+    }),
+    { result, dec } = check(plan.events);
+  assert(!plan.issues.some((i) => i.severity === "error"));
+  assert(plan.events.some((e) => e.phase === "satin-rails"));
+  assert.equal(plan.stats.stops, 1);
+  assert.equal(result.preview.filter((e) => e.cmd === "stop").length, 1);
+  assert.equal(
+    result.preview.filter((e) => e.cmd === "color").length,
+    plan.stats.changes,
+  );
+  assert.equal(dec.pec.declaredWidth / 10, plan.stats.bounds.width);
+  assert.equal(dec.pec.declaredHeight / 10, plan.stats.bounds.height);
+  const ids = o.operations.map((op) => op.id);
+  assert(
+    plan.events.findIndex((e) => e.operationId === ids[1]) >
+      plan.events.findLastIndex((e) => e.operationId === ids[0]),
+  );
+  assert(
+    plan.events.findIndex((e) => e.operationId === ids[2]) >
+      plan.events.findIndex((e) => e.operationId === ids[1]),
+  );
+});
 const fixture = (name) =>
   new Uint8Array(readFileSync(new URL("./fixtures/" + name, import.meta.url)));
 const call = (request) => {

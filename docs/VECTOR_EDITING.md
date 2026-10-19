@@ -107,7 +107,8 @@ The existing engine, satin, routing, tracing, project and PES regression suites
 remain in the release checks. No engine or exporter algorithm was replaced.
 
 Two independent manual satin rails, variable-width rail correspondence and
-hollow-ring seam tools are **milestone 2**, not implemented in this release.
+hollow-ring seam tools were added in **milestone 2 / 0.10.0**; see
+[Manual satin rails](MANUAL_SATIN.md).
 Text on paths, additional nondestructive effects, style transfer and linked/repeat
 tools are **milestone 3**. Existing satin direction guides remain available.
 Physical SE700 sew-outs of newly edited designs are still required: software

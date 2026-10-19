@@ -47,6 +47,7 @@ jobs:
           node tests/corner-density-browser.mjs
           node tests/method-categories-browser.mjs
           node tests/path-editing-browser.mjs
+          node tests/manual-rails-browser.mjs
       - run: node scripts/build.mjs
       - uses: actions/upload-pages-artifact@v3
         if: github.event_name != 'pull_request'

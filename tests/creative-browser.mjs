@@ -1,3 +1,4 @@
+import { chooseTool } from "./helpers/ui.mjs";
 import { reveal, chooseMethod } from "./helpers/ui.mjs";
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
@@ -148,7 +149,7 @@ try {
   await page.locator(".tree-rename").press("Escape");
   assert.equal((await project()).objects[0].name, "Renamed underlying");
   // Smart rectangle, radius handle, non-destructive parameter changes and transforms.
-  await page.locator('[data-tool="rect"]').click();
+  await chooseTool(page, "rect");
   await drag([-32, 24], [-4, 40]);
   await ready();
   p = await project();
@@ -164,7 +165,7 @@ try {
   assert.notDeepEqual(rect.rings, old);
   assert.equal(rect.shape.radius, 3);
   assert.equal(rect.spacing, 0.42);
-  await page.locator('[data-tool="star"]').click();
+  await chooseTool(page, "star");
   await drag([10, 25], [28, 42]);
   await ready();
   await fill("shape-sides", 7);
@@ -249,7 +250,7 @@ try {
   await ready();
   p = await project();
   assert(p.objects.find((o) => o.id === body.id).rings.length >= 2);
-  await page.locator('[data-tool="eyelet"]').click();
+  await chooseTool(page, "eyelet");
   const placement = await world(28, 0);
   await page.mouse.click(placement.x, placement.y);
   await ready();

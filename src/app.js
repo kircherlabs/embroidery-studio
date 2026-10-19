@@ -1,3 +1,16 @@
+import {
+  pencilCurve,
+  nearestSegment,
+  splitPath,
+  splitArea,
+  cutPathByLine,
+  eraseArtwork,
+  replaceArtwork,
+  joinPaths,
+  closeArtwork,
+  reverseArtwork,
+} from "./path-editing.js";
+import { fillPolygons, distance } from "./geometry.js";
 import { rasterImport } from "./reference-ui.js";
 import { installDrawingStyle } from "./drawing-style-ui.js";
 import { threadColors } from "./operations.js";
@@ -132,6 +145,9 @@ const stage = new Stage($("stage"), state, {
   finish: finishPath,
   draft: updateDraft,
   shape: addShape,
+  vectorStroke,
+  notice: toast,
+  sculptChanged,
   scrub,
   contextMenu: ({ x, y }) => arrangeMenu?.open(x, y),
 });
@@ -300,6 +316,7 @@ function setMode(mode) {
       ? "Select an object to refine its stitches"
       : "Scrub the timeline or click a stitch to inspect";
   document.querySelector(".tool-rail").hidden = mode !== "design";
+  updateVectorOptions();
   renderProperties();
   stage.render();
 }
@@ -307,8 +324,24 @@ function setTool(tool) {
   if (state.mode !== "design") setMode("design");
   stage.draft = [];
   stage.node = null;
-  updateDraft();
   state.tool = tool;
+  updateDraft();
+  stage.pencilPreview = null;
+  $("shape-family").open = [
+    "rect",
+    "ellipse",
+    "regular",
+    "star",
+    "eyelet",
+  ].includes(tool);
+  $("shape-family").classList.toggle("active", $("shape-family").open);
+  if (tool === "eraser")
+    $("erase-mode").value = selectedLeaves(state, { editable: true }).every(
+      (o) => o.closed || o.type === "fill",
+    )
+      ? "area"
+      : "line";
+  updateVectorOptions();
   document.querySelectorAll("[data-tool]").forEach((b) => {
     b.classList.toggle("active", b.dataset.tool === tool);
     b.setAttribute("aria-pressed", String(b.dataset.tool === tool));
@@ -318,7 +351,12 @@ function setTool(tool) {
     ?.scrollIntoView({ block: "nearest", inline: "nearest" });
   const hints = {
     select: "Drag objects to position them in the hoop",
-    node: "Drag nodes · double-click an edge to add a node",
+    node: "Drag anchors or pull a curve · double-click adds a node",
+    pencil:
+      "Drag to trace · Finish path or Closed fill · editable Bézier artwork",
+    knife:
+      "Select artwork · drag fully across to split · click a path to open it",
+    eraser: "Select artwork · brush away vector areas or line segments",
     polygon: "Click outline points · Enter to finish a fill",
     run: "Click path points · Enter to finish a running stitch",
     satin: "Click a centerline · Enter to finish satin",
@@ -337,14 +375,221 @@ function setTool(tool) {
 }
 function updateDraft() {
   $("draw-actions").hidden = stage.draft.length === 0;
-  $("pen-closed").closest("label").hidden = state.tool !== "pen";
+  $("pen-closed").closest("label").hidden = !["pen", "pencil"].includes(
+    state.tool,
+  );
   $("draw-message").textContent = `${stage.draft.length} points placed`;
   $("finish-draw").disabled =
     stage.draft.length < (state.tool === "polygon" ? 3 : 2);
 }
-function finishPath() {
+function vectorTargets() {
+  return selectedLeaves(state, { editable: true, visible: true }).filter(
+    (o) => !["manual", "reference"].includes(o.type),
+  );
+}
+function updateVectorOptions() {
+  const tool = state.tool,
+    active =
+      ["pencil", "node", "knife", "eraser"].includes(tool) &&
+      state.mode === "design";
+  $("vector-controls").hidden = !active;
+  document
+    .querySelectorAll("[data-vector-option]")
+    .forEach(
+      (e) => (e.hidden = !e.dataset.vectorOption.split(" ").includes(tool)),
+    );
+  const objects = vectorTargets();
+  $("sculpt-radius").closest("label").hidden =
+    tool !== "node" || !objects.some((o) => !o.curve);
+  $("join-vectors").disabled = objects.length !== 2;
+  $("close-vector").disabled = !objects.some(
+    (o) => !o.closed && o.type !== "fill",
+  );
+  $("reverse-vector").disabled = !objects.length;
+  $("split-node").disabled = objects.length !== 1;
+  $("vector-edit-guidance").textContent =
+    tool === "pencil"
+      ? "Smoothing controls trace tolerance in millimeters. Start a new stroke to finish the previous one."
+      : tool === "node"
+        ? "Pull a segment to sculpt; drag handles for precision. Imported contours use a local influence. Vector edits convert Smart Shapes/text to paths; Undo restores them."
+        : "Pieces retain sewing actions; construction stops repeat per piece. Parametric shapes/text become paths; Undo restores them. Erasing keeps small fragments for review.";
+  state.pencilSmoothing = $("pencil-smoothing").checkValidity()
+    ? Number($("pencil-smoothing").value)
+    : 0.15;
+  state.pencilClosed = $("pen-closed").checked;
+  state.eraseWidth = $("erase-width").checkValidity()
+    ? Number($("erase-width").value)
+    : 2;
+  state.sculptRadius = $("sculpt-radius").checkValidity()
+    ? Number($("sculpt-radius").value)
+    : 2;
+}
+function vectorStroke({ kind, points, scale }) {
+  const objects = vectorTargets();
+  if (!objects.length)
+    return toast(
+      "Select unlocked vector artwork first. References and needle commands are protected.",
+    );
+  mutate(() => {
+    const selectedIds = [];
+    for (const o of objects) {
+      let pieces;
+      if (kind === "eraser")
+        pieces = eraseArtwork(
+          o,
+          points,
+          state.eraseWidth || 2,
+          $("erase-mode").value === "area",
+          $("allow-open-run").checked,
+        );
+      else if (
+        points.length < 2 ||
+        distance(points[0], points.at(-1)) < 3 / scale
+      ) {
+        const hit = nearestSegment(o, points[0]);
+        if (!hit || hit.distance > 10 / scale)
+          throw Error(
+            "Click near the selected path, or drag a cutting line across it.",
+          );
+        pieces = splitPath(o, hit, $("allow-open-run").checked);
+      } else
+        pieces =
+          (o.closed || o.type === "fill") && $("knife-mode").value === "area"
+            ? splitArea(o, points[0], points.at(-1))
+            : cutPathByLine(
+                o,
+                points[0],
+                points.at(-1),
+                $("allow-open-run").checked,
+              );
+      if (pieces === null) {
+        selectedIds.push(o.id);
+        continue;
+      }
+      selectedIds.push(...replaceArtwork(state.project, o, pieces));
+      const tiny = pieces.filter((n) => {
+        const b = selectionBounds([n]);
+        return Math.hypot(b.width, b.height) < 0.3;
+      }).length;
+      if (tiny)
+        toast(
+          `Kept ${tiny} small vector fragments. Review them and the Small islands stitch filter.`,
+        );
+    }
+    state.selectionIds = selectedIds;
+    state.selection = selectedIds[0] || null;
+    state.activeOperationId = null;
+    validateProject(state.project);
+  });
+}
+function sculptChanged(before) {
+  try {
+    const original = JSON.parse(before);
+    const topology = (o) => {
+      const p = fillPolygons(o.rings, o.fillRule);
+      if (!p) throw Error("The drag crossed or invalidated a contour.");
+      return [p.length, p.reduce((n, p) => n + p.length - 1, 0)];
+    };
+    for (const o of state.project.objects) {
+      const old = original.objects.find((n) => n.id === o.id);
+      if (
+        old &&
+        (o.closed || o.type === "fill") &&
+        JSON.stringify(old.rings) !== JSON.stringify(o.rings) &&
+        JSON.stringify(topology(old)) !== JSON.stringify(topology(o))
+      )
+        throw Error("The drag would merge islands or lose a counter.");
+    }
+    validateProject(state.project);
+    record(before);
+  } catch (e) {
+    state.project = JSON.parse(before);
+    renderPanels();
+    stage.render();
+    toast(e.message + " Try a smaller sculpt drag.");
+  }
+}
+function repairPath(command) {
+  const objects = vectorTargets();
+  if (!objects.length) return toast("Select editable vector artwork.");
+  mutate(() => {
+    if (command === "join") {
+      if (objects.length !== 2) throw Error("Select two open paths to join.");
+      const [a, b] = objects;
+      if (a.parentId !== b.parentId)
+        throw Error(
+          "Join paths within the same SVG/group to preserve hierarchy.",
+        );
+      const joined = joinPaths(
+        a,
+        b,
+        Number($("join-gap").value),
+        $("join-use-first").checked,
+      );
+      replaceArtwork(state.project, a, [joined]);
+      for (const boundary of state.project.objects)
+        if (boundary.constructionArtworkIds?.includes(b.id))
+          boundary.constructionArtworkIds = [
+            ...new Set(
+              boundary.constructionArtworkIds.map((id) =>
+                id === b.id ? joined.id : id,
+              ),
+            ),
+          ];
+      replaceArtwork(state.project, b, []);
+      state.selectionIds = [joined.id];
+      state.selection = joined.id;
+    } else if (command === "split") {
+      if (objects.length !== 1 || stage.node === null)
+        throw Error("Select one path and an anchor with Node first.");
+      const o = objects[0];
+      let index = stage.node,
+        ring = 0;
+      if (!o.curve) {
+        while (ring < o.rings.length && index >= o.rings[ring].length)
+          index -= o.rings[ring++].length;
+      }
+      const pieces = splitPath(
+        o,
+        { index, t: 0, ring },
+        $("allow-open-run").checked,
+      );
+      state.selectionIds = replaceArtwork(state.project, o, pieces);
+      state.selection = state.selectionIds[0];
+      stage.node = null;
+    } else
+      objects.forEach((o) =>
+        command === "close" ? closeArtwork(o) : reverseArtwork(o),
+      );
+    validateProject(state.project);
+  });
+}
+function finishPath(options = {}) {
   const type = state.tool,
     pts = stage.draft;
+  if (type === "pencil") {
+    try {
+      const closed = $("pen-closed").checked,
+        curve = pencilCurve(pts, state.pencilSmoothing || 0.15, closed),
+        made = object("Pencil path", curveRings(curve), {
+          curve,
+          type: closed ? "fill" : "run",
+          closed,
+          underlay: false,
+          color: selected()?.color || PALETTE[0],
+        });
+      if (closed) applyDrawingStyle(made);
+      if (!addObjects([made])) return false;
+      stage.draft = [];
+      stage.pencilPreview = null;
+      updateDraft();
+      if (!options.keepTool) setTool("select");
+      return true;
+    } catch (e) {
+      toast(e.message);
+      return false;
+    }
+  }
   if (type === "pen" && pts.length >= 2) {
     const closed = $("pen-closed").checked,
       curve = { nodes: structuredClone(pts), closed, frame: identity() };
@@ -427,7 +672,7 @@ async function templateDialog() {
     );
 }
 function addObjects(objects) {
-  mutate(() => {
+  const added = mutate(() => {
     state.project.objects.push(...objects);
     if (objects.groups) (state.project.groups ||= []).push(...objects.groups);
     state.selectionIds = objects.groups?.length
@@ -435,11 +680,14 @@ function addObjects(objects) {
       : objects.map((o) => o.id);
     state.selection = state.selectionIds[0] || null;
   });
+  if (!added) return false;
   toast(
     `Added ${objects.length === 1 ? objects[0].name : objects.length + " objects"}`,
   );
+  return true;
 }
 function renderPanels() {
+  updateVectorOptions();
   drawingStyleUI.refresh();
   const focused = document.activeElement?.closest("#object-list button"),
     focusKey =
@@ -1783,6 +2031,42 @@ $("preview-selection").onchange = (e) => {
   state.previewSelection = e.target.checked;
   stage.render();
 };
+for (const id of ["pencil-smoothing", "sculpt-radius", "erase-width"])
+  $(id).onchange = () => {
+    if (!$(id).checkValidity())
+      return toast("Enter a value within the displayed range.");
+    updateVectorOptions();
+    stage.pencilPreview = null;
+    if (state.tool === "pencil" && stage.draft.length)
+      try {
+        stage.pencilPreview = pencilCurve(
+          stage.draft,
+          state.pencilSmoothing,
+          state.pencilClosed,
+        );
+      } catch {}
+    stage.render();
+  };
+$("pen-closed").onchange = () => {
+  updateVectorOptions();
+  stage.pencilPreview = null;
+  if (state.tool === "pencil" && stage.draft.length)
+    try {
+      stage.pencilPreview = pencilCurve(
+        stage.draft,
+        state.pencilSmoothing,
+        state.pencilClosed,
+      );
+    } catch {}
+  stage.render();
+};
+for (const [id, action] of [
+  ["split-node", "split"],
+  ["join-vectors", "join"],
+  ["close-vector", "close"],
+  ["reverse-vector", "reverse"],
+])
+  $(id).onclick = () => repairPath(action);
 $("finish-draw").onclick = finishPath;
 $("cancel-draw").onclick = () => {
   stage.draft = [];

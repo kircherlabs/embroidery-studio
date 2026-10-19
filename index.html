@@ -235,6 +235,79 @@
             <button id="finish-draw" class="primary">Finish path ↵</button>
             <button id="cancel-draw">Cancel</button>
           </div>
+          <div
+            id="vector-controls"
+            class="vector-controls"
+            role="toolbar"
+            aria-label="Vector editing options"
+            hidden
+          >
+            <label data-vector-option="pencil"
+              >Smoothing · mm<input
+                id="pencil-smoothing"
+                type="number"
+                value="0.15"
+                min="0.02"
+                max="1"
+                step="0.01"
+            /></label>
+            <label data-vector-option="node"
+              >Sculpt reach · mm<input
+                id="sculpt-radius"
+                type="number"
+                value="2"
+                min="0.2"
+                max="20"
+                step="0.1"
+            /></label>
+            <label data-vector-option="knife"
+              >Knife<select id="knife-mode">
+                <option value="area">Split regions / open paths</option>
+                <option value="path">Split contours into open paths</option>
+              </select></label
+            >
+            <label data-vector-option="eraser"
+              >Eraser<select id="erase-mode">
+                <option value="area">Erase area · closed regions</option>
+                <option value="line">Erase line segments</option>
+              </select></label
+            >
+            <label data-vector-option="eraser"
+              >Brush · mm<input
+                id="erase-width"
+                type="number"
+                min="0.2"
+                max="20"
+                step="0.1"
+                value="2"
+            /></label>
+            <label class="check" data-vector-option="node knife eraser"
+              ><input id="allow-open-run" type="checkbox" />Convert incompatible
+              actions on open pieces to Running</label
+            >
+            <details data-vector-option="node knife" id="path-repair">
+              <summary>Path repair</summary>
+              <div>
+                <button id="split-node">Split at selected node</button
+                ><button id="close-vector">Close path</button
+                ><button id="reverse-vector">Reverse path</button>
+                <label
+                  >Join gap · mm<input
+                    id="join-gap"
+                    type="number"
+                    min="0.01"
+                    max="50"
+                    step="0.1"
+                    value="1"
+                /></label>
+                <label class="check"
+                  ><input id="join-use-first" type="checkbox" />Use first path's
+                  sewing actions</label
+                ><button id="join-vectors">Join two paths</button>
+              </div>
+            </details>
+            <span id="vector-edit-guidance" role="status"></span>
+          </div>
         </div>
         <div class="canvas-area">
           <div class="tool-rail">
@@ -262,6 +335,27 @@
                 ◇</button
               ><span></span>
               <button
+                data-tool="pencil"
+                aria-label="Freehand Pencil"
+                data-help="Pencil — drag to trace a continuous editable curve. Adjust smoothing above the canvas, then Finish path or choose Closed fill. No needle commands are baked into the artwork."
+              >
+                ✎
+              </button>
+              <button
+                data-tool="knife"
+                aria-label="Knife / split artwork"
+                data-help="Knife — drag a line fully across selected regions to split their actual geometry. Click a path to split it there. Path repair also splits at the selected node. Undo restores the pieces."
+              >
+                ╱
+              </button>
+              <button
+                data-tool="eraser"
+                aria-label="Vector eraser"
+                data-help="Vector Eraser — brush across selected artwork. Area subtracts material from closed regions; Line removes path segments. This edits vectors, not individual embroidery stitches. Undo restores the geometry."
+              >
+                ▰
+              </button>
+              <button
                 data-tool="polygon"
                 title="Draw closed polygon (P)"
                 aria-label="Draw closed polygon"
@@ -282,47 +376,57 @@
               >
                 ≋
               </button>
-              <button
-                data-tool="rect"
-                title="Rectangle"
-                aria-label="Draw rectangle"
-              >
-                □
-              </button>
-              <button
-                data-tool="regular"
-                aria-label="Draw regular polygon"
-                data-help="Drag a polygon, then adjust the number of sides and corner radius in Smart shape."
-              >
-                ⬟
-              </button>
-              <button
-                data-tool="star"
-                aria-label="Draw star"
-                data-help="Drag a star; edit points, inner radius and rounding afterwards."
-              >
-                ☆
-              </button>
-              <button
-                data-tool="eyelet"
-                aria-label="Place eyelet reinforcement"
-                data-help="Place a satin reinforcement for a future manually punched hole. Configure diameter and band width; optional geometric subtraction is explicit."
-              >
-                ◎
-              </button>
+              <details id="shape-family" class="shape-family">
+                <summary
+                  aria-label="Shapes"
+                  data-help="Shapes — expand to choose Rectangle, Ellipse, Polygon, Star or Eyelet. Each keeps its existing editable parameters."
+                >
+                  ▱<small>Shapes</small>
+                </summary>
+                <div>
+                  <button
+                    data-tool="rect"
+                    title="Rectangle"
+                    aria-label="Draw rectangle"
+                  >
+                    □
+                  </button>
+                  <button
+                    data-tool="regular"
+                    aria-label="Draw regular polygon"
+                    data-help="Drag a polygon, then adjust the number of sides and corner radius in Smart shape."
+                  >
+                    ⬟
+                  </button>
+                  <button
+                    data-tool="star"
+                    aria-label="Draw star"
+                    data-help="Drag a star; edit points, inner radius and rounding afterwards."
+                  >
+                    ☆
+                  </button>
+                  <button
+                    data-tool="eyelet"
+                    aria-label="Place eyelet reinforcement"
+                    data-help="Place a satin reinforcement for a future manually punched hole. Configure diameter and band width; optional geometric subtraction is explicit."
+                  >
+                    ◎
+                  </button>
+                  <button
+                    data-tool="ellipse"
+                    title="Ellipse (E)"
+                    aria-label="Draw ellipse"
+                  >
+                    ○
+                  </button>
+                </div>
+              </details>
               <button
                 data-tool="pen"
                 aria-label="Draw Bézier path"
                 data-help="Click and drag anchors to create cubic curves. Enter finishes the path; edit anchors and tangent handles with the Node tool."
               >
                 ✒
-              </button>
-              <button
-                data-tool="ellipse"
-                title="Ellipse (E)"
-                aria-label="Draw ellipse"
-              >
-                ○
               </button>
               <button
                 id="text-tool"
@@ -545,7 +649,7 @@
     <footer class="status-bar">
       <span id="status">Ready</span
       ><span
-        >40 wt thread presets <i>·</i> v0.8.0 <i>·</i>
+        >40 wt thread presets <i>·</i> v0.9.0 <i>·</i>
         <a
           href="https://github.com/kircherlabs/embroidery-studio"
           target="_blank"

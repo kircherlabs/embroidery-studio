@@ -1,3 +1,4 @@
+import { chooseTool } from "./helpers/ui.mjs";
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
 import { mkdir, readFile } from "node:fs/promises";
@@ -139,7 +140,7 @@ try {
   });
   assert(sampled[0] - sampled[1] > 40, JSON.stringify(sampled));
   // Locked image does not intercept creating ordinary embroidery artwork.
-  await page.locator('[data-tool="rect"]').click();
+  await chooseTool(page, "rect");
   await drag({ x: -8, y: -6 }, { x: 8, y: 6 });
   await page.waitForFunction(
     () =>

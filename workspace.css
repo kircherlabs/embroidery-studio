@@ -762,3 +762,121 @@
 .simulator.compact-sequence #stitch-counter {
   font-size: 9px;
 }
+
+/* Vector controls are docked in normal layout, never over editable artwork. */
+.tool-context:has(#vector-controls:not([hidden])) {
+  height: auto;
+  flex-wrap: wrap;
+  max-height: min(220px, 30%);
+  overflow-y: auto;
+}
+/* Pencil capture must not move the camera when Finish/Closed controls appear. */
+.tool-context:has([data-vector-option="pencil"]:not([hidden])) {
+  height: 126px;
+}
+.vector-controls {
+  display: flex;
+  flex: 1 1 100%;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  max-height: 150px;
+  overflow: auto;
+  padding-top: 5px;
+  border-top: 1px solid #bac4b2;
+}
+.vector-controls label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: #34503a;
+  font-size: 11px;
+}
+.vector-controls input[type="number"] {
+  width: 72px;
+  min-height: 32px;
+  padding: 4px;
+}
+.vector-controls input[type="number"],
+.vector-controls select {
+  background: #f0f1e6;
+  color: #294332;
+  border-color: #a8b59b;
+}
+.vector-controls select {
+  max-width: 245px;
+  min-height: 32px;
+  padding: 4px;
+}
+.vector-controls button,
+.vector-controls summary {
+  min-height: 32px;
+  font-size: 11px;
+}
+.vector-controls details > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  padding: 5px 0;
+}
+#vector-edit-guidance {
+  flex-basis: 100%;
+  font-size: 10px;
+  line-height: 1.4;
+}
+.shape-family {
+  width: 36px;
+  flex-shrink: 0;
+}
+.shape-family summary {
+  list-style: none;
+  cursor: pointer;
+  text-align: center;
+  min-height: 36px;
+  color: #536650;
+  border-radius: 5px;
+  font-size: 22px;
+}
+.shape-family summary small {
+  display: block;
+  font-size: 8px;
+  line-height: 10px;
+}
+.shape-family.active summary {
+  background: #34503a;
+  color: #e7b784;
+}
+.shape-family > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+@media (max-width: 1099px), (max-height: 799px) {
+  .shape-family[open] {
+    display: flex;
+    width: auto;
+    align-items: flex-start;
+  }
+  .shape-family > div {
+    flex-direction: row;
+  }
+  .shape-family summary {
+    width: 36px;
+    flex-shrink: 0;
+  }
+  .vector-controls {
+    max-height: 140px;
+  }
+}
+/* With the sequence panel open, very short screens cannot fit every dock.
+   Keep a usable drawing surface and scroll the workspace instead of letting
+   navigation controls cover the drawing-tool rail. Collapsing Sequence reclaims it. */
+@media (max-height: 600px) {
+  .stage-shell:has(#vector-controls:not([hidden])) {
+    overflow-y: auto;
+  }
+  .stage-shell:has(#vector-controls:not([hidden])) .canvas-area {
+    min-height: 136px;
+    flex-shrink: 0;
+  }
+}

@@ -1,3 +1,4 @@
+import { chooseTool } from "./helpers/ui.mjs";
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
 import { mkdir } from "node:fs/promises";
@@ -91,7 +92,7 @@ try {
   assert(await summary.evaluate((e) => e === document.activeElement));
   const drag = async (tool, a, b) => {
     const n = (await project()).objects.length;
-    await page.locator(`[data-tool="${tool}"]`).click();
+    await chooseTool(page, tool);
     const coords = await page.evaluate(
       ({ a, b }) => {
         const r = document.getElementById("stage").getBoundingClientRect(),

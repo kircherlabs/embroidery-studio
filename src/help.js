@@ -1,4 +1,30 @@
 const descriptions = {
+  "pencil-smoothing":
+    "Approximate freehand fitting tolerance in millimeters. Smaller values follow the captured trace more closely with more editable nodes. Smoothing does not change stitch density.",
+  "sculpt-radius":
+    "Local influence distance in millimeters when pulling imported polygon contours. Bézier segments instead update their own tangent handles. Other contours and holes stay separate.",
+  "knife-mode":
+    "Split regions creates closed pieces with real Boolean geometry and retains holes. Split contours opens line pieces; incompatible fill/border actions need explicit conversion to Running.",
+  "erase-mode":
+    "Area subtracts the brushed region from closed vector artwork. Line removes portions of a single path, preserving the remaining Bézier segments. This does not delete individual needle commands.",
+  "erase-width":
+    "Vector eraser brush diameter in millimeters. The brush preview shows the actual subtraction width, independent of canvas zoom.",
+  "allow-open-run":
+    "Explicitly allow filled-region or closed-boundary actions on newly opened pieces to become Running outlines. Other compatible action settings and thread colors are retained. Undo restores the source stack.",
+  "join-gap":
+    "Maximum deliberate bridge between the nearest two open endpoints, in millimeters. Large gaps are rejected so joining does not create unexpected long sewing lines.",
+  "join-use-first":
+    "Allow joining paths with different colors or action stacks by taking the first path's sewing actions. Leave off to reject incompatible setups. Undo restores both originals.",
+  "join-vectors":
+    "Join two selected open paths in the same group at their nearest endpoints. Adjust Join gap if you deliberately want a connecting segment.",
+  "split-node":
+    "Split an open path at the selected anchor; open a closed contour at that anchor. Closed-region actions require explicit conversion. Knife can also split at a clicked location.",
+  "close-vector":
+    "Explicitly connect the last endpoint to the first. Source geometry and compatible outline actions close together; Undo restores the open path.",
+  "reverse-vector":
+    "Reverse selected vector path directions, including Bézier handles, while preserving artwork position and sewing settings.",
+  "node-symmetric":
+    "Set opposite tangent handles to the same length and direction around this anchor. Dragging either handle then maintains symmetry. Corner mode retains independent control.",
   "finish-draw":
     "Complete this path using the placed points. Enter also finishes. The drawing controls stay above the canvas so they do not cover your artwork.",
   "cancel-draw":
@@ -32,7 +58,7 @@ const descriptions = {
   "node-corner":
     "Remove the selected Bézier anchor's tangent handles to create a corner. Undo restores its prior handles.",
   "pen-closed":
-    "Close the Bézier path and generate a filled artwork region when finishing. Leave off for an open running-stitch curve.",
+    "Close this Pen or Pencil path and generate a filled artwork region when finishing. Leave off for an open running-stitch curve.",
   "raster-colors":
     "Reduce the image to this maximum number of colors before tracing. Fewer colors generally produce fewer regions and thread changes.",
   "raster-bg":

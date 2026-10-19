@@ -1,3 +1,4 @@
+import { chooseTool } from "./helpers/ui.mjs";
 import { chooseMethod } from "./helpers/ui.mjs";
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
@@ -317,7 +318,7 @@ try {
   await openDetails(page.locator("#draw-style"));
   await page.locator("#draw-style").selectOption("combined");
   await page.locator(".drawing-style > summary").click();
-  await page.locator('[data-tool="ellipse"]').click();
+  await chooseTool(page, "ellipse");
   const coords = await page.evaluate(() => {
     const r = document.getElementById("stage").getBoundingClientRect(),
       v = window.studio.getView();

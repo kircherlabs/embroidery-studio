@@ -1,3 +1,4 @@
+import { chooseTool } from "./helpers/ui.mjs";
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
 import { mkdir } from "node:fs/promises";
@@ -23,13 +24,11 @@ try {
   const ready = () => page.waitForFunction(() => window.studio?.getPlan()),
     project = () => page.evaluate(() => window.studio.getProject());
   const openProject = async (p) => {
-    await page
-      .locator("#file-input")
-      .setInputFiles({
-        name: "tools.embstudio",
-        mimeType: "application/json",
-        buffer: Buffer.from(JSON.stringify(p)),
-      });
+    await page.locator("#file-input").setInputFiles({
+      name: "tools.embstudio",
+      mimeType: "application/json",
+      buffer: Buffer.from(JSON.stringify(p)),
+    });
     await page.locator("#dialog-submit").click();
     await page.waitForFunction(
       (name) =>
@@ -92,7 +91,7 @@ try {
       objects: [],
     });
     for (const tool of ["polygon", "run", "satin", "pen", "manual"]) {
-      await page.locator(`[data-tool="${tool}"]`).click();
+      await chooseTool(page, tool);
       await page.locator("#zoom-fit").click();
       const before = await page.locator("#stage").boundingBox();
       await point(-8, -8, width === 390);

@@ -1,3 +1,11 @@
+import {
+  methodPicker,
+  categoryHelp,
+  methodOptions,
+  methodCategory,
+  CONSTRUCTION_METHODS,
+  METHOD_HELP,
+} from "./method-ui.js";
 import { referenceInspector } from "./reference-ui.js";
 import { actionCards, closingRings, moveAction } from "./sewing-actions.js";
 import { editOperations } from "./styles.js";
@@ -106,6 +114,14 @@ export function renderInspector(api) {
         : null,
     openVectors = vectors.filter((o) => !closedArtwork(o)),
     canClose = !pendingMethod || openVectors.every((o) => closingRings(o));
+  const categoryRequest = state.satinMethodRequest,
+    choosingSatin =
+      categoryRequest?.selection === ids.join("|") &&
+      categoryRequest?.action === (active?.id || null) &&
+      categoryRequest?.bulk === state.bulkOperations,
+    selectedType = common("type"),
+    constructionType = selectedType in CONSTRUCTION_METHODS ? selectedType : "",
+    defaultAddType = vectors.every(closedArtwork) ? "border" : "run";
   const b = selectionBounds(objects),
     name = ids[0] === PROJECT ? p.name : one?.name;
   const field = (
@@ -139,22 +155,24 @@ export function renderInspector(api) {
     <section id="method-settings" class="action-settings">
     ${
       targets.length
-        ? `<label class="field">Stitch method<select id="stitch-type">${mixed("type") ? '<option value="" selected disabled>Mixed</option>' : ""}${Object.entries(
-            OPERATION_TYPES,
+        ? methodPicker(
+            control.map((o) => o.type),
+            {
+              pending: choosingSatin,
+              open: openVectors.length > 0,
+              closed: vectors.some(closedArtwork),
+            },
           )
-            .map(
-              ([k, v]) =>
-                `<option value="${k}" ${common("type") === k ? "selected" : ""}>${v}</option>`,
-            )
-            .join("")}</select></label>`
         : ""
     }
     ${pendingMethod ? `<div class="method-closure" role="status"><p>${escape(OPERATION_TYPES[pendingMethod])} needs a closed area. ${openVectors.length} selected path${openVectors.length === 1 ? " is" : "s are"} open.${!canClose ? " Add or adjust nodes to form a nonempty region first. Running stitch and Satin Centerline can sew open paths." : " Closing adds a segment between the last and first points; Undo restores the open path."}</p><button id="close-artwork" ${canClose ? "" : "disabled"}>Close paths &amp; use ${escape(OPERATION_TYPES[pendingMethod])}</button><button id="cancel-method-change">Keep path open</button></div>` : openVectors.length ? '<p class="property-note">Fill and border methods need closed artwork. Choose one to review closing this path.</p>' : ""}
-    ${active && !isSewing(active) ? `<p class="property-note">${active.type === "stop" ? "Pauses for operator action here. Rename the action to explain positioning or trimming fabric." : "Requests a thread trim in the machine file. This does not pause to trim fabric; machine and format support varies."}</p>` : ""}
+    <div id="action-method-fields" ${choosingSatin ? "hidden" : ""}>
+    ${constructionType ? `<p class="property-note">${METHOD_HELP[constructionType]}</p>` : ""}
     <div class="section-label">THREAD COLOR ${mixed("color") ? "<span>MIXED</span>" : ""}</div><input id="thread-color" type="color" aria-label="Thread color" value="${common("color") || "#000000"}"><div class="swatch-palette">${palette.map((c) => `<button data-color="${c}" style="background:${c}" aria-label="Use thread ${c}"></button>`).join("")}</div>
     ${targets.some(isSewing) ? `<div class="section-label">STITCH SETTINGS</div><div class="two-col">${hasFill || hasSatin ? field("Row spacing", "spacing", "spacing", "mm", 0.15, 5) : ""}${control.some((o) => propertyApplies(o.type, "length")) ? field(hasFill ? "Maximum segment length" : "Running stitch length", "length", "length", "mm", 0.3, 7) : ""}</div>${hasDirectional ? field("Stitch direction", "angle", "angle", "°", -360, 360, 1) : ""}${hasDirectional ? `<label class="field">Fill pattern<select id="fill-pattern">${mixed("pattern") ? '<option value="" disabled selected>Mixed</option>' : ""}<option value="quarter">Quarter stagger</option><option value="half">Half stagger</option><option value="aligned">Aligned penetrations</option></select></label>` : ""}${hasSatin ? field("Satin band width", "satin-width", "width", "mm", 0.3, 7) : ""}` : ""}
     ${targets.length ? `<details class="advanced-settings" data-section="advanced"><summary>Advanced</summary>${hasFill || hasSatin ? field("Pull compensation", "compensation", "compensation", "mm", 0, 1) : ""}${control.some((o) => propertyApplies(o.type, "underlay")) ? check(hasFill || hasSatin ? "Light underlay" : "Preliminary outline pass", "underlay", "underlay") : ""}${control.some((o) => propertyApplies(o.type, "closed")) ? check("Sew closing segment", "closed-path", "closed") : ""}${hasPath ? check("Reverse sewing direction", "reverse-path", "reverse") : ""}${hasOutline ? field("Contour offset", "op-offset", "offset", "mm", -5, 5) + check("Outer boundary only", "outer-only", "outerOnly") : ""}${hasPath && control.some((o) => o.closed || ["placement", "tackdown", "basting", "contour", "border"].includes(o.type)) ? field("Start at vertex index", "start-index", "startIndex", "", 0, 500000, 1) : ""}${targets.some(isSewing) ? check("Tie-in · secure thread at start", "tie-in", "tieIn") + check("Tie-off · secure thread at end", "tie-off", "tieOff") : ""}${leaf && active ? `<label class="field">Sewing action name<input id="operation-name" maxlength="100" value="${escape(active.name)}"></label>` : ""}${leaf?.constructionArtworkIds?.length && active ? `<label class="field">This action sews<select id="construction-stage"><option value="prepare">Before decorative artwork</option><option value="finish">After decorative artwork</option></select></label>` : ""}</details>` : ""}
-    </section><details id="transform-settings" data-section="transform" open><summary>Position, size & rotation</summary><div class="section-label">POSITION & SIZE · SELECTION</div><div class="two-col">${field("Center X", "pos-x", null, "mm", -1000, 1000, 0.1, (b.minX + b.maxX) / 2)}${field("Center Y", "pos-y", null, "mm", -1000, 1000, 0.1, (b.minY + b.maxY) / 2)}${field("Width", "size-w", null, "mm", 0.1, 500, 0.1, b.width)}${field("Height", "size-h", null, "mm", 0.1, 500, 0.1, b.height)}</div><label class="check"><input id="proportional" type="checkbox" ${state.proportional !== false ? "checked" : ""}>Keep proportions · Shift while dragging to toggle</label>${field("Rotate selection by", "rotate", null, "°", -360, 360, 1, 0)}
+    ${targets.length ? `<details class="construction-method-picker" data-section="construction-method" ${constructionType ? "open" : ""}><summary>Advanced Construction</summary><label class="field">This action's construction purpose<select id="construction-method">${methodOptions(CONSTRUCTION_METHODS, constructionType, control.length > 1 && control.every((o) => o.type in CONSTRUCTION_METHODS) ? "Mixed construction purposes" : "Choose construction action…")}</select></label><p class="property-note" id="construction-method-guidance">Changes this action into a fabric-construction step or machine command. To keep existing stitching, use Add another sewing action instead.</p></details>` : ""}
+    </div></section><details id="transform-settings" data-section="transform" open><summary>Position, size & rotation</summary><div class="section-label">POSITION & SIZE · SELECTION</div><div class="two-col">${field("Center X", "pos-x", null, "mm", -1000, 1000, 0.1, (b.minX + b.maxX) / 2)}${field("Center Y", "pos-y", null, "mm", -1000, 1000, 0.1, (b.minY + b.maxY) / 2)}${field("Width", "size-w", null, "mm", 0.1, 500, 0.1, b.width)}${field("Height", "size-h", null, "mm", 0.1, 500, 0.1, b.height)}</div><label class="check"><input id="proportional" type="checkbox" ${state.proportional !== false ? "checked" : ""}>Keep proportions · Shift while dragging to toggle</label>${field("Rotate selection by", "rotate", null, "°", -360, 360, 1, 0)}
     </details><details id="object-sewing-options" data-section="object-sewing"><summary>Object sewing options</summary>${check("Keep sewing order position", "sequence-locked", "sequenceLocked")}
     ${leaf?.type === "manual" ? `<div id="manual-action-editor">${manualEditor(leaf)}</div>` : leaf ? `<button id="convert-manual" ${leaf.constructionArtworkIds?.length ? 'disabled aria-describedby="construction-manual-note"' : ""}>Make stitches editable</button>${leaf.constructionArtworkIds?.length ? '<p class="property-note" id="construction-manual-note">A linked patch boundary needs its sewing phases to surround the artwork. Duplicate the boundary alone before converting it to manual stitches.</p>' : ""}` : ""}</details>
     <section class="inspector-section" id="embroidery-settings"><h3>Embroidery</h3>
@@ -162,16 +180,7 @@ export function renderInspector(api) {
     <div id="embroidery-tools">
     ${
       vectors.length
-        ? `<details class="add-action-picker"><summary>+ ${leaf ? (operationsOf(leaf).length ? "Add another sewing action" : "Add a sewing action") : "Add a sewing action to each object"}</summary><div class="operation-add"><label>New action method<select id="add-operation" aria-label="Sewing action to add">${Object.entries(
-            OPERATION_TYPES,
-          )
-            .map(
-              ([k, v]) =>
-                `<option value="${k}" ${k === "border" ? "selected" : ""}>${v}</option>`,
-            )
-            .join(
-              "",
-            )}</select></label><button id="operation-add">Add action</button></div><p class="property-note" id="add-action-guidance"></p></details><div class="embroidery-presets"><button id="sewing-presets">Sewing presets…</button><button id="applique-recipe">Construction presets…</button></div>${leaf?.constructionArtworkIds?.length ? `<p class="property-note construction-link">Linked patch: preparation → ${leaf.constructionArtworkIds.length} artwork objects → finishing. These dependencies take priority over color batching.</p>` : ""}`
+        ? `<details class="add-action-picker"><summary>+ ${leaf ? (operationsOf(leaf).length ? "Add another sewing action" : "Add a sewing action") : "Add a sewing action to each object"}</summary><div class="operation-add-categories">${methodPicker([defaultAddType], { adding: true, open: openVectors.length > 0, closed: vectors.some(closedArtwork) })}<button id="operation-add">Add action</button><p class="property-note" id="add-action-guidance"></p><details data-section="add-construction"><summary>Advanced Construction</summary><label class="field">Construction action<select id="add-construction">${methodOptions(CONSTRUCTION_METHODS, "placement")}</select></label><p class="property-note" id="add-construction-purpose"></p><button id="construction-add">Add construction action</button><p class="property-note" id="add-construction-guidance"></p></details></div></details><div class="embroidery-presets"><button id="sewing-presets">Sewing presets…</button><button id="applique-recipe">Construction presets…</button></div>${leaf?.constructionArtworkIds?.length ? `<p class="property-note construction-link">Linked patch: preparation → ${leaf.constructionArtworkIds.length} artwork objects → finishing. These dependencies take priority over color batching.</p>` : ""}`
         : ""
     }
     </div></section>
@@ -216,6 +225,7 @@ export function renderInspector(api) {
     $("bulk-scope").onchange = (e) => {
       state.bulkOperations = e.target.value;
       state.methodRequest = null;
+      state.satinMethodRequest = null;
       refresh();
     };
   }
@@ -254,6 +264,7 @@ export function renderInspector(api) {
       return;
     }
     state.methodRequest = null;
+    state.satinMethodRequest = null;
     let result;
     const changed = mutate(() => {
       if (close)
@@ -277,10 +288,41 @@ export function renderInspector(api) {
       );
   };
   if ($("stitch-type"))
-    $("stitch-type").onchange = (e) => changeMethod(e.target.value);
+    $("stitch-type").onchange = (e) => {
+      if (e.target.value === "satin") {
+        if (control.every((o) => methodCategory(o.type) === "satin")) return;
+        state.methodRequest = null;
+        state.satinMethodRequest = {
+          selection: ids.join("|"),
+          action: active?.id || null,
+          bulk: state.bulkOperations,
+        };
+        refresh();
+        $("satin-construction")?.focus();
+      } else {
+        state.satinMethodRequest = null;
+        changeMethod(e.target.value);
+      }
+    };
+  for (const id of [
+    "reinforcement",
+    "satin-construction",
+    "construction-method",
+  ])
+    if ($(id))
+      $(id).onchange = (e) => {
+        state.satinMethodRequest = null;
+        changeMethod(e.target.value);
+      };
+  if ($("cancel-satin-choice"))
+    $("cancel-satin-choice").onclick = () => {
+      state.satinMethodRequest = null;
+      refresh();
+    };
   if ($("cancel-method-change"))
     $("cancel-method-change").onclick = () => {
       state.methodRequest = null;
+      state.satinMethodRequest = null;
       refresh();
     };
   if ($("close-artwork"))
@@ -418,6 +460,7 @@ export function renderInspector(api) {
           active?.id === id && state.collapsedActionKey !== key ? key : null;
         state.activeOperationId = id === "base" ? null : id;
         state.methodRequest = null;
+        state.satinMethodRequest = null;
         state.satinGuideEdit = null;
         refresh();
         api.draw();
@@ -507,49 +550,92 @@ export function renderInspector(api) {
       );
     };
   }
-  const updateAdd = () => {
-    const type = $("add-operation").value,
-      eligible = vectors.filter(
-        (o) => supportsMethod(o, type) && operationsOf(o).length < 32,
-      ).length;
-    $("operation-add").disabled = !eligible;
-    $("operation-add").textContent = leaf
-      ? "Add action"
+  const additionType = () => {
+    const category = $("add-operation").value;
+    return category === "satin"
+      ? $("add-satin-construction").value
+      : category === "run"
+        ? $("add-reinforcement").value
+        : "fill";
+  };
+  const updateAddition = (type, buttonId, noteId) => {
+    const eligible = vectors.filter(
+      (o) => supportsMethod(o, type) && operationsOf(o).length < 32,
+    ).length;
+    $(buttonId).disabled = !eligible;
+    $(buttonId).textContent = leaf
+      ? buttonId === "construction-add"
+        ? "Add construction action"
+        : "Add action"
       : `Add to ${eligible} objects`;
-    $("add-action-guidance").textContent =
+    $(noteId).textContent =
       eligible === vectors.length
         ? `${leaf ? "Adds one action sharing this artwork's geometry." : `Adds one action to each of ${eligible} objects.`} Existing actions retain their colors, settings and order.`
         : `${eligible} of ${vectors.length} objects support this addition. Other objects need a closed region or have reached 32 actions. Close open artwork with its method selector first, or choose an open-path method.`;
   };
+  const updateAdd = () => {
+    const type = additionType(),
+      category = $("add-operation").value;
+    $("add-operation").dataset.help =
+      categoryHelp(category) +
+      " Adding creates one independent action; existing actions stay unchanged.";
+    $("add-reinforcement-field").hidden = category !== "run";
+    $("add-satin-field").hidden = category !== "satin";
+    $("add-satin-guidance").textContent =
+      METHOD_HELP[type] +
+      (openVectors.length ? " Border and Column need closed artwork." : "");
+    $("add-reinforcement").dataset.help = METHOD_HELP[type] || METHOD_HELP.run;
+    updateAddition(type, "operation-add", "add-action-guidance");
+  };
+  const updateConstructionAdd = () => {
+    const type = $("add-construction").value;
+    $("add-construction-purpose").textContent = METHOD_HELP[type];
+    updateAddition(type, "construction-add", "add-construction-guidance");
+  };
   if ($("add-operation")) {
-    $("add-operation").onchange = updateAdd;
+    for (const id of [
+      "add-operation",
+      "add-reinforcement",
+      "add-satin-construction",
+    ])
+      $(id).onchange = updateAdd;
+    $("add-construction").onchange = updateConstructionAdd;
+    // Hidden contextual selectors retain usable defaults when changing categories.
+    if (!$("add-reinforcement").value) $("add-reinforcement").value = "run";
+    if (!$("add-satin-construction").value)
+      $("add-satin-construction").value =
+        openVectors.length && !vectors.some(closedArtwork) ? "satin" : "border";
     updateAdd();
+    updateConstructionAdd();
   }
-  if ($("operation-add"))
-    $("operation-add").onclick = () => {
-      const type = $("add-operation").value;
-      let skipped = 0;
-      mutate(() =>
-        vectors.forEach((o) => {
-          if (!supportsMethod(o, type) || operationsOf(o).length >= 32) {
-            skipped++;
-            return;
-          }
-          const op = makeOperation(type, o);
-          if (o.constructionArtworkIds?.length)
-            op.constructionStage = type === "border" ? "finish" : "prepare";
-          materialize(o).push(op);
-          if (leaf) {
-            state.activeOperationId = op.id;
-            state.collapsedActionKey = null;
-          }
-        }),
+  const addAction = (type) => {
+    let skipped = 0;
+    mutate(() =>
+      vectors.forEach((o) => {
+        if (!supportsMethod(o, type) || operationsOf(o).length >= 32) {
+          skipped++;
+          return;
+        }
+        const op = makeOperation(type, o);
+        if (o.constructionArtworkIds?.length)
+          op.constructionStage = type === "border" ? "finish" : "prepare";
+        materialize(o).push(op);
+        if (leaf) {
+          state.activeOperationId = op.id;
+          state.collapsedActionKey = null;
+        }
+      }),
+    );
+    if (skipped)
+      toast(
+        `${skipped} regions skipped: closed artwork required or 32-operation limit reached.`,
       );
-      if (skipped)
-        toast(
-          `${skipped} regions skipped: closed artwork required or 32-operation limit reached.`,
-        );
-    };
+  };
+  if ($("operation-add"))
+    $("operation-add").onclick = () => addAction(additionType());
+  if ($("construction-add"))
+    $("construction-add").onclick = () =>
+      addAction($("add-construction").value);
   if ($("applique-recipe"))
     $("applique-recipe").onclick = () => chooseConstruction(api);
   if ($("construction-stage")) {

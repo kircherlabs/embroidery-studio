@@ -4,7 +4,7 @@ import { mkdir, readFile } from "node:fs/promises";
 import { object } from "../src/model.js";
 import { smartShape } from "../src/creative.js";
 import { makeOperation } from "../src/operations.js";
-import { reveal } from "./helpers/ui.mjs";
+import { reveal, chooseMethod } from "./helpers/ui.mjs";
 import {
   decodePes,
   declaredRect,
@@ -43,13 +43,11 @@ try {
       await ready();
     },
     openProject = async (p) => {
-      await page
-        .locator("#file-input")
-        .setInputFiles({
-          name: "actions.embstudio",
-          mimeType: "application/json",
-          buffer: Buffer.from(JSON.stringify(p)),
-        });
+      await page.locator("#file-input").setInputFiles({
+        name: "actions.embstudio",
+        mimeType: "application/json",
+        buffer: Buffer.from(JSON.stringify(p)),
+      });
       await page.locator("#dialog-submit").click();
       await page.waitForFunction(
         (name) =>
@@ -122,7 +120,7 @@ try {
   });
   // A second pass is deliberate, independent and follows the fill in actual commands.
   await page.locator(".add-action-picker > summary").click();
-  await page.locator("#add-operation").selectOption("border");
+  await chooseMethod(page, "border", { add: true });
   await page.locator("#operation-add").click();
   await ready();
   circle = (await project()).objects[0];
@@ -155,7 +153,7 @@ try {
   await action(fillId);
   await page.locator("#stitch-type").selectOption("run");
   await ready();
-  await page.locator("#stitch-type").selectOption("satin");
+  await chooseMethod(page, "satin");
   await ready();
   circle = (await project()).objects[0];
   assert.equal(circle.operations.length, 2);

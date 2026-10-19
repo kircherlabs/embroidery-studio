@@ -1,3 +1,4 @@
+import { chooseMethod } from "./helpers/ui.mjs";
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
 import { mkdir } from "node:fs/promises";
@@ -360,7 +361,7 @@ try {
       "Unavailable for tatami",
     ),
   );
-  await page.locator("#stitch-type").selectOption("column");
+  await chooseMethod(page, "column");
   await ready();
   await openDetails(page.locator("#corner-adaptive"));
   assert(!(await page.locator("#corner-adaptive").isDisabled()));

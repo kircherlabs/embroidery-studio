@@ -1,4 +1,4 @@
-import { reveal } from "./helpers/ui.mjs";
+import { reveal, chooseMethod } from "./helpers/ui.mjs";
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
 import { mkdir, writeFile } from "node:fs/promises";
@@ -200,7 +200,7 @@ try {
   assert.equal(text.textSource.content, "MTR\nOB");
   assert.equal(text.textSource.font, "sans-serif");
   assert.deepEqual(text.textSource.frame, frame);
-  await page.locator("#stitch-type").selectOption("column");
+  await chooseMethod(page, "column");
   await ready();
   await page.locator("#column-mode").selectOption("directional");
   await ready();

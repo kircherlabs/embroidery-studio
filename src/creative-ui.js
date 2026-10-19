@@ -389,7 +389,7 @@ export function creativeInspector(api, leaf, objects, targets) {
     if (valid(e.target)) applyCorner("minCornerStitch", Number(e.target.value));
   };
   const art = document.getElementById("artwork-settings"),
-    method = document.getElementById("method-settings"),
+    method = document.getElementById("action-method-fields"),
     advanced = method.querySelector(".advanced-settings");
   for (const detail of [...box.children]) {
     const label = detail.querySelector("summary")?.textContent || "";

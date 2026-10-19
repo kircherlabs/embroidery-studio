@@ -1,4 +1,18 @@
-# Professional workspace audit and implementation plan
+# Professional workspace roadmap and implementation audit
+
+## Current status — 0.11.0
+
+| Milestone | Status | Delivered / remaining |
+| --- | --- | --- |
+| 1 — Drawing and editing | Complete | Pencil, sculpting, cutting, joining and erasing. |
+| 2 — Manual satin | Complete | Independent rails, rungs, variable width, seams and paired splitting. |
+| 3A — Text along paths | Complete | Editable curved/circular lettering and baselines. |
+| Rest of 3 — Advanced artwork | Remaining | Additional nondestructive effects, style transfer/eyedropper, linear/radial/linked repetition. |
+
+Physical sew-outs of new satin and lettering remain necessary. See the release
+sections below for software validation and known limitations.
+
+## Initial audit
 
 Baseline: main `0608066`, version 0.8.0. Protected backup
 `backup-before-creative-update` exists and is not modified.
@@ -45,7 +59,8 @@ Pencil, segment sculpting in Node, symmetric handles, area/path Knife, area/line
 Eraser, endpoint joins, closure/reversal and compact Shapes are implemented.
 Controls remain docked above the canvas. See [the user and engineering guide](VECTOR_EDITING.md)
 for algorithms, conversion rules, precision and limits. New tests supplement the
-existing regression suites; milestones 2 and 3 remain deferred.
+existing regression suites. At the 0.9.0 release, milestones 2 and 3 were deferred;
+subsequent deliveries are described below.
 
 ## Milestone 2 delivered in 0.10.0
 
@@ -56,7 +71,8 @@ Creation reuses existing paths without destroying the originals. Node editing,
 transforms, history, projects, simulation and machine export share the same source.
 See [Manual satin rails](MANUAL_SATIN.md) for controls, reconstruction and limits.
 The baseline table above records the pre-milestone audit, not current availability.
-Milestone 3 remains deferred. Physical sew-outs remain required for the new satin.
+At 0.10.0, milestone 3 remained deferred; its first delivery follows below.
+Physical sew-outs remain required for the new satin.
 
 ## Milestone 3A delivered in 0.11.0
 

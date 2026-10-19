@@ -151,6 +151,138 @@
   height: 18px;
   margin: 4px;
 }
+/* One ordered action list; only the selected action exposes its settings. */
+#properties .sewing-action {
+  border: 1px solid #465547;
+  border-left: 4px solid var(--action-thread);
+  border-radius: 7px;
+  overflow: hidden;
+  background: #1c2922;
+}
+#properties .sewing-action.selected {
+  border-top-color: #9caa8e;
+  border-right-color: #9caa8e;
+  border-bottom-color: #9caa8e;
+}
+#properties .sewing-action .operation-row {
+  border: 0;
+  border-radius: 0;
+  margin: 0;
+  padding: 4px 2px;
+  min-height: 40px;
+  background: #2b3a2f;
+  gap: 1px;
+  outline: 0;
+}
+#properties .sewing-action.disabled .operation-row {
+  background: #26302a;
+}
+#properties .sewing-action.disabled [data-operation] {
+  color: #a5afa6;
+}
+#properties .sewing-action .operation-row button {
+  min-width: 24px;
+  min-height: 32px;
+  padding: 3px;
+}
+#properties .sewing-action [data-operation] {
+  font-size: 12px;
+  font-weight: 600;
+}
+#properties .sewing-action [data-operation]::after {
+  content: " ▾";
+  font-size: 10px;
+}
+#properties .sewing-action [data-operation][aria-expanded="false"]::after {
+  content: " ▸";
+}
+#properties .action-settings {
+  padding: 10px;
+}
+#properties .action-settings .section-label {
+  margin: 10px 0 8px;
+  padding-top: 8px;
+  font-size: 9px;
+}
+#properties .action-settings label.field {
+  gap: 5px;
+  margin-bottom: 10px;
+  font-size: 11px;
+}
+#properties .action-settings .two-col {
+  align-items: end;
+}
+#properties .action-settings input:not([type="checkbox"]),
+#properties .action-settings select {
+  min-height: 34px;
+}
+#properties .action-settings .swatch-palette {
+  margin-bottom: 8px;
+}
+#properties .action-settings > .advanced-settings {
+  margin: 14px 0 0;
+}
+#properties .action-settings > .advanced-settings > summary {
+  cursor: pointer;
+  font-size: 12px;
+}
+#properties .action-settings details:not([open]) > summary {
+  margin-bottom: 0;
+}
+#properties .action-settings .swatch-palette {
+  gap: 5px;
+}
+#properties .add-action-picker,
+#properties #object-sewing-options {
+  margin: 10px 0;
+  border: 1px solid #465547;
+  border-radius: 6px;
+  padding: 8px;
+}
+#properties .add-action-picker > summary,
+#properties #object-sewing-options > summary {
+  cursor: pointer;
+  font-size: 12px;
+  padding: 5px 0;
+}
+#properties .add-action-picker .operation-add {
+  display: grid;
+  grid-template-columns: 1fr;
+}
+#properties .operation-add label {
+  min-width: 0;
+}
+#properties .operation-add select {
+  width: 100%;
+  margin-top: 5px;
+}
+#properties .embroidery-presets {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+  margin: 12px 0;
+}
+#properties .embroidery-presets button {
+  flex: 1;
+  font-size: 11px;
+  padding: 8px 5px;
+}
+#properties .bulk-action-status {
+  font-size: 11px;
+  color: #c0d1a1;
+  line-height: 1.5;
+}
+#properties .method-closure {
+  padding: 10px;
+  border: 1px solid #a99b71;
+  border-radius: 6px;
+  line-height: 1.5;
+  font-size: 12px;
+}
+#properties .method-closure button {
+  width: 100%;
+  margin-top: 8px;
+}
 #properties input:disabled {
   cursor: not-allowed;
 }

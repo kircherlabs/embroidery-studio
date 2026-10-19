@@ -1,3 +1,4 @@
+import { reveal } from "./helpers/ui.mjs";
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
@@ -317,6 +318,7 @@ try {
   await page.locator("#undo").click();
   await ready();
   await pick(a);
+  await reveal(page.locator("#add-operation"));
   await page.locator("#add-operation").selectOption("bean");
   await page.locator("#operation-add").click();
   await ready();

@@ -1,3 +1,4 @@
+import { reveal } from "./helpers/ui.mjs";
 // npm install --no-save playwright@1.56.1 && npx playwright install chromium
 import { createRequire } from "node:module";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
@@ -103,6 +104,7 @@ try {
   assert.equal(imported.color, "#b74b59");
   // SVG import selects its parent; its original region remains independently editable.
   await page.locator(`[data-select="${imported.id}"]`).click();
+  await reveal(page.locator("#convert-manual"));
   await page.locator("#convert-manual").click();
   await page.waitForFunction(
     () =>

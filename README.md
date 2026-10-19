@@ -27,10 +27,19 @@ instead of showing the source artwork's original paint.
 
 ## Properties and construction
 
-The selection-aware inspector separates **Artwork**, **Embroidery method**,
-**Construction steps** and **Advanced digitizing**. Choose a simple stitching style
-or edit individual operations sharing one source geometry. Open paths expose
-compatible methods with explicit closure guidance.
+Properties now has one **Embroidery** section. Ordered sewing-action cards keep
+each action's method, independent thread color and stitch settings together.
+Expand a card to edit it; **Advanced** holds underlay, compensation, ties, contour
+controls, corner optimization and action naming. **Add another sewing action**
+creates an extra pass without duplicating artwork. Changing the method updates
+the existing action. **Sewing presets** offers outline/fill combinations without
+a second permanent method dropdown. Bulk scope is explicit for SVG groups and
+multiselections; it preserves individual action lists and colors.
+
+**Artwork** separately holds names, geometry, lettering and transformations.
+Choosing fill or border on an open path offers an explicit, reversible closure
+when the geometry forms a valid region; unsuitable lines explain the required
+node edits. Existing projects keep their operations and settings unchanged.
 
 **Construction presets** checks the fabric boundary before replacing any steps.
 For an illustration, create a surrounding rectangle, rounded rectangle, circle or
@@ -60,7 +69,7 @@ for controls, quality choices, project limits and validation.
 
 New Satin column steps follow individual letter strokes with variable-width rails,
 branch sections, curve-aware spacing, center underlay and local direction guides.
-Select **Embroidery method → Satin column construction** to inspect rails, edit
+Expand a Satin column action in **Embroidery → Satin column construction** to inspect rails, edit
 cross-stroke guides, or choose the legacy directional mode. Unsuitable regions
 report an explicit tatami or unsewn fallback. Text and fonts remain editable.
 See [satin construction, validation and limits](docs/SATIN.md), including the

@@ -142,9 +142,9 @@ try {
   // Active operation is explicit; independent colors and method parameters stay independent.
   await page.locator(`[data-operation="${finish}"]`).click();
   assert(
-    (await page.locator(".active-operation").innerText()).includes(
-      "Finishing border",
-    ),
+    (
+      await page.locator(".sewing-action.selected [data-operation]").innerText()
+    ).includes("Finishing border"),
   );
   await field("satin-width", 1.5);
   p = await project();
@@ -218,7 +218,12 @@ try {
       window.studio.getProject().objects[0].operations?.length === 5 &&
       window.studio.getPlan()?.stats.stops === 2,
   );
-  await page.locator("#embroidery-style").selectOption("combined");
+  await page.locator("#sewing-presets").click();
+  await page.locator("#sewing-preset").selectOption("combined");
+  await page.locator("#dialog-submit").click();
+  await page
+    .getByRole("heading", { name: "Replace sewing actions?", exact: true })
+    .waitFor();
   await page.locator("#dialog-submit").click();
   await page.waitForFunction(
     () =>
@@ -283,9 +288,9 @@ try {
     [bad.id],
   );
   assert(
-    (await page.locator(".active-operation").innerText()).includes(
-      "Satin border",
-    ),
+    (
+      await page.locator(".sewing-action.selected [data-operation]").innerText()
+    ).includes("Satin border"),
   );
   await page.locator(`[data-op-enabled="${bad.operations[0].id}"]`).uncheck();
   await ready();

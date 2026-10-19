@@ -58,7 +58,7 @@ export function operationTargets(o, state, single = false) {
   }
   return !single && state.bulkOperations === "all"
     ? ops.filter(isSewing)
-    : [ops.find(isSewing)].filter(Boolean);
+    : [ops.find(isSewing) || (single ? ops[0] : null)].filter(Boolean);
 }
 export function effectiveOperation(o, op) {
   return {

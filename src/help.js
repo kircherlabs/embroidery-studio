@@ -160,9 +160,13 @@ const descriptions = {
   "object-name":
     "Rename the selected source object, SVG or group without changing its geometry or stitching.",
   "bulk-scope":
-    "Choose whether bulk settings affect each region's primary operation or all its sewing operations. Other operation settings stay independent.",
+    "Choose the first sewing action of each selected object, or every sewing action. This changes settings on existing actions without replacing or flattening their lists.",
   "stitch-type":
-    "Change the active step's stitch method, preserving source geometry and independent colors. This changes an existing step; Add step creates an additional operation.",
+    "Change this sewing action's stitch method. Its identity, color and position in the sewing order stay independent. Add another sewing action creates an additional pass. Fill and border methods require a closed area.",
+  "sewing-presets":
+    "Configure outline, fill, or fill plus border as editable sewing actions. Replacing multiple existing actions requires confirmation; Undo restores them.",
+  "bulk-action-enabled":
+    "Enable or disable the sewing actions in the displayed bulk scope. Their settings are preserved; disabled actions generate no machine commands.",
   "thread-color":
     "Assign the selected thread color to applicable operations. Color changes affect batching and machine thread-change instructions.",
   spacing:
@@ -216,11 +220,11 @@ const descriptions = {
   "convert-manual":
     "Replace generated operations with editable machine commands. Vector-based regeneration is lost for this object until undone.",
   "add-operation":
-    "Choose an additional manufacturing step that shares the selected artwork geometry.",
+    "Choose a new sewing action sharing the existing artwork. A running outline, fill and satin border can each have independent colors and settings.",
   "operation-add":
-    "Append the chosen operation to each selected vector object's stack. Existing steps keep their order.",
+    "Add the chosen sewing action after the existing actions. For a group or multiselection, the displayed count states which objects are compatible.",
   "operation-name":
-    "Name this embroidery step independently of its source artwork.",
+    "Rename this sewing action without renaming the artwork or changing its stitch method.",
   "applique-recipe":
     "Check fabric-piece suitability, then choose direct construction or a surrounding editable patch. Complex artwork stays decorative; stacks are replaced only after an explicit choice.",
   "manual-index":
@@ -265,16 +269,16 @@ function description(el) {
   if (el.matches("[data-object-step]"))
     return "Inspect this object's first sewing command. Use its grip to reorder the complete object; internal operation steps stay together.";
   if (el.matches("[data-op-enabled]"))
-    return "Enable or disable this embroidery step. Disabled steps stay editable but generate no machine commands.";
+    return "Enable or disable this sewing action. Disabled actions retain their settings and generate no machine commands.";
   if (el.matches("[data-operation]"))
-    return "Select this operation to edit its independent stitch settings. All operations share their object's source geometry.";
+    return "Expand this sewing action to edit its method, thread and stitch settings directly below. All actions share the artwork geometry. Click again to collapse.";
   if (el.matches("[data-op-action]"))
     return {
-      up: "Move this step earlier within its object's operation stack. Check construction order, such as placement before tackdown.",
-      down: "Move this step later within its object's operation stack. Check construction order before export.",
-      copy: "Duplicate this operation and its settings on the same source artwork.",
+      up: "Sew this action earlier on the same artwork. Linked patch preparation stays before decorative artwork and finishing stays after it.",
+      down: "Sew this action later on the same artwork. Review placement and tackdown order for fabric construction.",
+      copy: "Add a copy of this sewing action with independent settings on the same artwork.",
       delete:
-        "Remove this operation without deleting the source artwork. Undo restores it.",
+        "Remove this sewing action without deleting the artwork. Undo restores it.",
     }[el.dataset.opAction];
   if (el.matches("[data-color]"))
     return "Apply this thread color to selected objects or operations. Compatible colors can be batched in automatic sewing order.";

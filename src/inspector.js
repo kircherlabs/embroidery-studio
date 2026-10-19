@@ -1,11 +1,7 @@
 import { referenceInspector } from "./reference-ui.js";
-import { curveRings } from "./smart-geometry.js";
-import {
-  EMBROIDERY_STYLES,
-  embroideryStyle,
-  editOperations,
-} from "./styles.js";
-import { chooseConstruction, applyStyle } from "./construction-ui.js";
+import { actionCards, closingRings, moveAction } from "./sewing-actions.js";
+import { editOperations } from "./styles.js";
+import { chooseConstruction, chooseSewingPreset } from "./construction-ui.js";
 import { creativeInspector } from "./creative-ui.js";
 import {
   nodeById,
@@ -101,6 +97,15 @@ export function renderInspector(api) {
         o.type,
       ),
     );
+  const request = state.methodRequest,
+    pendingMethod =
+      request?.selection === ids.join("|") &&
+      request?.action === (active?.id || null) &&
+      request?.bulk === state.bulkOperations
+        ? request.type
+        : null,
+    openVectors = vectors.filter((o) => !closedArtwork(o)),
+    canClose = !pendingMethod || openVectors.every((o) => closingRings(o));
   const b = selectionBounds(objects),
     name = ids[0] === PROJECT ? p.name : one?.name;
   const field = (
@@ -131,90 +136,67 @@ export function renderInspector(api) {
       !objects.length
         ? `<p class="property-note">${all.length ? "Unlock artwork in the tree to edit it." : "This selection contains no drawable geometry."}</p>`
         : `
-    <section class="inspector-section" id="method-settings"><h3>Embroidery method</h3>
-    ${
-      vectors.length
-        ? `<label class="field">Artwork stitching style<select id="embroidery-style"><option value="custom">Custom / construction steps</option>${Object.entries(
-            EMBROIDERY_STYLES,
-          )
-            .map(
-              ([key, label]) =>
-                `<option value="${key}" ${vectors.every((o) => embroideryStyle(o) === key) ? "selected" : ""} ${vectors.every((o) => supportsMethod(o, key === "combined" ? "fill" : key)) ? "" : "disabled"}>${label}</option>`,
-            )
-            .join(
-              "",
-            )}</select></label><p class="property-note">A style configures this artwork's steps. Method settings below edit ${leaf ? "only the active step" : "the scope chosen below"}. Advanced stacks stay available in Construction steps.</p>${vectors.some((o) => !closedArtwork(o)) ? '<p class="property-note">Open paths support running and centerline stitches. Fills and fabric borders need a closed region.</p><button id="close-artwork">Close artwork paths</button>' : ""}`
-        : ""
-    }
-    ${(vectors.length && ids.length > 1) || one?.kind || ids[0] === PROJECT ? '<label class="field">Apply embroidery settings to<select id="bulk-scope"><option value="primary">Primary operation of each region</option><option value="all">All sewing operations</option></select></label>' : ""}
-    <p class="active-operation" role="status">${leaf && active ? `Editing step: <strong>${escape(active.name)}</strong>${active.enabled === false ? " · disabled; enable it to generate stitches" : ""}` : `${targets.length} operation${targets.length === 1 ? "" : "s"} in scope · incompatible settings are reported after edits`}</p>
+    <section id="method-settings" class="action-settings">
     ${
       targets.length
-        ? `<label class="field">${active && !isSewing(active) ? "Step command" : "Active step · stitch method"}<select id="stitch-type">${mixed("type") ? '<option value="" selected disabled>Mixed</option>' : ""}${Object.entries(
+        ? `<label class="field">Stitch method<select id="stitch-type">${mixed("type") ? '<option value="" selected disabled>Mixed</option>' : ""}${Object.entries(
             OPERATION_TYPES,
           )
             .map(
               ([k, v]) =>
-                `<option value="${k}" ${vectors.every((o) => supportsMethod(o, k)) ? "" : "disabled"} ${common("type") === k ? "selected" : ""}>${v}</option>`,
+                `<option value="${k}" ${common("type") === k ? "selected" : ""}>${v}</option>`,
             )
             .join("")}</select></label>`
         : ""
     }
-    ${active && !isSewing(active) ? `<p class="property-note">${active.type === "stop" ? "Pauses for operator action at this point. Name the step for positioning or trimming fabric." : "Requests a thread trim in the machine file. This does not pause to trim fabric; machine and file-format support varies."}</p>` : ""}
+    ${pendingMethod ? `<div class="method-closure" role="status"><p>${escape(OPERATION_TYPES[pendingMethod])} needs a closed area. ${openVectors.length} selected path${openVectors.length === 1 ? " is" : "s are"} open.${!canClose ? " Add or adjust nodes to form a nonempty region first. Running stitch and Satin Centerline can sew open paths." : " Closing adds a segment between the last and first points; Undo restores the open path."}</p><button id="close-artwork" ${canClose ? "" : "disabled"}>Close paths &amp; use ${escape(OPERATION_TYPES[pendingMethod])}</button><button id="cancel-method-change">Keep path open</button></div>` : openVectors.length ? '<p class="property-note">Fill and border methods need closed artwork. Choose one to review closing this path.</p>' : ""}
+    ${active && !isSewing(active) ? `<p class="property-note">${active.type === "stop" ? "Pauses for operator action here. Rename the action to explain positioning or trimming fabric." : "Requests a thread trim in the machine file. This does not pause to trim fabric; machine and format support varies."}</p>` : ""}
     <div class="section-label">THREAD COLOR ${mixed("color") ? "<span>MIXED</span>" : ""}</div><input id="thread-color" type="color" aria-label="Thread color" value="${common("color") || "#000000"}"><div class="swatch-palette">${palette.map((c) => `<button data-color="${c}" style="background:${c}" aria-label="Use thread ${c}"></button>`).join("")}</div>
-    ${
-      targets.some(isSewing)
-        ? `<div class="section-label">STITCH SETTINGS${active ? " · SELECTED OPERATION" : ""}</div><div class="two-col">${hasFill || hasSatin ? field("Row spacing", "spacing", "spacing", "mm", 0.15, 5) : ""}${control.some((o) => propertyApplies(o.type, "length")) ? field(hasFill ? "Maximum segment length" : "Running stitch length", "length", "length", "mm", 0.3, 7) : ""}</div>${hasDirectional ? field("Stitch direction", "angle", "angle", "°", -360, 360, 1) : ""}${hasDirectional ? `<label class="field">Fill pattern<select id="fill-pattern">${mixed("pattern") ? '<option value="" disabled selected>Mixed</option>' : ""}<option value="quarter">Quarter stagger</option><option value="half">Half stagger</option><option value="aligned">Aligned penetrations</option></select></label>` : ""}<div class="two-col">${hasSatin ? field("Satin band width", "satin-width", "width", "mm", 0.3, 7) : ""}${hasFill || hasSatin ? field("Pull compensation", "compensation", "compensation", "mm", 0, 1) : ""}</div>
-    ${control.some((o) => propertyApplies(o.type, "underlay")) ? check(hasFill || hasSatin ? "Light underlay" : "Preliminary outline pass", "underlay", "underlay") : ""}${control.some((o) => propertyApplies(o.type, "closed")) ? check("Sew closing segment", "closed-path", "closed") : ""}${hasPath ? check("Reverse sewing direction", "reverse-path", "reverse") : ""}
-    <details class="advanced-settings" data-section="advanced"><summary>Advanced digitizing</summary>${hasOutline ? field("Contour offset", "op-offset", "offset", "mm", -5, 5) + check("Outer boundary only", "outer-only", "outerOnly") : ""}${hasPath && control.some((o) => o.closed || ["placement", "tackdown", "basting", "contour", "border"].includes(o.type)) ? field("Start at vertex index", "start-index", "startIndex", "", 0, 500000, 1) : ""}${check("Tie-in · secure thread at start", "tie-in", "tieIn")}${check("Tie-off · secure thread at end", "tie-off", "tieOff")}<p class="property-note">Offsets apply to closed outline operations. Start vertex and reversal affect contour paths; fill direction controls tatami. Satin width and spacing stay in millimeters when artwork is resized.</p></details>`
-        : ""
-    }
+    ${targets.some(isSewing) ? `<div class="section-label">STITCH SETTINGS</div><div class="two-col">${hasFill || hasSatin ? field("Row spacing", "spacing", "spacing", "mm", 0.15, 5) : ""}${control.some((o) => propertyApplies(o.type, "length")) ? field(hasFill ? "Maximum segment length" : "Running stitch length", "length", "length", "mm", 0.3, 7) : ""}</div>${hasDirectional ? field("Stitch direction", "angle", "angle", "°", -360, 360, 1) : ""}${hasDirectional ? `<label class="field">Fill pattern<select id="fill-pattern">${mixed("pattern") ? '<option value="" disabled selected>Mixed</option>' : ""}<option value="quarter">Quarter stagger</option><option value="half">Half stagger</option><option value="aligned">Aligned penetrations</option></select></label>` : ""}${hasSatin ? field("Satin band width", "satin-width", "width", "mm", 0.3, 7) : ""}` : ""}
+    ${targets.length ? `<details class="advanced-settings" data-section="advanced"><summary>Advanced</summary>${hasFill || hasSatin ? field("Pull compensation", "compensation", "compensation", "mm", 0, 1) : ""}${control.some((o) => propertyApplies(o.type, "underlay")) ? check(hasFill || hasSatin ? "Light underlay" : "Preliminary outline pass", "underlay", "underlay") : ""}${control.some((o) => propertyApplies(o.type, "closed")) ? check("Sew closing segment", "closed-path", "closed") : ""}${hasPath ? check("Reverse sewing direction", "reverse-path", "reverse") : ""}${hasOutline ? field("Contour offset", "op-offset", "offset", "mm", -5, 5) + check("Outer boundary only", "outer-only", "outerOnly") : ""}${hasPath && control.some((o) => o.closed || ["placement", "tackdown", "basting", "contour", "border"].includes(o.type)) ? field("Start at vertex index", "start-index", "startIndex", "", 0, 500000, 1) : ""}${targets.some(isSewing) ? check("Tie-in · secure thread at start", "tie-in", "tieIn") + check("Tie-off · secure thread at end", "tie-off", "tieOff") : ""}${leaf && active ? `<label class="field">Sewing action name<input id="operation-name" maxlength="100" value="${escape(active.name)}"></label>` : ""}${leaf?.constructionArtworkIds?.length && active ? `<label class="field">This action sews<select id="construction-stage"><option value="prepare">Before decorative artwork</option><option value="finish">After decorative artwork</option></select></label>` : ""}</details>` : ""}
     </section><details id="transform-settings" data-section="transform" open><summary>Position, size & rotation</summary><div class="section-label">POSITION & SIZE · SELECTION</div><div class="two-col">${field("Center X", "pos-x", null, "mm", -1000, 1000, 0.1, (b.minX + b.maxX) / 2)}${field("Center Y", "pos-y", null, "mm", -1000, 1000, 0.1, (b.minY + b.maxY) / 2)}${field("Width", "size-w", null, "mm", 0.1, 500, 0.1, b.width)}${field("Height", "size-h", null, "mm", 0.1, 500, 0.1, b.height)}</div><label class="check"><input id="proportional" type="checkbox" ${state.proportional !== false ? "checked" : ""}>Keep proportions · Shift while dragging to toggle</label>${field("Rotate selection by", "rotate", null, "°", -360, 360, 1, 0)}
-    </details>${check("Pin source sequence position", "sequence-locked", "sequenceLocked")}
-    ${leaf?.type === "manual" ? manualEditor(leaf) : leaf ? `<button id="convert-manual" ${leaf.constructionArtworkIds?.length ? 'disabled aria-describedby="construction-manual-note"' : ""}>Make stitches editable</button>${leaf.constructionArtworkIds?.length ? '<p class="property-note" id="construction-manual-note">A linked patch boundary needs its operation phases to surround the artwork. Duplicate the boundary alone before converting it to one manual stitch block.</p>' : ""}` : ""}
+    </details><details id="object-sewing-options" data-section="object-sewing"><summary>Object sewing options</summary>${check("Keep sewing order position", "sequence-locked", "sequenceLocked")}
+    ${leaf?.type === "manual" ? `<div id="manual-action-editor">${manualEditor(leaf)}</div>` : leaf ? `<button id="convert-manual" ${leaf.constructionArtworkIds?.length ? 'disabled aria-describedby="construction-manual-note"' : ""}>Make stitches editable</button>${leaf.constructionArtworkIds?.length ? '<p class="property-note" id="construction-manual-note">A linked patch boundary needs its sewing phases to surround the artwork. Duplicate the boundary alone before converting it to manual stitches.</p>' : ""}` : ""}</details>
+    <section class="inspector-section" id="embroidery-settings"><h3>Embroidery</h3>
+    ${leaf && vectors.length ? `<div class="operation-stack">${actionCards(leaf, active, state.collapsedActionKey)}</div>` : vectors.length ? `<p class="property-note">Editing ${vectors.length} artwork objects together. Select an individual object to manage its ordered sewing actions.</p><label class="field">Apply changes to<select id="bulk-scope"><option value="primary">First sewing action of each object</option><option value="all">All sewing actions of each object</option></select></label><p class="bulk-action-status">${targets.length} actions in scope · colors, order and other actions remain independent.</p>${targets.length ? '<label class="check"><input type="checkbox" id="bulk-action-enabled">Include these actions when sewing</label>' : ""}` : '<p class="property-note">Manual needle commands · edit stitches directly.</p>'}
+    <div id="embroidery-tools">
     ${
       vectors.length
-        ? `<details class="operations-panel inspector-section" data-section="construction" open><summary>Construction steps</summary><p class="property-note">${leaf ? "One artwork, shared geometry. Select a step to edit its method and independent settings above. Steps sew in listed order." : "Adds one step per selected vector region; settings scope above does not change this action. Existing steps retain their order."}</p>
-    ${
-      leaf
-        ? `<div class="operation-stack">${operationsOf(leaf)
+        ? `<details class="add-action-picker"><summary>+ ${leaf ? (operationsOf(leaf).length ? "Add another sewing action" : "Add a sewing action") : "Add a sewing action to each object"}</summary><div class="operation-add"><label>New action method<select id="add-operation" aria-label="Sewing action to add">${Object.entries(
+            OPERATION_TYPES,
+          )
             .map(
-              (op, i) =>
-                `<div class="operation-row ${active?.id === op.id ? "active" : ""}"><input type="checkbox" data-op-enabled="${escape(op.id)}" aria-label="Enable ${escape(op.name)}" ${op.enabled !== false ? "checked" : ""}><button data-operation="${escape(op.id)}">${i + 1}. ${escape(op.name)}${leaf.constructionArtworkIds?.length ? `<small>${(op.constructionStage || (op.type === "border" ? "finish" : "prepare")) === "finish" ? "After artwork" : "Before artwork"}</small>` : ""}</button>${leaf.operations ? `<button data-op-action="up" ${i === 0 ? "disabled" : ""} data-op-id="${escape(op.id)}" aria-label="Move ${escape(op.name)} earlier">↑</button><button data-op-action="down" ${i === leaf.operations.length - 1 ? "disabled" : ""} data-op-id="${escape(op.id)}" aria-label="Move ${escape(op.name)} later">↓</button><button data-op-action="copy" ${leaf.operations.length >= 32 ? "disabled" : ""} data-op-id="${escape(op.id)}" aria-label="Duplicate ${escape(op.name)}">⧉</button><button data-op-action="delete" data-op-id="${escape(op.id)}" aria-label="Delete ${escape(op.name)}">×</button>` : ""}</div>`,
+              ([k, v]) =>
+                `<option value="${k}" ${k === "border" ? "selected" : ""}>${v}</option>`,
             )
             .join(
               "",
-            )}</div>${active ? `<label class="field">Operation name<input id="operation-name" maxlength="100" value="${escape(active.name)}"></label>` : ""}`
+            )}</select></label><button id="operation-add">Add action</button></div><p class="property-note" id="add-action-guidance"></p></details><div class="embroidery-presets"><button id="sewing-presets">Sewing presets…</button><button id="applique-recipe">Construction presets…</button></div>${leaf?.constructionArtworkIds?.length ? `<p class="property-note construction-link">Linked patch: preparation → ${leaf.constructionArtworkIds.length} artwork objects → finishing. These dependencies take priority over color batching.</p>` : ""}`
         : ""
     }
-    <div class="operation-add"><select id="add-operation" aria-label="Operation to add">${Object.entries(
-      OPERATION_TYPES,
-    )
-      .map(([k, v]) => `<option value="${k}">${v}</option>`)
-      .join(
-        "",
-      )}</select><button id="operation-add">Add step</button></div><button id="applique-recipe">Construction presets…</button><p class="property-note">Choose a fabric boundary or surround decorative artwork with one editable patch. Geometry is checked before replacing any steps.</p>${leaf?.constructionArtworkIds?.length ? `<p class="property-note construction-link">Linked patch: preparation → ${leaf.constructionArtworkIds.length} decorative artwork objects → finishing. These dependencies take priority over manual color batching.</p>${active ? `<label class="field">This step sews<select id="construction-stage"><option value="prepare">Before decorative artwork</option><option value="finish">After decorative artwork</option></select></label>` : ""}` : ""}</details>`
-        : ""
-    }
+    </div></section>
     `
     }`;
   const transformPanel = $("transform-settings");
   if (transformPanel) $("artwork-settings").append(transformPanel);
-  if ($("embroidery-style"))
-    $("embroidery-style").onchange = (e) => {
-      if (e.target.value !== "custom") applyStyle(api, vectors, e.target.value);
-    };
-  if ($("close-artwork"))
-    $("close-artwork").onclick = () =>
-      mutate(() =>
-        vectors.forEach((o) => {
-          o.closed = true;
-          if (o.curve) {
-            o.curve.closed = true;
-            o.rings = curveRings(o.curve);
-          }
-        }),
-      );
+  const methodPanel = $("method-settings"),
+    embroidery = $("embroidery-settings");
+  if (embroidery) {
+    const body =
+      leaf && vectors.length && active ? $("action-body-" + active.id) : null;
+    if (body) body.append(methodPanel);
+    else embroidery.insertBefore(methodPanel, $("embroidery-tools"));
+    $("embroidery-tools").append($("object-sewing-options"));
+    $("properties").insertBefore(
+      embroidery,
+      $("artwork-settings").parentElement,
+    );
+    if (vectors.length && !targets.length) methodPanel.hidden = true;
+    if ($("manual-action-editor"))
+      methodPanel.append($("manual-action-editor"));
+  }
+  if ($("sewing-presets"))
+    $("sewing-presets").onclick = () => chooseSewingPreset(api, vectors);
   if ($("object-name"))
     $("object-name").onchange = (e) =>
       mutate(() => {
@@ -233,6 +215,7 @@ export function renderInspector(api) {
     $("bulk-scope").value = state.bulkOperations || "primary";
     $("bulk-scope").onchange = (e) => {
       state.bulkOperations = e.target.value;
+      state.methodRequest = null;
       refresh();
     };
   }
@@ -246,8 +229,63 @@ export function renderInspector(api) {
         `${result.changed} operation${result.changed === 1 ? "" : "s"} updated; ${result.skipped} incompatible targets unchanged. Choose a compatible method or change the editing scope.`,
       );
   };
+  const changeMethod = async (type, close = false) => {
+    if (vectors.some((o) => !supportsMethod(o, type)) && !close) {
+      state.methodRequest = {
+        type,
+        selection: ids.join("|"),
+        action: active?.id || null,
+        bulk: state.bulkOperations,
+      };
+      refresh();
+      return;
+    }
+    if (
+      !leaf &&
+      state.bulkOperations === "all" &&
+      targets.length > vectors.length &&
+      !(await api.ask(
+        "Change all sewing actions?",
+        `<p>This changes the stitch method of ${targets.length} sewing actions across ${vectors.length} objects. Action order and colors stay independent; existing techniques, including placement and finishing, will change. Undo restores them.</p>`,
+        "Change methods",
+      ))
+    ) {
+      refresh();
+      return;
+    }
+    state.methodRequest = null;
+    let result;
+    const changed = mutate(() => {
+      if (close)
+        for (const o of openVectors) {
+          const rings = closingRings(o);
+          if (!rings)
+            throw Error(
+              `${o.name}: add or adjust nodes to form a closed area first.`,
+            );
+          o.closed = true;
+          if (o.curve) {
+            o.curve.closed = true;
+            o.rings = rings;
+          }
+        }
+      result = editOperations(objects, state, !!leaf, "type", type);
+    });
+    if (changed && result?.skipped)
+      toast(
+        `${result.changed} sewing actions updated; ${result.skipped} incompatible targets unchanged. Reference images and manual stitch objects keep their own editing controls.`,
+      );
+  };
   if ($("stitch-type"))
-    $("stitch-type").onchange = (e) => apply("type", e.target.value);
+    $("stitch-type").onchange = (e) => changeMethod(e.target.value);
+  if ($("cancel-method-change"))
+    $("cancel-method-change").onclick = () => {
+      state.methodRequest = null;
+      refresh();
+    };
+  if ($("close-artwork"))
+    $("close-artwork").onclick = () => changeMethod(pendingMethod, true);
+
   if ($("fill-pattern")) {
     $("fill-pattern").value = common("pattern") || "";
     $("fill-pattern").onchange = (e) => apply("pattern", e.target.value);
@@ -374,10 +412,18 @@ export function renderInspector(api) {
   document.querySelectorAll("[data-operation]").forEach(
     (el) =>
       (el.onclick = () => {
-        state.activeOperationId =
-          el.dataset.operation === "base" ? null : el.dataset.operation;
+        const id = el.dataset.operation,
+          key = `${leaf.id}:${id}`;
+        state.collapsedActionKey =
+          active?.id === id && state.collapsedActionKey !== key ? key : null;
+        state.activeOperationId = id === "base" ? null : id;
+        state.methodRequest = null;
+        state.satinGuideEdit = null;
         refresh();
         api.draw();
+        document
+          .getElementById("action-heading-" + id)
+          ?.focus({ preventScroll: true });
       }),
   );
   document.querySelectorAll("[data-op-enabled]").forEach(
@@ -391,6 +437,8 @@ export function renderInspector(api) {
                 ? ops[0]
                 : ops.find((op) => op.id === el.dataset.opEnabled);
           op.enabled = value;
+          state.activeOperationId = op.id;
+          state.collapsedActionKey = null;
         });
       }),
   );
@@ -411,15 +459,19 @@ export function renderInspector(api) {
     (el) =>
       (el.onclick = () =>
         mutate(() => {
-          const ops = leaf.operations,
-            i = ops.findIndex((op) => op.id === el.dataset.opId),
+          state.collapsedActionKey = null;
+          const ops = materialize(leaf),
+            i =
+              el.dataset.opId === "base"
+                ? 0
+                : ops.findIndex((op) => op.id === el.dataset.opId),
             action = el.dataset.opAction;
           if (action === "delete") {
             ops.splice(i, 1);
             state.activeOperationId = null;
           } else if (action === "copy") {
             if (ops.length >= 32) {
-              toast("Each artwork object supports up to 32 steps.");
+              toast("Each artwork object supports up to 32 sewing actions.");
               return;
             }
             const op = makeOperation(ops[i].type, leaf);
@@ -430,11 +482,49 @@ export function renderInspector(api) {
             ops.splice(i + 1, 0, op);
             state.activeOperationId = op.id;
           } else {
-            const j = i + (action === "up" ? -1 : 1);
-            if (j >= 0 && j < ops.length) [ops[i], ops[j]] = [ops[j], ops[i]];
+            moveAction(leaf, ops[i].id, action === "up" ? -1 : 1);
           }
         })),
   );
+  if ($("bulk-action-enabled")) {
+    const input = $("bulk-action-enabled");
+    input.checked = targets.every((op) => op.enabled !== false);
+    input.indeterminate =
+      targets.some((op) => op.enabled === false) &&
+      targets.some((op) => op.enabled !== false);
+    input.onchange = () => {
+      const enabled = input.checked;
+      mutate(() =>
+        vectors.forEach((o) => {
+          const selected = operationTargets(o, state, false),
+            ops = materialize(o);
+          for (const old of selected)
+            (old.id === "base"
+              ? ops[0]
+              : ops.find((op) => op.id === old.id)
+            ).enabled = enabled;
+        }),
+      );
+    };
+  }
+  const updateAdd = () => {
+    const type = $("add-operation").value,
+      eligible = vectors.filter(
+        (o) => supportsMethod(o, type) && operationsOf(o).length < 32,
+      ).length;
+    $("operation-add").disabled = !eligible;
+    $("operation-add").textContent = leaf
+      ? "Add action"
+      : `Add to ${eligible} objects`;
+    $("add-action-guidance").textContent =
+      eligible === vectors.length
+        ? `${leaf ? "Adds one action sharing this artwork's geometry." : `Adds one action to each of ${eligible} objects.`} Existing actions retain their colors, settings and order.`
+        : `${eligible} of ${vectors.length} objects support this addition. Other objects need a closed region or have reached 32 actions. Close open artwork with its method selector first, or choose an open-path method.`;
+  };
+  if ($("add-operation")) {
+    $("add-operation").onchange = updateAdd;
+    updateAdd();
+  }
   if ($("operation-add"))
     $("operation-add").onclick = () => {
       const type = $("add-operation").value;
@@ -449,7 +539,10 @@ export function renderInspector(api) {
           if (o.constructionArtworkIds?.length)
             op.constructionStage = type === "border" ? "finish" : "prepare";
           materialize(o).push(op);
-          if (leaf) state.activeOperationId = op.id;
+          if (leaf) {
+            state.activeOperationId = op.id;
+            state.collapsedActionKey = null;
+          }
         }),
       );
       if (skipped)

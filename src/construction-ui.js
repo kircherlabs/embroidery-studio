@@ -1,4 +1,4 @@
-import { operationObject } from "./operations.js";
+import { operationObject, supportsMethod } from "./operations.js";
 import {
   preflightConstruction,
   patchBoundary,
@@ -8,7 +8,7 @@ import {
 import { selectedLeaves, selectionIds, selectionBounds } from "./hierarchy.js";
 import { MACHINES } from "./model.js";
 import { inside } from "./geometry.js";
-import { setEmbroideryStyle } from "./styles.js";
+import { setEmbroideryStyle, EMBROIDERY_STYLES } from "./styles.js";
 const esc = (s) =>
   String(s).replace(
     /[&<>"']/g,
@@ -191,9 +191,9 @@ export async function applyStyle(api, objects, style) {
   if (
     replacing &&
     !(await api.ask(
-      "Replace construction steps?",
-      "<p>This style replaces each selected object's operation stack. Independent colors, stops and construction steps will be replaced. Source geometry stays editable. Undo restores the complete previous stacks.</p>",
-      "Replace with style",
+      "Replace sewing actions?",
+      "<p>This preset replaces each selected object's sewing actions, including their independent colors and any construction stops. Artwork stays editable. Undo restores all previous actions.</p>",
+      "Replace actions",
     ))
   )
     return;
@@ -205,4 +205,21 @@ export async function applyStyle(api, objects, style) {
   } catch (e) {
     api.toast(e.message);
   }
+}
+export async function chooseSewingPreset(api, objects) {
+  const ok = await api.ask(
+    "Sewing presets",
+    `<p>Configure ordinary stitching on ${objects.length} selected artwork object${objects.length === 1 ? "" : "s"}. Existing sewing actions will be replaced; Undo restores them.</p><label>Preset<select id="sewing-preset">${Object.entries(
+      EMBROIDERY_STYLES,
+    )
+      .map(
+        ([key, label]) =>
+          `<option value="${key}" ${objects.every((o) => supportsMethod(o, ["combined", "fill-border"].includes(key) ? "fill" : key)) ? "" : "disabled"}>${label}</option>`,
+      )
+      .join(
+        "",
+      )}</select></label><p>For fabric placement, tackdown and operator stops, use Construction presets instead.</p>`,
+    "Use preset",
+  );
+  if (ok) return applyStyle(api, objects, $("sewing-preset").value);
 }

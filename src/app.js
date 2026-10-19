@@ -277,6 +277,8 @@ function select(id, options = {}) {
   state.selectionIds = roots(state.project, ids);
   state.selection = state.selectionIds[0] || null;
   state.activeOperationId = null;
+  state.collapsedActionKey = null;
+  state.methodRequest = null;
   stage.node = null;
   state.manualIndex = 0;
   renderPanels();
@@ -747,6 +749,7 @@ function renderStats() {
           state.selectionIds = [issue.objectId];
           state.activeOperationId =
             issue.operationId === "base" ? null : issue.operationId;
+          state.collapsedActionKey = null;
           setMode("design");
           renderPanels();
           stage.render();
@@ -895,6 +898,7 @@ function scrub(n) {
     state.activeOperationId !== e.operationId
   ) {
     state.activeOperationId = e.operationId;
+    state.collapsedActionKey = null;
     renderProperties();
   }
   renderPlayback();

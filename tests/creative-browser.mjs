@@ -1,3 +1,4 @@
+import { reveal } from "./helpers/ui.mjs";
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
 import { mkdir, writeFile } from "node:fs/promises";
@@ -204,6 +205,7 @@ try {
   await page.locator("#column-mode").selectOption("directional");
   await ready();
   await fill("angle", 85);
+  await reveal(page.locator("#underlay"));
   await page.locator("#underlay").uncheck();
   await ready();
   assert(

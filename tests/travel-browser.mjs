@@ -1,3 +1,4 @@
+import { reveal } from "./helpers/ui.mjs";
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
@@ -116,6 +117,7 @@ try {
   );
   await page.screenshot({ path: "test-results/travel-outline-commands.png" });
   await page.locator(".object-select").first().click();
+  await reveal(page.locator("#sequence-locked"));
   await page.locator("#sequence-locked").check();
   await page.waitForFunction(
     () =>

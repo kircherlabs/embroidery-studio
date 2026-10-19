@@ -14,11 +14,17 @@ export const EMBROIDERY_STYLES = {
   border: "Outline · satin border",
   fill: "Filled · tatami",
   combined: "Fill + running outline",
+  "fill-border": "Fill + satin border",
 };
 
 export function setEmbroideryStyle(o, style) {
   if (!(style in EMBROIDERY_STYLES)) throw Error("Choose an embroidery style.");
-  if (!supportsMethod(o, style === "combined" ? "fill" : style))
+  if (
+    !supportsMethod(
+      o,
+      ["combined", "fill-border"].includes(style) ? "fill" : style,
+    )
+  )
     throw Error(
       `${o.name}: this style needs a closed region. Close the artwork path first, or use a running outline.`,
     );
@@ -28,9 +34,13 @@ export function setEmbroideryStyle(o, style) {
     type: o.type,
     closed: closedArtwork(o),
   };
-  o.operations = (style === "combined" ? ["fill", "run"] : [style]).map(
-    (type) => makeOperation(type, source),
-  );
+  o.operations = (
+    style === "combined"
+      ? ["fill", "run"]
+      : style === "fill-border"
+        ? ["fill", "border"]
+        : [style]
+  ).map((type) => makeOperation(type, source));
   if (style === "combined") o.operations[1].underlay = false;
 }
 
@@ -38,6 +48,8 @@ export function embroideryStyle(o) {
   const ops = o.operations || [{ type: o.type }];
   if (ops.length === 2 && ops[0].type === "fill" && ops[1].type === "run")
     return "combined";
+  if (ops.length === 2 && ops[0].type === "fill" && ops[1].type === "border")
+    return "fill-border";
   return ops.length === 1 && ops[0].type in EMBROIDERY_STYLES
     ? ops[0].type
     : "custom";
@@ -83,6 +95,9 @@ export function editOperations(objects, state, single, key, value) {
         // Set method defaults without changing source geometry or unrelated thread colors.
         const fresh = makeOperation(value, o);
         const previous = { ...op };
+        if (o.constructionArtworkIds?.length && !previous.constructionStage)
+          previous.constructionStage =
+            previous.type === "border" ? "finish" : "prepare";
         Object.assign(op, fresh, previous, {
           type: value,
           id: previous.id,

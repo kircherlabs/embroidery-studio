@@ -396,9 +396,10 @@ export function creativeInspector(api, leaf, objects, targets) {
     detail.dataset.section ||= label;
     if (label === "Satin column construction")
       method.insertBefore(detail, advanced);
-    else if (label === "Optimize corner stitches")
+    else if (label === "Optimize corner stitches") {
+      detail.hidden = cornerTargets.length === 0;
       (advanced || method).append(detail);
-    else art.append(detail);
+    } else art.append(detail);
   }
   box.remove();
 }

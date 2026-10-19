@@ -46,6 +46,25 @@
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+/* Nested lettering controls must shrink within a narrow properties drawer.
+   Native select widths and button min-content sizes vary across platforms. */
+#properties .text-path-controls,
+#properties .text-path-controls .field {
+  min-width: 0;
+}
+#properties .text-path-controls .two-col {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+#properties .text-path-controls button,
+#properties .text-path-controls select {
+  min-width: 0;
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+#properties .text-path-controls select {
+  width: 100%;
+}
 .tree-rename {
   width: 100%;
   min-width: 0;

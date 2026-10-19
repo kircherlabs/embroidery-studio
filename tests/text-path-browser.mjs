@@ -311,7 +311,28 @@ try {
     await input.scrollIntoViewIfNeeded();
     const r = await input.boundingBox();
     assert(r.x >= 0 && r.x + r.width <= width + 1);
-    assert(await page.evaluate(() => document.body.scrollWidth <= innerWidth));
+    const overflow = await page.evaluate(() => ({
+      innerWidth,
+      body: document.body.scrollWidth,
+      offscreen: [...document.body.querySelectorAll("*")]
+        .map((el) => {
+          const r = el.getBoundingClientRect();
+          return {
+            tag: el.tagName,
+            id: el.id,
+            cls: el.className,
+            x: r.x,
+            width: r.width,
+            right: r.right,
+          };
+        })
+        .filter((r) => r.width > 0 && (r.right > innerWidth + 1 || r.x < -1))
+        .slice(0, 20),
+    }));
+    assert(
+      overflow.body <= overflow.innerWidth,
+      JSON.stringify({ viewport: { width, height }, ...overflow }),
+    );
   }
   assert.deepEqual(errors, []);
   console.log(

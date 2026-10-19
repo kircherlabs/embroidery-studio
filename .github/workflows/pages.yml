@@ -29,6 +29,7 @@ jobs:
           node scripts/serve.mjs > /tmp/studio-preview.log 2>&1 &
           STUDIO_PID=$!
           trap 'kill "$STUDIO_PID"' EXIT
+          node tests/text-path-browser.mjs
           node tests/browser.mjs
           node tests/svg-browser.mjs
           node tests/digitizing-browser.mjs
@@ -48,7 +49,6 @@ jobs:
           node tests/method-categories-browser.mjs
           node tests/path-editing-browser.mjs
           node tests/manual-rails-browser.mjs
-          node tests/text-path-browser.mjs
       - run: node scripts/build.mjs
       - uses: actions/upload-pages-artifact@v3
         if: github.event_name != 'pull_request'

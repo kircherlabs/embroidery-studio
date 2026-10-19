@@ -1,4 +1,6 @@
 import { installRailInspector } from "./rail-ui.js";
+import { installPathTextInspector } from "./text-path-ui.js";
+import { letteringCurve, updateLetteringCurve } from "./text-path.js";
 import { setNodeMode } from "./path-editing.js";
 import { refitPatch } from "./construction.js";
 import { FONTS, updateLettering } from "./importers.js";
@@ -137,7 +139,7 @@ export function creativeInspector(api, leaf, objects, targets) {
        `<button data-reference-align="${key}" data-help="Align actual selected geometry to the chosen reference. A specific reference remains stationary. Groups move together; locked descendants stay unchanged.">${label}</button>`,
    )
    .join("")}</div></details>`;
-  if (leaf?.curve || leaf?.satinRails)
+  if (leaf?.curve || leaf?.satinRails || leaf?.textSource?.path)
     box.insertAdjacentHTML(
       "beforeend",
       '<details><summary>Bézier node controls</summary><p class="property-note">Select an anchor with the Node tool. Drag tangent handles to reshape curves; double-click a curve to split it. Delete removes an anchor.</p><button id="node-smooth">Smooth active anchor</button><button id="node-corner">Make active anchor a corner</button><button id="node-symmetric">Symmetric active anchor</button></details>',
@@ -238,7 +240,7 @@ export function creativeInspector(api, leaf, objects, targets) {
   if ($("round-node"))
     $("round-node").onclick = () => {
       const index = api.node();
-      if (index === null || leaf.curve) {
+      if (index === null || leaf.curve || leaf.textSource?.path) {
         toast(
           "Select a polygon vertex with the Node tool. Bézier anchors use their tangent handles.",
         );
@@ -259,7 +261,10 @@ export function creativeInspector(api, leaf, objects, targets) {
     if ($("node-" + action))
       $("node-" + action).onclick = () => {
         const i = api.node(),
-          c = leaf.satinRails?.[state.railSide || "a"] || leaf.curve;
+          c =
+            leaf.satinRails?.[state.railSide || "a"] ||
+            letteringCurve(leaf) ||
+            leaf.curve;
         if (i === null || !c.nodes[i]) {
           toast("Select an anchor with the Node tool first.");
           return;
@@ -267,6 +272,7 @@ export function creativeInspector(api, leaf, objects, targets) {
         safe(() => {
           setNodeMode(c, i, action);
           if (leaf.satinRails) regenerateRails(leaf);
+          else if (leaf.textSource?.path) updateLetteringCurve(leaf, c);
           else leaf.rings = curveRings(c);
         });
       };
@@ -405,4 +411,5 @@ export function creativeInspector(api, leaf, objects, targets) {
   }
   box.remove();
   installRailInspector(api, leaf, objects, targets);
+  installPathTextInspector(api, leaf);
 }

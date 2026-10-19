@@ -1,4 +1,5 @@
 import { railArtwork } from "../src/rail-ui.js";
+import { regeneratePathText } from "../src/text-path.js";
 import { addReference } from "../src/references.js";
 import { arrangeArtwork } from "../src/arrange.js";
 import { createSurroundingPatch } from "../src/construction.js";
@@ -23,6 +24,81 @@ import { applique, makeOperation } from "../src/operations.js";
 mkdirSync(new URL("../test-results/", import.meta.url), { recursive: true });
 const python = process.env.PYTHON || "python",
   adapter = fileURLToPath(new URL("./pes-codec-adapter.py", import.meta.url));
+
+test("curved editable glyphs export their actual sewn geometry, stops and full dimensions without the baseline", () => {
+  const glyph = {
+      advance: 4,
+      rings: [
+        [
+          { x: 0, y: 0 },
+          { x: 0, y: -5 },
+          { x: 3, y: -5 },
+          { x: 3, y: 0 },
+        ],
+        [
+          { x: 1, y: -1 },
+          { x: 2, y: -1 },
+          { x: 2, y: -4 },
+          { x: 1, y: -4 },
+        ],
+      ],
+    },
+    o = object("Curved glyphs", [], {
+      textSource: {
+        content: "OOO",
+        font: "serif",
+        height: 5,
+        tracking: 1,
+        lineSpacing: 1.3,
+        align: "center",
+        frame: [-1, 0, 0, 1, 0, 0],
+        glyphs: Array.from({ length: 3 }, () => structuredClone(glyph)),
+        path: {
+          curve: {
+            nodes: [
+              { x: -90, y: 0, out: { x: -30, y: -20 } },
+              { x: 90, y: 0, in: { x: 30, y: -20 } },
+            ],
+            closed: false,
+            frame: [1, 0, 0, 1, 0, 0],
+          },
+          offset: 0,
+          normal: 0,
+          reverse: false,
+        },
+      },
+    });
+  regeneratePathText(o);
+  o.operations = [
+    makeOperation("fill", o),
+    makeOperation("stop", o),
+    { ...makeOperation("run", o), color: "#dd3344" },
+  ];
+  const p = generate({
+      version: 1,
+      name: "Path text",
+      machine: "se700",
+      objects: [o],
+      planning: { smallDetail: 0 },
+    }),
+    { result, dec } = check(p.events);
+  assert(p.stats.fits);
+  assert(p.stats.bounds.width < 20);
+  assert.equal(p.stats.stops, 1);
+  assert.equal(result.preview.filter((e) => e.cmd === "stop").length, 1);
+  assert.equal(
+    result.preview.filter((e) => e.cmd === "color").length,
+    p.stats.changes,
+  );
+  assert.equal(
+    dec.pec.declaredWidth / 10,
+    Math.round(p.stats.bounds.width * 10) / 10,
+  );
+  assert.equal(
+    dec.pec.declaredHeight / 10,
+    Math.round(p.stats.bounds.height * 10) / 10,
+  );
+});
 
 test("manual rail satin retains its complete needle sequence, action order, stops and corrected PES origin", () => {
   const rail = (y) => ({

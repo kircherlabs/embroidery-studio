@@ -1,4 +1,5 @@
 import { railArtwork, railCandidates } from "./rail-ui.js";
+import { baselineCandidate, constructionBaseline } from "./text-path.js";
 import { splitRailSource, railLayout } from "./manual-satin.js";
 import {
   pencilCurve,
@@ -436,24 +437,28 @@ function updateVectorOptions() {
   $("rails-closed").disabled = !!stage.railDraftA;
   state.railClosed = $("rails-closed").checked;
   $("join-vectors").disabled =
-    objects.length !== 2 || objects.some((o) => o.satinRails);
+    objects.length !== 2 ||
+    objects.some((o) => o.satinRails || o.textSource?.path);
   $("close-vector").disabled = !objects.some(
     (o) => !o.closed && o.type !== "fill",
   );
   $("reverse-vector").disabled =
-    !objects.length || objects.some((o) => o.satinRails);
+    !objects.length || objects.some((o) => o.satinRails || o.textSource?.path);
   $("split-node").disabled =
-    objects.length !== 1 || objects.some((o) => o.satinRails);
+    objects.length !== 1 ||
+    objects.some((o) => o.satinRails || o.textSource?.path);
   $("vector-edit-guidance").textContent =
     tool === "rails"
       ? "Two boundaries define actual satin width. Draw A, finish, then B; both rails remain editable. Closed rails must enclose one opening."
-      : railTarget && tool === "node"
-        ? `Editing rail ${(state.railSide || "a").toUpperCase()}. Drag anchors/handles or pull its curve. Double-click inserts a node; Delete removes one. Source seams and sewing direction are separate controls.`
-        : tool === "pencil"
-          ? "Smoothing controls trace tolerance in millimeters. Start a new stroke to finish the previous one."
-          : tool === "node"
-            ? "Pull a segment to sculpt; drag handles for precision. Imported contours use a local influence. Vector edits convert Smart Shapes/text to paths; Undo restores them."
-            : "Pieces retain sewing actions; construction stops repeat per piece. Parametric shapes/text become paths; Undo restores them. Erasing keeps small fragments for review.";
+      : selected()?.textSource?.path && tool === "node"
+        ? "Editing the lettering baseline. Drag anchors, handles or its curve; text and fonts remain editable. Geometry regenerates all sewing actions."
+        : railTarget && tool === "node"
+          ? `Editing rail ${(state.railSide || "a").toUpperCase()}. Drag anchors/handles or pull its curve. Double-click inserts a node; Delete removes one. Source seams and sewing direction are separate controls.`
+          : tool === "pencil"
+            ? "Smoothing controls trace tolerance in millimeters. Start a new stroke to finish the previous one."
+            : tool === "node"
+              ? "Pull a segment to sculpt; drag handles for precision. Imported contours use a local influence. Vector edits convert Smart Shapes/text to paths; Undo restores them."
+              : "Pieces retain sewing actions; construction stops repeat per piece. Parametric shapes/text become paths; Undo restores them. Erasing keeps small fragments for review.";
   state.pencilSmoothing = $("pencil-smoothing").checkValidity()
     ? Number($("pencil-smoothing").value)
     : 0.15;
@@ -630,7 +635,7 @@ async function createRailsFromSelection() {
   const hide = $("hide-rail-sources").checked;
   mutate(() => {
     if (objects.every((o) => o.parentId === objects[0].parentId))
-      made.parentId = objects[0].parentId;
+      made.parentId = objects[0].parentId ?? null;
     const at = Math.max(
       ...objects.map((o) => state.project.objects.indexOf(o)),
     );
@@ -837,8 +842,9 @@ async function templateDialog() {
       ),
     );
 }
-function addObjects(objects) {
+function addObjects(objects, setup = null) {
   const added = mutate(() => {
+    setup?.();
     state.project.objects.push(...objects);
     if (objects.groups) (state.project.groups ||= []).push(...objects.groups);
     state.selectionIds = objects.groups?.length
@@ -998,7 +1004,7 @@ function renderProperties() {
       draw: () => stage.render(),
       selectTool: () => setTool("select"),
       node: () => stage.node,
-      editRails: () => setTool("node"),
+      editCurve: () => setTool("node"),
       splitRails: splitManualRails,
       retrace: async (group) => {
         const response = await fetch(group.imageSource.data),
@@ -1386,21 +1392,44 @@ async function ask(title, html, submit = "Continue") {
   );
 }
 async function textDialog() {
+  const candidates = selectedLeaves(state, { editable: true }),
+    baseline =
+      candidates.length === 1 && baselineCandidate(candidates[0])
+        ? candidates[0]
+        : null;
   const ok = await ask(
     "Lettering & monograms",
-    '<p>Turn lettering into editable fill outlines. Keep small letters simple and test stitch density on your fabric.</p><label>Text<input id="text-value" value="Bloom" maxlength="32" required></label><label>Letter height (mm)<input id="text-height" type="number" value="14" min="3" max="80" step="1" required></label><label>Style<select id="text-font"><option value="serif">Classic serif</option><option value="sans-serif">Modern sans</option><option value="monospace">Geometric mono</option><option value="cursive">Script (device font)</option></select></label>',
+    '<p>Turn lettering into editable fill outlines. Keep small letters simple and test stitch density on your fabric.</p><label>Text<input id="text-value" value="Bloom" maxlength="32" required></label><label>Letter height (mm)<input id="text-height" type="number" value="14" min="3" max="80" step="1" required></label><label>Style<select id="text-font"><option value="serif">Classic serif</option><option value="sans-serif">Modern sans</option><option value="monospace">Geometric mono</option><option value="cursive">Script (device font)</option></select></label>' +
+      (baseline
+        ? `<label class="check"><input type="checkbox" id="text-use-path">Follow a copy of ${esc(baseline.name)}</label><label class="check"><input type="checkbox" id="text-hide-path" ${constructionBaseline(baseline) ? "disabled" : "checked"}>Hide original baseline when following it</label><p>The copied curve stays editable inside the lettering and creates no separate stitches. ${constructionBaseline(baseline) ? "The original construction boundary keeps its sewing actions and visibility." : ""}</p>`
+        : ""),
     "Add lettering",
   );
   if (!ok) return;
   try {
-    addObjects([
-      lettering(
+    const follow = !!$("text-use-path")?.checked,
+      made = lettering(
         $("text-value").value,
         Number($("text-height").value),
         selected()?.color || PALETTE[5],
         $("text-font").value,
-      ),
-    ]);
+        follow
+          ? {
+              path: {
+                curve: worldCurve(baseline),
+                offset: 0,
+                normal: 0,
+                reverse: false,
+              },
+            }
+          : {},
+      );
+    if (follow) made.parentId = baseline.parentId ?? null;
+    const hide =
+      follow && !constructionBaseline(baseline) && $("text-hide-path").checked;
+    addObjects([made], () => {
+      if (hide) baseline.visible = false;
+    });
   } catch (e) {
     toast(e.message);
   }

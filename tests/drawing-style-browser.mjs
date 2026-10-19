@@ -32,7 +32,14 @@ try {
       const p = document
         .querySelector(".drawing-style-panel")
         .getBoundingClientRect();
-      return p.top >= 7 && p.bottom <= innerHeight - 7;
+      // Native details toggle and resize callbacks run after the viewport change.
+      // Measure only once positioning has settled on every axis.
+      return (
+        p.top >= 7 &&
+        p.bottom <= innerHeight - 7 &&
+        p.left >= 7 &&
+        p.right <= innerWidth - 7
+      );
     });
     const r = await panel.boundingBox(),
       s = await chooser.boundingBox();
@@ -162,15 +169,13 @@ try {
   );
   // SVG parent selection applies real operations to descendants, with a protected stack replacement.
   const n = (await project()).objects.length;
-  await page
-    .locator("#file-input")
-    .setInputFiles({
-      name: "Style.svg",
-      mimeType: "image/svg+xml",
-      buffer: Buffer.from(
-        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 30"><g id="Shapes"><rect x="0" y="0" width="15" height="15" fill="red"/><path d="M25 0L45 0L35 15Z" fill="blue"/></g></svg>',
-      ),
-    });
+  await page.locator("#file-input").setInputFiles({
+    name: "Style.svg",
+    mimeType: "image/svg+xml",
+    buffer: Buffer.from(
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 30"><g id="Shapes"><rect x="0" y="0" width="15" height="15" fill="red"/><path d="M25 0L45 0L35 15Z" fill="blue"/></g></svg>',
+    ),
+  });
   await page.waitForFunction(
     (n) =>
       window.studio.getProject().objects.length > n && window.studio.getPlan(),

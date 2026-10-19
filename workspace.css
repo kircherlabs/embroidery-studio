@@ -711,6 +711,25 @@
 .workspace-bar .panel-toggles #toggle-layers {
   display: inline-flex;
 }
+@media (max-width: 360px) {
+  .app-header .project-name {
+    width: 100px;
+    max-width: 100px;
+  }
+  .file-actions {
+    gap: 3px;
+  }
+  .file-actions button {
+    padding: 5px 6px;
+  }
+  .file-actions .primary {
+    padding: 6px 8px;
+    margin-left: 0;
+  }
+  .file-actions .primary span {
+    margin-left: 6px;
+  }
+}
 @media (max-height: 600px) {
   .workspace > .layers {
     overflow-y: auto;

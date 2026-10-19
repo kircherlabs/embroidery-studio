@@ -29,6 +29,19 @@ Rounded satin borders, centerlines and stroke columns preserve spacing on the
 outer rail of bends. Running outlines follow rounded curves; tight turns report
 located Design Issues. See [corner coverage and validation](docs/CORNER_DENSITY.md).
 
+## Editable text along paths
+
+Select a curve or circle and choose **Add lettering → Follow a copy**. Or select
+existing lettering and open **Artwork → Editable lettering → Text along a path**
+to copy a baseline. Content, font, height, spacing and sewing actions remain editable.
+Use **Edit lettering baseline** and Node to reshape it; adjust along/across offsets
+or reverse its direction in Properties. The embedded baseline produces no stitches.
+
+Projects preserve both glyph outlines and the editable baseline. The original
+curve stays independent and can be hidden to prevent duplicate sewing. One line
+per baseline is supported; text that would exceed an open path is rejected with
+a useful explanation. See [path lettering and current limits](docs/TEXT_PATH.md).
+
 ## Manual satin digitizing
 
 **Manual satin rails** (∥) draws two independent Bézier boundaries. Finish rail A,

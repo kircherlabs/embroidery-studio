@@ -57,3 +57,15 @@ transforms, history, projects, simulation and machine export share the same sour
 See [Manual satin rails](MANUAL_SATIN.md) for controls, reconstruction and limits.
 The baseline table above records the pre-milestone audit, not current availability.
 Milestone 3 remains deferred. Physical sew-outs remain required for the new satin.
+
+## Milestone 3A delivered in 0.11.0
+
+Editable text follows open Bézier curves or closed baselines. Font/content/spacing
+changes, along/across positioning, reversal, baseline Node editing, transformations,
+sewing actions and portable projects remain editable. Embedded baseline geometry
+is excluded from sewing and hoop bounds. See [path lettering](TEXT_PATH.md).
+
+Milestone 3 is **in progress**, not complete. Additional nondestructive offsets and
+simplification, style transfer/eyedropper, and linear/radial/linked repetition remain
+for subsequent coherent releases. Existing offsets, fillets and ordinary
+copy/paste/mirroring remain available in the meantime.

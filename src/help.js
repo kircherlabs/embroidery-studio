@@ -1,4 +1,24 @@
 const descriptions = {
+  "text-use-path":
+    "Place this editable lettering along a copy of the selected curve. The baseline becomes part of the lettering source and generates no separate stitches; Node edits it later.",
+  "text-hide-path":
+    "When following the selected curve, hide the original artwork so its own sewing actions do not also stitch. The original remains editable and Undo restores its visibility.",
+  "text-path-source":
+    "Choose one existing single-contour path or shape to copy as this lettering's editable baseline. Original artwork remains independent after copying.",
+  "text-path-attach":
+    "Place the existing text on the chosen copied baseline while retaining its content, font and sewing actions. Optional source hiding and attachment share one Undo step.",
+  "text-path-hide-source":
+    "Hide the original baseline artwork after copying it so its independent sewing actions do not sew twice. This does not delete the original.",
+  "text-path-offset":
+    "Shift the whole text run along its baseline in source millimeters, after Left/Center/Right alignment. Closed baselines wrap; open baselines reject text that would extend beyond an end.",
+  "text-path-normal":
+    "Move letters across the curve in source millimeters. Positive values move toward the local right-hand side of the baseline's forward direction; letters retain their outlines.",
+  "text-path-reverse":
+    "Follow the baseline in its opposite direction. Letters rotate with that direction, which can place circular lettering on the opposite side. This is independent of machine sewing-order reversal.",
+  "text-path-edit":
+    "Use Node to edit the copied baseline's anchors, handles or segments. Editable text, font controls and sewing actions are preserved; this does not convert letters into fixed paths.",
+  "text-path-detach":
+    "Return to straight editable lettering centered at the current artwork position. Content, font and sewing actions remain intact; Undo restores the baseline and curved arrangement.",
   "rails-closed":
     "Create two closed boundaries forming one ring. Rail A and B must enclose the same opening; both seam nodes are editable after creation. This differs from drawing two satin outlines.",
   "rails-from-selection":

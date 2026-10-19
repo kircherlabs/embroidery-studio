@@ -1,4 +1,5 @@
 import { roundChecked } from "./creative.js";
+import { layoutPathText } from "./text-path.js";
 import { mapPoint, identity } from "./smart-geometry.js";
 import { object, bounds, translate, uid } from "./model.js";
 import { parseSVGPath, segmentPath, SVGPathError } from "./svg-path.js";
@@ -719,6 +720,46 @@ export function lettering(text, height, color, font = "serif", options = {}) {
   const cap = ctx.measureText("M").actualBoundingBoxAscent || 80,
     scale = height / cap,
     gap = tracking / scale;
+  if (options.path) {
+    if (text.includes("\n"))
+      throw Error(
+        "Text on a path supports one line. Use separate lettering objects for multiple lines.",
+      );
+    const glyphs = [...text].map((char) => {
+      ctx.font = `bold 110px ${font}`;
+      const advance = ctx.measureText(char).width;
+      c.width = Math.max(1, Math.ceil(advance + 60));
+      c.height = 240;
+      ctx.font = `bold 110px ${font}`;
+      ctx.fillText(char, 30, 160);
+      const d = ctx.getImageData(0, 0, c.width, c.height),
+        labels = new Int16Array(c.width * c.height).fill(-1);
+      for (let i = 0; i < labels.length; i++)
+        if (d.data[i * 4 + 3] > 128) labels[i] = 0;
+      const rings = traceLabels(labels, c.width, c.height, 0, 1).map((r) =>
+        r.map((p) => ({ x: (p.x - 30) * scale, y: (p.y - 160) * scale })),
+      );
+      return { advance: advance * scale, rings };
+    });
+    const textSource = {
+        content: text,
+        height,
+        font,
+        tracking,
+        lineSpacing,
+        align,
+        frame: identity(),
+        path: structuredClone(options.path),
+        glyphs,
+      },
+      { rings } = layoutPathText(textSource);
+    return object(text.slice(0, 100), rings, {
+      color,
+      angle: 0,
+      fillRule: "nonzero",
+      textSource,
+    });
+  }
   const lines = text.split("\n");
   const widths = lines.map(
     (line) =>

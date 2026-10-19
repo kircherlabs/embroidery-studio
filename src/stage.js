@@ -5,6 +5,7 @@ import {
   pencilCurve,
   sculptCurve,
 } from "./path-editing.js";
+import { letteringCurve, updateLetteringCurve } from "./text-path.js";
 import {
   detachSource,
   curveRings,
@@ -45,12 +46,26 @@ export class Stage {
   }
 
   activeCurve(o) {
-    return o?.satinRails ? o.satinRails[this.state.railSide || "a"] : o?.curve;
+    return o?.satinRails
+      ? o.satinRails[this.state.railSide || "a"]
+      : letteringCurve(o || {}) || o?.curve;
   }
   updateCurve(o, c) {
     if (o.satinRails) {
       o.satinRails[this.state.railSide || "a"] = c;
       regenerateRails(o);
+    } else if (o.textSource?.path) {
+      try {
+        updateLetteringCurve(o, c);
+        if (this.drag) this.drag.pathError = null;
+      } catch (e) {
+        if (!this.drag?.before) throw e;
+        Object.assign(
+          o,
+          JSON.parse(this.drag.before).objects.find((n) => n.id === o.id),
+        );
+        this.drag.pathError = e.message;
+      }
     } else {
       o.curve = c;
       o.rings = curveRings(c);
@@ -637,6 +652,18 @@ export class Stage {
         ctx.arc(start.x, start.y, 4 / scale, 0, Math.PI * 2);
         ctx.fill();
       }
+    }
+    if (
+      selected?.textSource?.path &&
+      s.mode === "design" &&
+      s.tool === "node" &&
+      isVisible(s.project, selected)
+    ) {
+      const c = letteringCurve(selected);
+      ctx.strokeStyle = "#86618d";
+      ctx.lineWidth = 1.5 / scale;
+      this.path(ctx, curveRings(c), c.closed);
+      ctx.stroke();
     }
     if (this.railDraftA) {
       ctx.strokeStyle = "#b67916";
@@ -1260,7 +1287,7 @@ export class Stage {
       const curve = this.activeCurve(d.original),
         q = curve ? inversePoint(p, curve.frame) : p,
         a = curve ? inversePoint(d.start, curve.frame) : d.start;
-      if (d.o.satinRails) {
+      if (d.o.satinRails || d.o.textSource?.path) {
         const c = this.activeCurve(d.o);
         sculptCurve(c, d.hit.index, d.hit.t, { x: q.x - a.x, y: q.y - a.y });
         this.updateCurve(d.o, c);
@@ -1407,6 +1434,8 @@ export class Stage {
         this.actions.refresh();
       } else if (!["pan", "pen"].includes(d.type))
         this.actions.changed(d.before);
+      if (d.pathError)
+        this.actions.notice?.(d.pathError + " The baseline edit was restored.");
       this.render();
     }
   }

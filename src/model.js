@@ -532,6 +532,29 @@ function validateSource(o) {
       !["left", "center", "right"].includes(t.align)
     )
       throw Error("Invalid editable lettering.");
+    if (t.path) {
+      if (
+        !t.path.curve ||
+        t.content.includes("\n") ||
+        typeof t.path.reverse !== "boolean" ||
+        !number(t.path.offset, -2000, 2000) ||
+        !number(t.path.normal, -200, 200)
+      )
+        throw Error("Invalid path lettering settings.");
+      validateSource({ type: "fill", curve: t.path.curve });
+      if (
+        !Array.isArray(t.glyphs) ||
+        t.glyphs.length !== [...t.content].length ||
+        t.glyphs.some(
+          (g) => !g || !number(g.advance, 0, 1000) || !points(g.rings),
+        ) ||
+        t.glyphs.reduce(
+          (n, g) => n + g.rings.reduce((m, r) => m + r.length, 0),
+          0,
+        ) > 100000
+      )
+        throw Error("Invalid saved lettering glyphs.");
+    }
   }
   if (o.curve) {
     const c = o.curve;

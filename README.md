@@ -25,6 +25,10 @@ the drawing surface. They never float over artwork. The Objects panel displays
 the colors of enabled sewing operations; multicolor stacks have striped swatches
 instead of showing the source artwork's original paint.
 
+Rounded satin borders, centerlines and stroke columns preserve spacing on the
+outer rail of bends. Running outlines follow rounded curves; tight turns report
+located Design Issues. See [corner coverage and validation](docs/CORNER_DENSITY.md).
+
 ## Properties and construction
 
 Properties now has one **Embroidery** section. Ordered sewing-action cards keep

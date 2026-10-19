@@ -24,7 +24,7 @@ const descriptions = {
   "outer-only":
     "Use only outer contours for this outline operation. Enable to avoid stitching counters as extra finishing borders; disable when inner boundaries also need construction stitching.",
   "corner-adaptive":
-    "Improve needle placement near turns without rounding artwork. Preserves running-path corners and shortens crowded inner satin stitches. Very sharp junctions still need separate regions.",
+    "Alternate short and full penetrations only on compressed inner satin turns; preserve full outer-curve coverage. Running corners stay on the source path. Satin rail spacing is preserved even when this option is off.",
   "eyelet-marker":
     "Add a real running-stitch reference cross at the hole center before reinforcement. Cutting or punching the fabric is manual.",
   "node-smooth":
@@ -170,7 +170,7 @@ const descriptions = {
   "thread-color":
     "Assign the selected thread color to applicable operations. Color changes affect batching and machine thread-change instructions.",
   spacing:
-    "Row spacing in millimeters. Smaller spacing gives denser fill or satin coverage, more thread and greater puckering risk. Artwork size stays unchanged.",
+    "Spacing in millimeters between fill rows, or same-side satin penetrations on the faster moving rail. Satin adds stations around outer curves to retain coverage. Smaller spacing increases density, thread usage and puckering risk.",
   length:
     "Maximum segment length in millimeters for fill, or target length along a running path. Satin columns use it only when wide spans need splitting. Travel moves are separate.",
   angle:

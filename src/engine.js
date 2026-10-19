@@ -1,3 +1,4 @@
+import { centerlineRails, paceRails, shortInnerTurns } from "./satin-rails.js";
 import { strokeSatin } from "./stroke-satin.js";
 import { designIssues } from "./design-issues.js";
 import { quantizeColumnPaths } from "./column-routing.js";
@@ -19,7 +20,11 @@ export function resample(path, maxLength, closed = false) {
     clean.push({ ...clean[0] });
   const p = simplifyPath(clean, Math.min(0.04, maxLength / 8));
   if (p.length < 2) return p;
-  const out = [{ ...p[0] }];
+  const out = [{ ...p[0] }],
+    stations = [0],
+    vertices = [0];
+  for (let i = 1; i < p.length; i++)
+    vertices.push(vertices.at(-1) + distance(p[i - 1], p[i]));
   let carry = 0;
   for (let i = 1; i < p.length; i++) {
     const a = p[i - 1],
@@ -32,6 +37,7 @@ export function resample(path, maxLength, closed = false) {
         x: a.x + ((b.x - a.x) * at) / d,
         y: a.y + ((b.y - a.y) * at) / d,
       });
+      stations.push(vertices[i - 1] + at);
       at += maxLength;
     }
     carry = (carry + d) % maxLength;
@@ -42,11 +48,28 @@ export function resample(path, maxLength, closed = false) {
         (d * (distance(b, c) || 1)) >
         -0.85;
     if (i === p.length - 1 || corner) {
-      if (distance(out.at(-1), b) > 1e-9) out.push({ ...b });
+      if (distance(out.at(-1), b) > 1e-9) {
+        out.push({ ...b });
+        stations.push(vertices[i]);
+      }
       carry = 0;
     }
   }
-  return out;
+  // Long running stitches must not cut across a newly rounded bend. Keep the
+  // length stations, adding only the source vertices needed for 0.1 mm fidelity
+  // (.04 mm source simplification plus .06 mm chord refinement).
+  const followed = [out[0]];
+  let vertex = 1;
+  for (let i = 1; i < out.length; i++) {
+    while (vertex < p.length && vertices[vertex] <= stations[i - 1] + 1e-9)
+      vertex++;
+    const curve = [out[i - 1]];
+    while (vertex < p.length && vertices[vertex] < stations[i] - 1e-9)
+      curve.push(p[vertex++]);
+    curve.push(out[i]);
+    followed.push(...simplifyPath(curve, 0.06).slice(1));
+  }
+  return followed;
 }
 function subdivide(path, limit) {
   const out = path.length ? [path[0]] : [];
@@ -55,10 +78,14 @@ function subdivide(path, limit) {
       b = path[i],
       n = Math.ceil(distance(a, b) / limit);
     for (let j = 1; j <= n; j++)
-      out.push({
-        x: a.x + ((b.x - a.x) * j) / n,
-        y: a.y + ((b.y - a.y) * j) / n,
-      });
+      out.push(
+        j === n
+          ? { ...b }
+          : {
+              x: a.x + ((b.x - a.x) * j) / n,
+              y: a.y + ((b.y - a.y) * j) / n,
+            },
+      );
   }
   return out;
 }
@@ -191,61 +218,21 @@ export function satin(
   cornerControl = false,
   minimum = 0.3,
 ) {
-  let center = resample(path, spacing / 2, closed);
-  if (closed && path.length > 2) {
-    // An even, uniformly spaced station loop closes on the opposite rail.
-    // Per-edge resampling could leave an odd count and a same-rail seam float.
-    const ring = [...path];
-    if (distance(ring[0], ring.at(-1)) > 1e-9) ring.push(ring[0]);
-    const lengths = [0];
-    for (let i = 1; i < ring.length; i++)
-      lengths.push(lengths.at(-1) + distance(ring[i - 1], ring[i]));
-    const total = lengths.at(-1),
-      count = Math.max(4, Math.ceil(total / spacing) * 2);
-    let edge = 1;
-    center = Array.from({ length: count }, (_, i) => {
-      const s = (total * i) / count;
-      while (edge < ring.length - 1 && lengths[edge] < s) edge++;
-      const t =
-          (s - lengths[edge - 1]) / (lengths[edge] - lengths[edge - 1] || 1),
-        a = ring[edge - 1],
-        b = ring[edge];
-      return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
-    });
-  }
-  if (closed && center.length > 1 && distance(center[0], center.at(-1)) < 1e-9)
-    center.pop();
-  if (center.length < 2) return [];
-  const pts = [];
-  for (let i = 0; i < center.length; i++) {
-    const p = center[i],
-      a =
-        center[
-          closed ? (i + center.length - 1) % center.length : Math.max(0, i - 1)
-        ],
-      b =
-        center[
-          closed ? (i + 1) % center.length : Math.min(center.length - 1, i + 1)
-        ],
-      d = distance(a, b) || 1,
-      sign = i % 2 ? 1 : -1;
-    pts.push({
-      x: p.x - ((((b.y - a.y) / d) * width) / 2) * sign,
-      y: p.y + ((((b.x - a.x) / d) * width) / 2) * sign,
-    });
-  }
+  const built = centerlineRails(path, width, spacing, closed);
+  let sections = paceRails(built.sections, spacing, closed);
+  if (!sections)
+    throw Error(
+      "Satin rails turn too abruptly. Split this path or reduce its width.",
+    );
   if (cornerControl)
-    for (let i = 2; i < pts.length; i++) {
-      const d = distance(pts[i], pts[i - 2]);
-      if (d < minimum) {
-        const t = Math.min(0.6, (1 - d / minimum) * 0.6);
-        pts[i] = {
-          x: pts[i].x + (center[i].x - pts[i].x) * t,
-          y: pts[i].y + (center[i].y - pts[i].y) * t,
-        };
-      }
-    }
-  return subdivide(closed ? [...pts, pts[0]] : pts, length);
+    sections = shortInnerTurns(sections, minimum, closed, spacing);
+  const pts = sections.map((q, i) => (i % 2 ? q.b : q.a));
+  const result = subdivide(
+    closed && pts.length ? [...pts, pts[0]] : pts,
+    length,
+  );
+  result.tightTurn = built.tight;
+  return result;
 }
 function pathsFor(o, from, to) {
   if (o.satinColumn && o.columnMode === "stroke") {
@@ -350,19 +337,19 @@ function pathsFor(o, from, to) {
       paths.push({ p, phase: o.technique || "top" });
     }
   if (o.type === "satin")
-    for (const ring of o.rings)
-      paths.push({
-        p: satin(
-          o.closed ? [...ring, ring[0]] : ring,
-          o.width + o.compensation * 2,
-          o.spacing,
-          7,
-          o.closed,
-          o.cornerControl,
-          o.minCornerStitch || 0.3,
-        ),
-        phase: "top",
-      });
+    for (const ring of o.rings) {
+      const p = satin(
+        ring,
+        o.width + o.compensation * 2,
+        o.spacing,
+        7,
+        o.closed,
+        o.cornerControl,
+        o.minCornerStitch || 0.3,
+      );
+      if (p.tightTurn) o.satinTightTurn = true;
+      paths.push({ p, phase: "top" });
+    }
   return (o.satinColumn ? quantizeColumnPaths(paths, o) : paths).filter(
     ({ p }) =>
       new Set(p.map((q) => Math.round(q.x * 10) + "," + Math.round(q.y * 10)))
@@ -569,6 +556,19 @@ export function generate(project) {
         );
     }
     const paths = o.type === "manual" ? null : pathsFor(o, last, to);
+    if (o.satinTightTurn)
+      (diagnostics.operationIssues ||= []).push({
+        severity: "warning",
+        code: "tight-satin-turn",
+        objectId: o.id,
+        objectName: o.name,
+        operationId: o.operationId,
+        operationName: o.operationName,
+        message:
+          "This satin band is wider than the inside turn can accommodate. Outer coverage is retained with a pivot fan; the inner rail cannot keep its full offset.",
+        action:
+          "Increase the artwork corner radius, reduce Satin band width, or split this turn into separate regions. Review the inner penetrations with a sew-out.",
+      });
     if (o.columnGridWarnings) warnings.push(...o.columnGridWarnings);
     if (o.strokeAnalysis) {
       const a = o.strokeAnalysis;

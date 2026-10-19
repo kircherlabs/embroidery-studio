@@ -44,6 +44,7 @@ jobs:
           node tests/drawing-style-browser.mjs
           node tests/tool-context-browser.mjs
           node tests/sewing-actions-browser.mjs
+          node tests/corner-density-browser.mjs
       - run: node scripts/build.mjs
       - uses: actions/upload-pages-artifact@v3
         if: github.event_name != 'pull_request'

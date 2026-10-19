@@ -320,7 +320,12 @@ export function strokeSatin(o, from = { x: 0, y: 0 }) {
         warnings,
       };
     if (o.cornerControl !== false)
-      paced = shortInnerTurns(paced, o.minCornerStitch || 0.3, c.closed);
+      paced = shortInnerTurns(
+        paced,
+        o.minCornerStitch || 0.3,
+        c.closed,
+        o.spacing,
+      );
     sections.splice(0, sections.length, ...paced);
     strokes.push({ ...c, points, sections });
   }

@@ -170,7 +170,7 @@ const descriptions = {
   "thread-color":
     "Assign the selected thread color to applicable operations. Color changes affect batching and machine thread-change instructions.",
   spacing:
-    "Millimeters between fill rows, or same-side satin penetrations on the faster moving rail. Satin adds stations around outer curves to retain coverage. Smaller spacing increases density, thread usage and puckering risk.",
+    "Spacing in millimeters between fill rows, or same-side satin penetrations on the faster moving rail. Satin adds stations around outer curves to retain coverage. Smaller spacing increases density, thread usage and puckering risk.",
   length:
     "Maximum segment length in millimeters for fill, or target length along a running path. Satin columns use it only when wide spans need splitting. Travel moves are separate.",
   angle:

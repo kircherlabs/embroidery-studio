@@ -22,7 +22,9 @@ still split at the existing safe limits.
 The crowded-corner option previously could shorten both rails, including straight
 strokes, and measured against previously shortened points. It now shortens only a
 compressed inner rail, alternating short and full penetrations against unmodified
-rail measurements. Outer penetrations remain full width. Turning coverage is
+rail measurements. Shortening is permitted only when the remaining full inner
+penetrations still meet the requested spacing. Outer penetrations remain full
+width. Turning coverage is
 always paced correctly even when optional short stitches are disabled.
 
 If the inside turn radius is smaller than half the compensated band width, a

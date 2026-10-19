@@ -43,10 +43,20 @@ export function paceRails(sections, spacing, closed = false) {
 
 // Only the compressed inner rail gets alternating short stitches. Full outer
 // penetrations and every other inner penetration remain at the original edge.
+// Full inner edge penetrations must still be no farther apart than requested.
 // Measure against unmodified rails: a prior short stitch must not trigger another.
-export function shortInnerTurns(sections, minimum = 0.3, closed = false) {
+export function shortInnerTurns(
+  sections,
+  minimum = 0.3,
+  closed = false,
+  spacing = 0.42,
+) {
   return sections.map((q, i) => {
-    if (Math.floor(i / 2) % 2 === 0 || (!closed && i < 2)) return q;
+    if (
+      Math.floor(i / 2) % 2 === 0 ||
+      (!closed && (i < 2 || i + 2 >= sections.length))
+    )
+      return q;
     const prev = sections[(i + sections.length - 2) % sections.length],
       da = distance(q.a, prev.a),
       db = distance(q.b, prev.b),
@@ -55,7 +65,12 @@ export function shortInnerTurns(sections, minimum = 0.3, closed = false) {
       ["a", da, db],
       ["b", db, da],
     ])
-      if (d < minimum && d < other * 0.8)
+      if (
+        d < minimum &&
+        d < other * 0.8 &&
+        d + distance(q[side], sections[(i + 2) % sections.length][side]) <=
+          spacing + 1e-9
+      )
         out[side] = mix(
           q[side],
           q.center,

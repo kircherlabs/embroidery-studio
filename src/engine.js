@@ -224,7 +224,8 @@ export function satin(
     throw Error(
       "Satin rails turn too abruptly. Split this path or reduce its width.",
     );
-  if (cornerControl) sections = shortInnerTurns(sections, minimum, closed);
+  if (cornerControl)
+    sections = shortInnerTurns(sections, minimum, closed, spacing);
   const pts = sections.map((q, i) => (i % 2 ? q.b : q.a));
   const result = subdivide(
     closed && pts.length ? [...pts, pts[0]] : pts,

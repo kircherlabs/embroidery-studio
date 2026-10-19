@@ -71,6 +71,14 @@ test("satin density is measured on outer arcs, with full width and even closed s
     assert.equal((p.length - 1) % 2, 0);
     assert(distance(p[0], p.at(-2)) > width * 0.8);
     assert(!p.tightTurn);
+    // A high crowding threshold must not thin a mildly curved inner edge.
+    const controlled = satin(circle(radius), width, 0.42, 7, true, true, 1),
+      fullInner = controlled
+        .slice(0, -1)
+        .filter(
+          (q) => Math.abs(Math.hypot(q.x, q.y) - (radius - width / 2)) < 0.012,
+        );
+    assert(maximumGap(fullInner, true) <= 0.425);
     const o = object("Machine-grid curve", [circle(radius)], {
       type: "satin",
       closed: true,

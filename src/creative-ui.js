@@ -29,7 +29,7 @@ export function satinSummary(results) {
 export function creativeInspector(api, leaf, objects, targets) {
   const { state, mutate, toast } = api,
     p = state.project,
-    vectors = objects.filter((o) => o.type !== "manual");
+    vectors = objects.filter((o) => !["manual", "reference"].includes(o.type));
   if (!vectors.length) return;
   const cornerTypes = CORNER_TYPES;
   const cornerTargets = targets.filter(
@@ -337,7 +337,7 @@ export function creativeInspector(api, leaf, objects, targets) {
       state.satinGuideEdit =
         state.satinGuideEdit === column.id ? null : column.id;
       state.satinStructure = true;
-      state.tool = "select";
+      api.selectTool?.();
       api.refresh();
       api.draw();
     };

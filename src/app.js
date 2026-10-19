@@ -1,3 +1,4 @@
+import { rasterImport } from "./reference-ui.js";
 import { satinSummary } from "./creative-ui.js";
 import { EMBROIDERY_STYLES, setEmbroideryStyle } from "./styles.js";
 import { traceDialog } from "./tracing-ui.js";
@@ -218,10 +219,14 @@ function scheduleGenerate() {
   $("status").textContent = "Generating stitch sequence…";
   $("export").disabled = true;
   clearTimeout(generationTimer);
-  generationTimer = setTimeout(
-    () => worker.postMessage({ id, project: state.project }),
-    100,
-  );
+  generationTimer = setTimeout(() => {
+    const project = {
+      ...state.project,
+      objects: state.project.objects.filter((o) => o.type !== "reference"),
+    };
+    delete project.referenceAssets;
+    worker.postMessage({ id, project });
+  }, 100);
 }
 worker.onmessage = ({ data }) => {
   if (data.id !== generation) return;
@@ -467,7 +472,7 @@ function renderPanels() {
     <button class="drag-grip" data-tree-grip aria-label="Reorder ${esc(o.name)}">${icon("grip")}</button>
     <button class="selection-check" data-check="${esc(o.id)}" aria-label="Select ${esc(o.name)}" aria-pressed="${selectedIds.has(o.id) ? "true" : affected.has(o.id) ? "mixed" : "false"}"><span>${selectedIds.has(o.id) ? "✓" : affected.has(o.id) ? "−" : ""}</span></button>
     ${o.kind ? `<button class="tree-toggle" data-expand="${esc(o.id)}" aria-label="${state.collapsed.has(o.id) ? "Expand" : "Collapse"} ${esc(o.name)}">${state.collapsed.has(o.id) ? "▸" : "▾"}</button>` : '<span class="tree-toggle"></span>'}
-    <button class="object-select" data-select="${esc(o.id)}"><span class="swatch ${o.kind ? "group-icon" : ""}" style="background:${o.color || "transparent"}">${o.kind ? (o.kind === "svg" ? "▧" : "▱") : ""}</span><span class="object-text"><span class="object-title">${esc(o.name)}</span><span class="object-type">${o.kind ? `${leaves(state.project, [o.id]).length} regions · ${o.kind === "svg" ? "Imported SVG" : "Group"}` : o.operations ? `${o.operations.length} operations` : o.svgLabel ? esc(o.svgLabel) : o.type === "fill" ? "Tatami fill" : o.type === "satin" ? "Satin centerline" : o.type === "manual" ? "Manual stitches" : "Running stitch"}</span></span></button>
+    <button class="object-select" data-select="${esc(o.id)}"><span class="swatch ${o.kind ? "group-icon" : ""}" style="background:${o.color || "transparent"}">${o.type === "reference" ? "▧" : o.kind ? (o.kind === "svg" ? "▧" : "▱") : ""}</span><span class="object-text"><span class="object-title">${esc(o.name)}</span><span class="object-type">${o.kind ? `${leaves(state.project, [o.id]).length} regions · ${o.kind === "svg" ? "Imported SVG" : "Group"}` : o.operations ? `${o.operations.length} operations` : o.type === "reference" ? "Reference image · no stitches" : o.svgLabel ? esc(o.svgLabel) : o.type === "fill" ? "Tatami fill" : o.type === "satin" ? "Satin centerline" : o.type === "manual" ? "Manual stitches" : "Running stitch"}</span></span></button>
     <button class="tree-lock" data-lock="${esc(o.id)}" aria-label="${o.locked ? "Unlock" : "Lock"} ${esc(o.name)}" aria-pressed="${isLocked(state.project, o)}">${icon(isLocked(state.project, o) ? "lock" : "unlock")}</button><button class="visibility" data-visibility="${esc(o.id)}" aria-label="${o.visible === false ? "Show" : "Hide"} ${esc(o.name)}" aria-pressed="${!isVisible(state.project, o)}">${icon(isVisible(state.project, o) ? "eye" : "hidden")}</button></div>`;
   $("object-list").setAttribute("role", "tree");
   $("object-list").setAttribute("aria-multiselectable", "true");
@@ -553,6 +558,7 @@ function renderProperties() {
       bindManual,
       convertManual,
       draw: () => stage.render(),
+      selectTool: () => setTool("select"),
       node: () => stage.node,
       retrace: async (group) => {
         const response = await fetch(group.imageSource.data),
@@ -1086,11 +1092,12 @@ async function exportDialog() {
 }
 async function importFile(file) {
   if (busy) return;
-  if (file.size > 20 * 1024 * 1024) {
-    toast("Choose a file smaller than 20 MB.");
+  const ext = file.name.split(".").at(-1).toLowerCase();
+  const limit = ["json", "embstudio"].includes(ext) ? 96 : 20;
+  if (file.size > limit * 1024 * 1024) {
+    toast(`Choose a file smaller than ${limit} MB.`);
     return;
   }
-  const ext = file.name.split(".").at(-1).toLowerCase();
   busy = true;
   $("status").textContent = "Reading " + file.name + "…";
   try {
@@ -1110,8 +1117,12 @@ async function importFile(file) {
       const objects = importSVG(await file.text(), file.name);
       addObjects(objects);
       if (objects.importWarnings) toast(objects.importWarnings);
-    } else if (["png", "jpg", "jpeg"].includes(ext)) {
-      const objects = await traceDialog(file, ask);
+    } else if (["png", "jpg", "jpeg", "webp"].includes(ext)) {
+      const objects = await rasterImport(
+        file,
+        { state, ask, mutate, toast, selectTool: () => setTool("select") },
+        traceDialog,
+      );
       if (objects) addObjects(objects);
     } else if (
       ["pes", "pec", "dst", "exp", "jef", "vp3", "xxx"].includes(ext)
@@ -1156,6 +1167,8 @@ async function importFile(file) {
   } finally {
     busy = false;
     $("file-input").value = "";
+    if ($("status").textContent.startsWith("Reading "))
+      $("status").textContent = "Ready";
   }
 }
 function removeSelected() {
@@ -1165,7 +1178,7 @@ function removeSelected() {
     stage.node !== null &&
     o &&
     !isLocked(state.project, o) &&
-    o.type !== "manual"
+    !["manual", "reference"].includes(o.type)
   ) {
     if (o.curve) {
       if (o.curve.nodes.length > (o.curve.closed ? 3 : 2))
@@ -1507,7 +1520,7 @@ const collapseCompactSequence = () => {
 };
 collapseCompactSequence();
 compactSequence.addEventListener("change", collapseCompactSequence);
-function editCommand(command) {
+async function editCommand(command) {
   if (command === "rename") {
     beginRename(state.selection);
     return;
@@ -1527,6 +1540,20 @@ function editCommand(command) {
   }
   const ids = selectionIds(state),
     selected = selectedLeaves(state, { editable: true });
+  if (["flip-horizontal", "flip-vertical"].includes(command)) {
+    if (!selected.length) return;
+    if (
+      selected.some((o) => o.textSource) &&
+      !(await ask(
+        "Mirror editable lettering?",
+        "<p>This mirrors the lettering itself, so letters may read backwards or upside down. Text and font settings remain editable; future font changes keep the mirror. Undo restores the original orientation.</p>",
+        "Mirror selection",
+      ))
+    )
+      return;
+    mutate(() => arrangeArtwork(state.project, ids, command));
+    return;
+  }
   if (
     [
       "center",
@@ -1542,7 +1569,9 @@ function editCommand(command) {
         state.project,
         command === "center-design"
           ? state.project.objects
-              .filter((o) => isVisible(state.project, o))
+              .filter(
+                (o) => o.type !== "reference" && isVisible(state.project, o),
+              )
               .map((o) => o.id)
           : ids,
         command === "center-design" ? "center" : command,
@@ -1639,10 +1668,14 @@ function editCommand(command) {
     return;
   }
   if (command === "basting" || command === "registration") {
-    if (!selected.length) return;
-    const b = selectionBounds(selected),
+    const artwork = selected.filter((o) => o.type !== "reference");
+    if (!artwork.length)
+      return toast(
+        "Select embroidery artwork for construction marks. Reference images do not generate stitches.",
+      );
+    const b = selectionBounds(artwork),
       margin = 2,
-      color = selected[0].color;
+      color = artwork[0].color;
     if (command === "basting") {
       const ring = [
         { x: b.minX - margin, y: b.minY - margin },

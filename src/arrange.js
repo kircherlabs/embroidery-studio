@@ -19,6 +19,14 @@ export function arrangeArtwork(p, ids, action) {
   if (!objects.length) return false;
   const b = selectionBounds(objects),
     center = { x: (b.minX + b.maxX) / 2, y: (b.minY + b.maxY) / 2 };
+  if (["flip-horizontal", "flip-vertical"].includes(action)) {
+    transformSelection(objects, {
+      sx: action === "flip-horizontal" ? -1 : 1,
+      sy: action === "flip-vertical" ? -1 : 1,
+      pivot: center,
+    });
+    return true;
+  }
   if (["center", "hoop-x", "hoop-y"].includes(action)) {
     transformSelection(objects, {
       dx: action === "hoop-y" ? 0 : -center.x,
@@ -171,6 +179,20 @@ export function installArrangeMenu({ state, command, fitDesign, fitHoop }) {
           ) +
           "</div>"
         : "") +
+      '<div class="menu-caption">Mirror selection</div><div class="alignment-grid">' +
+      add(
+        "flip-horizontal",
+        "⇋ Flip Horizontal",
+        "Mirror the complete selection left to right around its center. Geometry, Bézier handles and needle coordinates change; stitch width and spacing stay unchanged. Editable lettering asks for confirmation.",
+        !any,
+      ) +
+      add(
+        "flip-vertical",
+        "⇵ Flip Vertical",
+        "Mirror the complete selection top to bottom around its center. Groups keep their relative arrangement and operations. Editable lettering asks for confirmation.",
+        !any,
+      ) +
+      "</div>" +
       '<div class="menu-caption">View & selection</div><div class="alignment-grid">' +
       add(
         "fit-design",

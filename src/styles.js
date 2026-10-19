@@ -47,6 +47,10 @@ export function editOperations(objects, state, single, key, value) {
   let changed = 0,
     skipped = 0;
   for (const o of objects) {
+    if (o.type === "reference") {
+      skipped++;
+      continue;
+    }
     if (o.type === "manual") {
       if (key === "color") {
         o.color = value;

@@ -1,3 +1,4 @@
+import { referenceInspector } from "./reference-ui.js";
 import { curveRings } from "./smart-geometry.js";
 import {
   EMBROIDERY_STYLES,
@@ -59,10 +60,12 @@ export function renderInspector(api) {
     ids = selectionIds(state);
   const all = selectedLeaves(state),
     objects = selectedLeaves(state, { editable: true }),
-    vectors = objects.filter((o) => o.type !== "manual");
+    vectors = objects.filter((o) => !["manual", "reference"].includes(o.type));
   if (!ids.length) return false;
   const one = ids.length === 1 ? nodeById(p, ids[0]) : null,
     leaf = one && !one.kind ? one : null;
+  if (all.length && all.every((o) => o.type === "reference"))
+    return referenceInspector(api, all, leaf);
   const targets = vectors.flatMap((o) => operationTargets(o, state, !!leaf));
   const active = leaf ? operationTargets(leaf, state, true)[0] : null;
   const control = vectors.flatMap((o) =>
@@ -122,7 +125,7 @@ export function renderInspector(api) {
           ? "Selection properties"
           : "Object properties";
   $("properties").innerHTML =
-    `<p class="selection-summary">${all.length} artwork object${all.length === 1 ? "" : "s"} selected${all.length !== objects.length ? ` · ${all.length - objects.length} locked, excluded from edits` : ""}${all.some((o) => !isVisible(p, o)) ? " · hidden artwork will not sew until shown" : ""}</p>
+    `<p class="selection-summary">${all.length} artwork object${all.length === 1 ? "" : "s"} selected${all.length !== objects.length ? ` · ${all.length - objects.length} locked, excluded from edits` : ""}${all.some((o) => !isVisible(p, o)) ? " · hidden artwork will not sew until shown" : ""}${all.some((o) => o.type === "reference") ? " · reference images have no embroidery settings" : ""}</p>
     <details class="inspector-section" data-section="artwork" open><summary>Artwork</summary><div id="artwork-settings" class="creative-settings">${name !== undefined ? `<label class="field">${one?.kind ? "Group / SVG name" : "Object name"}<input id="object-name" value="${escape(name)}" maxlength="200" ${one?.locked ? "disabled" : ""}></label>` : ""}
     </div></details>${
       !objects.length
@@ -238,7 +241,7 @@ export function renderInspector(api) {
     mutate(() => {
       result = editOperations(objects, state, !!leaf, key, value);
     });
-    if (result.skipped)
+    if (result?.skipped)
       toast(
         `${result.changed} operation${result.changed === 1 ? "" : "s"} updated; ${result.skipped} incompatible targets unchanged. Choose a compatible method or change the editing scope.`,
       );
@@ -326,7 +329,9 @@ export function renderInspector(api) {
   $("sequence-locked").onchange = (e) => {
     const value = e.target.checked;
     mutate(() => {
-      objects.forEach((o) => (o.sequenceLocked = value));
+      objects
+        .filter((o) => o.type !== "reference")
+        .forEach((o) => (o.sequenceLocked = value));
       if (one?.kind) one.sequenceLocked = value;
       if (!value)
         for (const group of p.groups || [])

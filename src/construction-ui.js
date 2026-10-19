@@ -28,7 +28,9 @@ const issueList = (issues) =>
 export async function chooseConstruction(api) {
   const { state, ask, mutate, toast } = api,
     project = state.project,
-    objects = selectedLeaves(state, { editable: true }),
+    objects = selectedLeaves(state, { editable: true }).filter(
+      (o) => o.type !== "reference",
+    ),
     check = preflightConstruction(objects, MACHINES[project.machine]);
   if (!objects.length) return toast("Select editable artwork first.");
   const ok = await ask(
@@ -59,7 +61,7 @@ export async function chooseConstruction(api) {
 }
 export async function surroundingPatchDialog(api) {
   const { state, ask, mutate, toast } = api,
-    objects = selectedLeaves(state),
+    objects = selectedLeaves(state).filter((o) => o.type !== "reference"),
     ids = [...selectionIds(state)],
     p = state.project;
   const b = selectionBounds(objects);

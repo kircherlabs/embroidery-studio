@@ -141,6 +141,16 @@ const descriptions = {
   "step-next": "Step forward one machine command, including non-sewing events.",
   "text-tool":
     "Create lettering as editable vector fill outlines. Device fonts determine the artwork; use sufficiently large letters for your thread.",
+  "image-import-mode":
+    "Use as Reference keeps a background image without creating stitches. Automatically Trace opens the existing color-reduction and editable-vector workflow.",
+  "reference-storage-mode":
+    "Original preserves exact uploaded image bytes. Optimize explicitly resizes to at most 2048 pixels and re-encodes the stored copy; the original is not embedded afterward.",
+  "edit-reference":
+    "Unlock and select this background reference for moving, resizing or rotating with canvas handles. Finish editing locks it so drawing tools target foreground artwork.",
+  "reference-opacity":
+    "Display opacity of the reference image only. This does not affect stitch density, thread colors or exported files.",
+  "reference-name":
+    "Rename the reference layer without changing its shared image asset or embroidery artwork.",
   "object-name":
     "Rename the selected source object, SVG or group without changing its geometry or stitching.",
   "bulk-scope":

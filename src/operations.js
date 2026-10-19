@@ -30,9 +30,13 @@ export const requiresClosed = (type) =>
     "contour",
   ].includes(type);
 export const closedArtwork = (o) =>
-  o.type !== "manual" && (o.type === "fill" || o.closed === true);
+  o.type !== "reference" &&
+  o.type !== "manual" &&
+  (o.type === "fill" || o.closed === true);
 export const supportsMethod = (o, type) =>
-  o.type !== "manual" && (!requiresClosed(type) || closedArtwork(o));
+  o.type !== "reference" &&
+  o.type !== "manual" &&
+  (!requiresClosed(type) || closedArtwork(o));
 export const CORNER_TYPES = new Set([
   "column",
   "run",
@@ -134,7 +138,8 @@ export function defaultOperation(o) {
     ),
   };
 }
-export const operationsOf = (o) => o.operations || [defaultOperation(o)];
+export const operationsOf = (o) =>
+  o.type === "reference" ? [] : o.operations || [defaultOperation(o)];
 export function materialize(o) {
   if (!o.operations) o.operations = [{ ...defaultOperation(o), id: uid() }];
   return o.operations;

@@ -1,3 +1,4 @@
+import { pruneReferenceAssets } from "./references.js";
 import { sourceTransform } from "./smart-geometry.js";
 import { uid, bounds, pointsOf, translate } from "./model.js";
 
@@ -207,6 +208,7 @@ export function deleteSelection(p, ids) {
   );
   p.objects = p.objects.filter((o) => !remove.has(o.id));
   p.groups = (p.groups || []).filter((g) => !remove.has(g.id));
+  pruneReferenceAssets(p);
 }
 export function copySelection(p, ids) {
   const selected = roots(p, ids),
@@ -214,6 +216,18 @@ export function copySelection(p, ids) {
   return {
     objects: structuredClone(all.filter((n) => !n.kind)),
     groups: structuredClone(all.filter((n) => n.kind)),
+    ...(all.some((n) => n.type === "reference")
+      ? {
+          referenceAssets: Object.fromEntries(
+            all
+              .filter((n) => n.type === "reference")
+              .map((n) => [
+                n.reference.assetId,
+                structuredClone(p.referenceAssets[n.reference.assetId]),
+              ]),
+          ),
+        }
+      : {}),
     roots: all
       .filter(
         (n) =>
@@ -227,7 +241,20 @@ export function pasteSelection(p, clipboard, offset = 3) {
   const copy = structuredClone(clipboard),
     all = [...copy.groups, ...copy.objects],
     ids = new Map(all.map((n) => [n.id, uid()]));
+  const assetIds = new Map();
+  for (const [id, asset] of Object.entries(copy.referenceAssets || {})) {
+    const assets = (p.referenceAssets ||= {}),
+      existing = Object.keys(assets).find(
+        (key) => assets[key].data === asset.data,
+      ),
+      next = existing || (!Object.hasOwn(assets, id) ? id : uid());
+    assets[next] ||= asset;
+    assetIds.set(id, next);
+  }
   for (const n of all) {
+    if (n.type === "reference")
+      n.reference.assetId =
+        assetIds.get(n.reference.assetId) || n.reference.assetId;
     const wasRoot = copy.roots.includes(n.id);
     n.id = ids.get(n.id);
     n.parentId =
@@ -277,13 +304,24 @@ export function transformSelection(
       c.x - c.x * ca * sx + c.y * sa * sy + dx,
       c.y - c.x * sa * sx - c.y * ca * sy + dy,
     ]);
-    // Fill direction follows artwork rotation. Physical density and border
-    // widths stay in millimeters when resizing, as in embroidery digitizers.
-    if (angle) {
-      o.angle = ((o.angle + angle + 540) % 360) - 180;
+    // Reflect stitch directions with the source without changing physical density.
+    if (angle || sx * sy < 0) {
+      const direction = (v) => {
+        if (v === undefined) return v;
+        let d = v;
+        if (sx * sy < 0)
+          d =
+            (Math.atan2(
+              Math.sign(sy) * Math.sin((v * Math.PI) / 180),
+              Math.sign(sx) * Math.cos((v * Math.PI) / 180),
+            ) *
+              180) /
+            Math.PI;
+        return ((d + angle + 540) % 360) - 180;
+      };
+      if (o.angle !== undefined) o.angle = direction(o.angle);
       for (const op of o.operations || [])
-        if (op.angle !== undefined)
-          op.angle = ((op.angle + angle + 540) % 360) - 180;
+        if (op.angle !== undefined) op.angle = direction(op.angle);
     }
   }
 }

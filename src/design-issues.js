@@ -13,7 +13,9 @@ export function designIssues(project, warnings = [], diagnostics = {}) {
       )
         issues.push(issue);
     };
-  for (const o of project.objects.filter((o) => isVisible(project, o))) {
+  for (const o of project.objects.filter(
+    (o) => o.type !== "reference" && isVisible(project, o),
+  )) {
     const ops = operationsOf(o).filter((op) => op.enabled !== false);
     for (const op of ops) {
       const base = {

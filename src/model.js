@@ -1,3 +1,4 @@
+import { validateReferences } from "./references.js";
 import { sourceTransform } from "./smart-geometry.js";
 export const VERSION = 1;
 export const PALETTE = [
@@ -393,6 +394,7 @@ export function validateProject(p) {
     )
       throw Error("Invalid digitizing settings.");
   }
+  validateReferences(p);
   let total = 0;
   for (const o of p.objects) {
     if (
@@ -404,7 +406,7 @@ export function validateProject(p) {
         !["quarter", "half", "aligned"].includes(o.pattern)) ||
       (o.sequenceLocked !== undefined &&
         typeof o.sequenceLocked !== "boolean") ||
-      !["fill", "run", "satin", "manual"].includes(o.type)
+      !["fill", "run", "satin", "manual", "reference"].includes(o.type)
     )
       throw Error("Invalid object.");
     if (o.type === "manual") {
@@ -431,7 +433,7 @@ export function validateProject(p) {
         if (!Number.isFinite(o[k]) || o[k] < min || o[k] > max)
           throw Error(`Invalid ${k} setting.`);
     }
-    validateSource(o);
+    if (o.type !== "reference") validateSource(o);
     const pts = o.type === "manual" ? o.commands : o.rings.flat();
     total += pts.length;
     if (

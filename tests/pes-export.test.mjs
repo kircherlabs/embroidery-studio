@@ -1,3 +1,5 @@
+import { addReference } from "../src/references.js";
+import { arrangeArtwork } from "../src/arrange.js";
 import { createSurroundingPatch } from "../src/construction.js";
 import { smartShape } from "../src/creative.js";
 import test from "node:test";
@@ -390,4 +392,83 @@ test("stroke columns preserve mixed-operation stops, colors, dimensions and ever
     sewn.findIndex((e) => e.operationId === opIds[2]) >
       sewn.findIndex((e) => e.operationId === opIds[1]),
   );
+});
+
+test("reference assets do not change PES bytes, dimensions, commands, or embedded graphics", () => {
+  const o = smartShape("star", 25, 21),
+    p = {
+      version: 1,
+      name: "Reference safety",
+      machine: "se700",
+      objects: [o],
+    },
+    before = generate(p),
+    first = exportDesign(before.events);
+  const reference = addReference(p, {
+    name: "PRIVATE_REFERENCE_IMAGE.png",
+    width: 400,
+    height: 200,
+    data: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=",
+  });
+  for (const q of reference.rings[0]) {
+    q.x += 800;
+    q.y += 300;
+  }
+  reference.reference.frame[4] += 800;
+  reference.reference.frame[5] += 300;
+  const after = generate(p),
+    second = exportDesign(after.events);
+  assert.deepEqual(after.events, before.events);
+  assert.deepEqual(first.bytes, second.bytes);
+  assert(
+    !Buffer.from(second.bytes).includes(Buffer.from("PRIVATE_REFERENCE_IMAGE")),
+  );
+  assert(!Buffer.from(second.bytes).includes(Buffer.from("data:image")));
+  assert(after.stats.fits);
+  check(after.events);
+});
+test("horizontal and vertical flips preserve correctly reflected running needle coordinates in actual PES", () => {
+  for (const action of ["flip-horizontal", "flip-vertical"]) {
+    const o = object(
+        "Asymmetric path",
+        [
+          [
+            { x: -15, y: -8 },
+            { x: 5, y: -8 },
+            { x: 5, y: -4 },
+            { x: -3, y: -4 },
+            { x: -3, y: 9 },
+          ],
+        ],
+        { type: "run", underlay: false, closed: false },
+      ),
+      p = { version: 1, name: "Mirrored path", machine: "se700", objects: [o] };
+    o.operations = [
+      {
+        ...makeOperation("run", o),
+        tieIn: false,
+        tieOff: false,
+        underlay: false,
+      },
+    ];
+    const before = generate(p).events.filter((e) => e.cmd === "stitch");
+    arrangeArtwork(p, [o.id], action);
+    const plan = generate(p),
+      after = plan.events.filter((e) => e.cmd === "stitch");
+    assert.equal(after.length, before.length);
+    after.forEach((e, i) => {
+      assert(
+        Math.abs(
+          e.x -
+            (action === "flip-horizontal" ? -10 - before[i].x : before[i].x),
+        ) < 0.10001,
+      );
+      assert(
+        Math.abs(
+          e.y - (action === "flip-vertical" ? 1 - before[i].y : before[i].y),
+        ) < 0.10001,
+      );
+    });
+    check(plan.events);
+  }
 });

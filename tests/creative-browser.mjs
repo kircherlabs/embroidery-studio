@@ -377,6 +377,8 @@ try {
     mimeType: "image/png",
     buffer: Buffer.from(png, "base64"),
   });
+  await page.locator("#image-import-mode").selectOption("trace");
+  await page.locator("#dialog-submit").click();
   await page.waitForSelector("#trace-preview");
   await page.locator("#raster-colors").fill("3");
   await page.locator("#trace-area").fill("0");

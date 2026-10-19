@@ -45,6 +45,7 @@ export class Stage {
     this.draft = [];
     this.node = null;
     this.pointers = new Map();
+    this.referenceImages = new Map();
     this.dpr = devicePixelRatio || 1;
     new ResizeObserver(() => this.resize()).observe(canvas);
     canvas.addEventListener("pointerdown", (e) => this.down(e));
@@ -170,8 +171,8 @@ export class Stage {
     this.fitObjects(selected);
   }
   fitDesign() {
-    const objects = this.state.project.objects.filter((o) =>
-      isVisible(this.state.project, o),
+    const objects = this.state.project.objects.filter(
+      (o) => o.type !== "reference" && isVisible(this.state.project, o),
     );
     if (!objects.length) {
       this.fit();
@@ -249,6 +250,33 @@ export class Stage {
     this.pan.x += (x - c.x) * (1 - ratio);
     this.pan.y += (y - c.y) * (1 - ratio);
     this.render();
+  }
+  drawReferences(ctx) {
+    const p = this.state.project;
+    for (const id of this.referenceImages.keys())
+      if (!p.referenceAssets?.[id]) this.referenceImages.delete(id);
+    for (const o of p.objects)
+      if (o.type === "reference" && isVisible(p, o)) {
+        if (this.state.isolation && !within(p, o, this.state.isolation))
+          continue;
+        const r = o.reference,
+          asset = p.referenceAssets?.[r.assetId];
+        if (!asset) continue;
+        let cached = this.referenceImages.get(r.assetId);
+        if (!cached || cached.data !== asset.data) {
+          const image = new Image();
+          cached = { image, data: asset.data };
+          this.referenceImages.set(r.assetId, cached);
+          image.onload = () => this.render();
+          image.src = asset.data;
+        }
+        if (!cached.image.complete || !cached.image.naturalWidth) continue;
+        ctx.save();
+        ctx.globalAlpha = r.opacity;
+        ctx.transform(...r.frame);
+        ctx.drawImage(cached.image, -0.5, -0.5, 1, 1);
+        ctx.restore();
+      }
   }
   invalidate() {
     this.render();
@@ -353,9 +381,10 @@ export class Stage {
         -m.width / 2 - 9 / scale,
         y + 3 / scale,
       );
+    if (s.mode === "design") this.drawReferences(ctx);
     if (s.mode === "design")
-      for (const o of s.project.objects.filter((o) =>
-        isVisible(s.project, o),
+      for (const o of s.project.objects.filter(
+        (o) => o.type !== "reference" && isVisible(s.project, o),
       )) {
         if (s.isolation && !within(s.project, o, s.isolation)) continue;
         ctx.globalAlpha = s.showStitches && !editing ? 0.13 : 0.8;
@@ -501,6 +530,7 @@ export class Stage {
       if (
         s.tool === "node" &&
         selected &&
+        selected.type !== "reference" &&
         selectionIds(s).length === 1 &&
         s.selection === selected.id
       ) {
@@ -705,6 +735,12 @@ export class Stage {
         p.y > b.maxY + pad
       )
         return false;
+      if (o.type === "reference")
+        return (
+          selectionIds(this.state).some((id) =>
+            within(this.state.project, o, id),
+          ) && inside(p, o.rings)
+        );
       if (o.type === "fill") return inside(p, o.rings, o.fillRule);
       for (const pts of o.type === "manual" ? [o.commands] : o.rings)
         for (
@@ -839,6 +875,7 @@ export class Stage {
     if (
       s.tool === "node" &&
       selected &&
+      selected.type !== "reference" &&
       !isLocked(s.project, selected) &&
       selectionIds(s).length === 1
     ) {
@@ -1132,6 +1169,7 @@ export class Stage {
               .filter((o) => {
                 const b = objectBounds(o);
                 return (
+                  o.type !== "reference" &&
                   isVisible(this.state.project, o) &&
                   !isLocked(this.state.project, o) &&
                   (!this.state.isolation ||
@@ -1187,7 +1225,12 @@ export class Stage {
     const o = this.state.project.objects.find(
       (o) => o.id === this.state.selection,
     );
-    if (!o || o.type === "manual" || isLocked(this.state.project, o)) return;
+    if (
+      !o ||
+      ["manual", "reference"].includes(o.type) ||
+      isLocked(this.state.project, o)
+    )
+      return;
     if (o.curve) {
       const c = o.curve;
       let best = 8 / this.scale,
@@ -1270,7 +1313,13 @@ export class Stage {
       if (o.type === "manual") o.commands = structuredClone(original.commands);
       else o.rings = structuredClone(original.rings);
       o.angle = original.angle;
-      for (const key of ["shape", "textSource", "rounding", "curve"]) {
+      for (const key of [
+        "shape",
+        "textSource",
+        "rounding",
+        "curve",
+        "reference",
+      ]) {
         if (original[key]) o[key] = structuredClone(original[key]);
         else delete o[key];
       }

@@ -430,6 +430,12 @@ try {
           Math.min(fittedHoop.width, fittedHoop.height) +
           40,
       ) < 0.1,
+      JSON.stringify({
+        viewport: { width, height },
+        fittedHoop,
+        canvas: await mobile.locator("#stage").boundingBox(),
+        header: await mobile.locator(".app-header").boundingBox(),
+      }),
     );
     assert(
       Math.abs(fittedHoop.center.x - fittedHoop.width / 2) < 0.1 &&

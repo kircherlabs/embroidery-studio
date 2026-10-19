@@ -29,6 +29,7 @@ jobs:
           node scripts/serve.mjs > /tmp/studio-preview.log 2>&1 &
           STUDIO_PID=$!
           trap 'kill "$STUDIO_PID"' EXIT
+          node tests/workspace-browser.mjs
           node tests/text-path-browser.mjs
           node tests/browser.mjs
           node tests/svg-browser.mjs
@@ -36,7 +37,6 @@ jobs:
           node tests/travel-browser.mjs
           node tests/editor-browser.mjs
           node tests/ux-browser.mjs
-          node tests/workspace-browser.mjs
           node tests/creative-browser.mjs
           node tests/pes-browser.mjs
           node tests/properties-browser.mjs

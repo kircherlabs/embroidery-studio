@@ -514,6 +514,11 @@ function validateSource(o) {
       !Array.isArray(c.nodes) ||
       c.nodes.length < 2 ||
       c.nodes.length > 2000 ||
+      c.nodes.some(
+        (n) =>
+          n.mode !== undefined &&
+          !["corner", "smooth", "symmetric"].includes(n.mode),
+      ) ||
       c.nodes.some((n) =>
         [n, n.in, n.out]
           .filter(Boolean)

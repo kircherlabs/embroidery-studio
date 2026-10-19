@@ -1,3 +1,4 @@
+import { chooseTool } from "./helpers/ui.mjs";
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
 import { mkdir, readFile } from "node:fs/promises";
@@ -62,7 +63,7 @@ try {
     machine: "se700",
     objects: [],
   });
-  await page.locator('[data-tool="ellipse"]').click();
+  await chooseTool(page, "ellipse");
   const v = await page.evaluate(() => {
     const r = document.getElementById("stage").getBoundingClientRect(),
       v = window.studio.getView();

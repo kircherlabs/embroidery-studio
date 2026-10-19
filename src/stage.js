@@ -1,4 +1,10 @@
 import {
+  nearestSegment,
+  sculptArtwork,
+  alignHandle,
+  pencilCurve,
+} from "./path-editing.js";
+import {
   detachSource,
   curveRings,
   mapPoint,
@@ -657,20 +663,33 @@ export class Stage {
       ctx.lineWidth = 1.5 / scale;
       this.path(
         ctx,
-        s.tool === "pen"
-          ? curveRings({ nodes: this.draft, closed: false })
-          : [this.draft],
+        s.tool === "pencil" && this.pencilPreview
+          ? curveRings(this.pencilPreview)
+          : s.tool === "pen"
+            ? curveRings({ nodes: this.draft, closed: false })
+            : [this.draft],
         s.tool === "polygon",
       );
       if (s.tool === "polygon") ctx.fill();
       ctx.stroke();
-      for (const p of this.draft) {
+      for (const p of s.tool === "pencil" ? [] : this.draft) {
         ctx.beginPath();
         ctx.arc(p.x, p.y, 3 / scale, 0, Math.PI * 2);
         ctx.fillStyle = "#e7b784";
         ctx.fill();
         ctx.stroke();
       }
+    }
+    if (this.drag?.type === "vector-stroke") {
+      const erasing = this.drag.kind === "eraser";
+      ctx.save();
+      ctx.strokeStyle = erasing ? "#bf554866" : "#b14c31";
+      ctx.lineWidth = erasing ? s.eraseWidth || 2 : 1.5 / scale;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      this.path(ctx, [this.drag.points], false);
+      ctx.stroke();
+      ctx.restore();
     }
     if (this.shape || this.marquee) {
       const { start: a, end: b } = this.shape || this.marquee;
@@ -849,6 +868,34 @@ export class Stage {
       this.render();
       return;
     }
+    if (s.tool === "pencil") {
+      const previousDraft = this.draft;
+      if (previousDraft.length > 1) {
+        try {
+          pencilCurve(
+            previousDraft,
+            s.pencilSmoothing || 0.15,
+            s.pencilClosed || false,
+          );
+        } catch (e) {
+          this.actions.notice?.(
+            e.message + " Adjust the pending stroke before drawing another.",
+          );
+          return;
+        }
+      }
+      this.draft = [p];
+      this.pencilPreview = null;
+      this.drag = { type: "pencil", start: p, previousDraft };
+      this.actions.draft();
+      this.render();
+      return;
+    }
+    if (["knife", "eraser"].includes(s.tool)) {
+      this.drag = { type: "vector-stroke", kind: s.tool, points: [p] };
+      this.render();
+      return;
+    }
     if (s.tool === "pen") {
       const node = { x: p.x, y: p.y };
       this.draft.push(node);
@@ -877,6 +924,7 @@ export class Stage {
       selected &&
       selected.type !== "reference" &&
       !isLocked(s.project, selected) &&
+      isVisible(s.project, selected) &&
       selectionIds(s).length === 1
     ) {
       if (selected.curve) {
@@ -912,6 +960,29 @@ export class Stage {
           before: JSON.stringify(s.project),
           start: p,
           original: { ...pts[index] },
+        };
+        this.render();
+        return;
+      }
+    }
+    if (
+      s.tool === "node" &&
+      selected &&
+      !["reference", "manual"].includes(selected.type) &&
+      !isLocked(s.project, selected) &&
+      isVisible(s.project, selected) &&
+      selectionIds(s).length === 1
+    ) {
+      const hit = nearestSegment(selected, p);
+      if (hit && hit.distance < 8 / this.scale) {
+        this.node = null;
+        this.drag = {
+          type: "sculpt",
+          o: selected,
+          hit,
+          start: p,
+          original: structuredClone(selected),
+          before: JSON.stringify(s.project),
         };
         this.render();
         return;
@@ -1108,6 +1179,37 @@ export class Stage {
           sx = sy = Math.abs(sx - 1) > Math.abs(sy - 1) ? sx : sy;
         transformSelection(d.objects, { sx, sy, pivot });
       }
+    } else if (d.type === "pencil") {
+      for (const event of e.getCoalescedEvents?.().length
+        ? e.getCoalescedEvents()
+        : [e]) {
+        const q = this.toWorld(event);
+        if (
+          this.draft.length < 6000 &&
+          distance(q, this.draft.at(-1)) > 1 / this.scale
+        )
+          this.draft.push(q);
+      }
+      this.actions.draft();
+    } else if (d.type === "vector-stroke") {
+      if (
+        distance(p, d.points.at(-1)) > 1 / this.scale &&
+        d.points.length < 4000
+      )
+        d.points.push(p);
+    } else if (d.type === "sculpt") {
+      if (!d.active && distance(p, d.start) * this.scale < 2) return;
+      d.active = true;
+      Object.assign(d.o, structuredClone(d.original));
+      const curve = d.original.curve,
+        q = curve ? inversePoint(p, curve.frame) : p,
+        a = curve ? inversePoint(d.start, curve.frame) : d.start;
+      sculptArtwork(
+        d.o,
+        d.hit,
+        { x: q.x - a.x, y: q.y - a.y },
+        this.state.sculptRadius || 2,
+      );
     } else if (d.type === "pen") {
       const dx = p.x - d.start.x,
         dy = p.y - d.start.y;
@@ -1136,7 +1238,10 @@ export class Stage {
             n[key].x += dx;
             n[key].y += dy;
           }
-      } else n[d.key] = q;
+      } else {
+        n[d.key] = q;
+        alignHandle(n, d.key);
+      }
       d.o.curve = c;
       d.o.rings = curveRings(c);
     } else if (d.type === "node") {
@@ -1195,7 +1300,46 @@ export class Stage {
     if (this.drag) {
       const d = this.drag;
       this.drag = null;
-      if (
+      if (d.type === "pencil") {
+        const stroke = this.draft;
+        if (stroke.length < 2) {
+          this.draft = d.previousDraft;
+          this.actions.draft();
+          this.render();
+          return;
+        }
+        if (d.previousDraft.length > 1) {
+          this.draft = d.previousDraft;
+          if (!this.actions.finish({ keepTool: true })) {
+            this.actions.draft();
+            this.render();
+            return;
+          }
+          this.draft = stroke;
+        }
+        if (stroke.length >= 6000)
+          this.actions.notice?.(
+            "Pencil capture reached 6,000 points. Review this stroke and use shorter strokes for the rest.",
+          );
+        try {
+          this.pencilPreview = pencilCurve(
+            this.draft,
+            this.state.pencilSmoothing || 0.15,
+            this.state.pencilClosed || false,
+          );
+        } catch {
+          this.pencilPreview = null;
+        }
+        this.actions.draft();
+      } else if (d.type === "vector-stroke")
+        this.actions.vectorStroke?.({
+          kind: d.kind,
+          points: d.points,
+          scale: this.scale,
+        });
+      else if (d.type === "sculpt") {
+        if (d.active) this.actions.sculptChanged?.(d.before);
+      } else if (
         d.type === "satin-guide" &&
         distance(d.op.satinGuides[d.index].a, d.op.satinGuides[d.index].b) < 0.2
       ) {
@@ -1210,6 +1354,10 @@ export class Stage {
     this.guides = [];
     if (this.pointers.size && this.touchDraft) {
       this.draft = this.touchDraft;
+      this.actions.draft();
+    }
+    if (this.drag?.type === "pencil") {
+      this.draft = this.drag.previousDraft;
       this.actions.draft();
     }
     if (this.drag?.before) this.state.project = JSON.parse(this.drag.before);

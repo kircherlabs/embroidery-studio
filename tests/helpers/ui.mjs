@@ -32,3 +32,21 @@ export async function chooseMethod(page, type, { add = false } = {}) {
       .locator(add ? "#add-reinforcement" : "#reinforcement")
       .selectOption(type);
 }
+
+// Open the compact Shapes family through its real disclosure control.
+export async function chooseTool(page, tool) {
+  if (
+    ["rect", "ellipse", "regular", "star", "eyelet"].includes(tool) &&
+    (await page.locator("#shape-family").getAttribute("open")) === null
+  )
+    await page.locator("#shape-family > summary").click();
+  await page.locator(`[data-tool="${tool}"]`).click();
+  // Tool docks change available canvas size. Wait for ResizeObserver's camera
+  // update before browser tests map design coordinates to pointer coordinates.
+  await page.evaluate(
+    () =>
+      new Promise((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(resolve)),
+      ),
+  );
+}

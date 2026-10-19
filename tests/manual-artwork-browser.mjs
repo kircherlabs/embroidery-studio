@@ -1,3 +1,4 @@
+import { chooseTool } from "./helpers/ui.mjs";
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
 import { mkdir, readFile } from "node:fs/promises";
@@ -139,14 +140,14 @@ try {
   });
   assert(sampled[0] - sampled[1] > 40, JSON.stringify(sampled));
   // Locked image does not intercept creating ordinary embroidery artwork.
-  await page.locator('[data-tool="rect"]').click();
+  await chooseTool(page, "rect");
   await drag({ x: -8, y: -6 }, { x: 8, y: 6 });
   await page.waitForFunction(
     () =>
       window.studio.getProject().objects.length === 2 &&
       window.studio.getPlan(),
   );
-  await page.locator('[data-tool="pen"]').click();
+  await chooseTool(page, "pen");
   await drag({ x: -12, y: 8 }, { x: -10, y: 3 });
   await drag({ x: 10, y: 9 }, { x: 13, y: 3 });
   await page.locator("#finish-draw").click();
@@ -391,7 +392,7 @@ try {
     (await project()).objects.find((o) => o.id === curveObject.id),
     flipped,
   );
-  await page.locator('[data-tool="node"]').click();
+  await chooseTool(page, "node");
   const handle = mapPoint(flipped.curve.nodes[0].out, flipped.curve.frame);
   await drag(handle, { x: handle.x + 2, y: handle.y - 1 }, true);
   assert.notDeepEqual(

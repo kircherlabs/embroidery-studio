@@ -64,6 +64,14 @@ workflow](docs/PROPERTIES.md) for applicability, testing and limitations.
 
 ## Manual references and flipping
 
+**Pencil** now traces continuous strokes into editable Bézier artwork with
+adjustable smoothing. **Node** can pull curve segments and set smooth, corner or
+symmetric anchors. **Knife**, **Vector Eraser**, and the docked **Path repair**
+controls split, subtract, join, close and reverse actual artwork, preserving holes,
+hierarchy, Undo and sewing actions. **Shapes** keeps the existing parametric tools
+in one expandable family. See the [drawing and repair guide](docs/VECTOR_EDITING.md)
+for controls, explicit conversions and milestone limitations.
+
 Raster import now offers **Use as Reference** or **Automatically Trace**. References
 are separate locked background layers with opacity, canvas transforms and shared
 embedded image data. They never sew, export, or affect hoop fit. Select an image

@@ -1,3 +1,4 @@
+import { setNodeMode } from "./path-editing.js";
 import { refitPatch } from "./construction.js";
 import { FONTS, updateLettering } from "./importers.js";
 import { regenerateShape, curveRings } from "./smart-geometry.js";
@@ -130,7 +131,7 @@ export function creativeInspector(api, leaf, objects, targets) {
   if (leaf?.curve)
     box.insertAdjacentHTML(
       "beforeend",
-      '<details><summary>Bézier node controls</summary><p class="property-note">Select an anchor with the Node tool. Drag tangent handles to reshape curves; double-click a curve to split it. Delete removes an anchor.</p><button id="node-smooth">Smooth active anchor</button><button id="node-corner">Make active anchor a corner</button></details>',
+      '<details><summary>Bézier node controls</summary><p class="property-note">Select an anchor with the Node tool. Drag tangent handles to reshape curves; double-click a curve to split it. Delete removes an anchor.</p><button id="node-smooth">Smooth active anchor</button><button id="node-corner">Make active anchor a corner</button><button id="node-symmetric">Symmetric active anchor</button></details>',
     );
   const panel = document.getElementById("properties");
   panel.prepend(box);
@@ -245,7 +246,7 @@ export function creativeInspector(api, leaf, objects, targets) {
         roundChecked(leaf, radius, { ring, indices: [at] });
       });
     };
-  for (const action of ["smooth", "corner"])
+  for (const action of ["smooth", "corner", "symmetric"])
     if ($("node-" + action))
       $("node-" + action).onclick = () => {
         const i = api.node(),
@@ -255,18 +256,7 @@ export function creativeInspector(api, leaf, objects, targets) {
           return;
         }
         safe(() => {
-          const n = c.nodes[i];
-          if (action === "corner") {
-            delete n.in;
-            delete n.out;
-          } else {
-            const a = c.nodes[Math.max(0, i - 1)],
-              b = c.nodes[Math.min(c.nodes.length - 1, i + 1)];
-            const dx = (b.x - a.x) / 6,
-              dy = (b.y - a.y) / 6;
-            n.in = { x: n.x - dx, y: n.y - dy };
-            n.out = { x: n.x + dx, y: n.y + dy };
-          }
+          setNodeMode(c, i, action);
           leaf.rings = curveRings(c);
         });
       };

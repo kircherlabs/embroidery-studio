@@ -23,6 +23,7 @@
   grid-column: 2;
   grid-row: 1;
   min-width: 0;
+  container: drawing-workspace / inline-size;
 }
 .workspace > .inspector {
   grid-column: 3;
@@ -225,6 +226,9 @@
   min-height: 40px;
   overflow: hidden;
 }
+.canvas-surface > #stage {
+  min-height: 0;
+}
 .tool-rail {
   display: flex;
   flex-direction: column;
@@ -284,6 +288,119 @@
   gap: 4px;
   display: grid;
   grid-template-columns: 1fr auto;
+}
+.tool-context {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+  min-height: 56px;
+  height: 56px;
+  padding: 5px 12px;
+  background: #e3e6d9;
+  color: #34503a;
+  border-bottom: 1px solid #bac4b2;
+}
+.tool-context .stage-top {
+  position: static;
+  flex: 1;
+  min-width: 0;
+  z-index: auto;
+  pointer-events: auto;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+.tool-context .stage-top > div {
+  min-width: 0;
+}
+.tool-context .stage-top #stage-hint,
+.tool-context #navigation-hint {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tool-context .stage-top #stage-hint {
+  font-size: 10px;
+}
+.tool-context .stage-top .eyebrow {
+  margin-bottom: 2px;
+}
+.tool-context #draw-actions {
+  position: static;
+  transform: none;
+  box-shadow: none;
+  background: transparent;
+  padding: 0;
+  width: auto;
+  flex-shrink: 0;
+  color: #34503a;
+  white-space: normal;
+}
+.tool-context #draw-actions button {
+  min-height: 36px;
+  font-size: 11px;
+}
+.tool-context #cancel-draw {
+  background: #edf0e4;
+  color: #34503a;
+  border-color: #87967b;
+}
+.tool-context #cancel-draw:hover {
+  background: #d4dccb;
+}
+.tool-context #draw-actions label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: inherit;
+}
+.tool-context #draw-message {
+  display: block;
+}
+@container drawing-workspace (max-width: 640px) {
+  .tool-context:has(#draw-actions:not([hidden])) .stage-top {
+    display: none;
+  }
+  .tool-context #draw-actions {
+    width: 100%;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    gap: 4px 8px;
+  }
+  .tool-context #draw-message {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .tool-context #draw-actions label {
+    grid-column: 1;
+    grid-row: 2;
+  }
+  .tool-context #finish-draw {
+    grid-column: 2;
+    grid-row: 1 / 3;
+  }
+  .tool-context #cancel-draw {
+    grid-column: 3;
+    grid-row: 1 / 3;
+  }
+}
+@media (max-height: 600px) {
+  .tool-context {
+    height: 36px;
+    min-height: 36px;
+    padding: 2px 8px;
+  }
+  .tool-context .eyebrow,
+  .tool-context #navigation-hint {
+    display: none;
+  }
+  .tool-context #draw-actions button {
+    min-height: 30px;
+    padding: 5px 8px;
+  }
+  .tool-context #draw-actions {
+    gap: 2px 6px;
+  }
 }
 #navigation-hint {
   grid-column: 1/-1;

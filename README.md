@@ -20,6 +20,11 @@ confirmation; Undo restores previous operations. Locked objects, reference image
 manual stitches and linked patch boundaries are protected, and incompatible open
 paths are explained. The drawing default is remembered on this device.
 
+Active path controls (point count, Closed fill, Finish and Cancel) are docked above
+the drawing surface. They never float over artwork. The Objects panel displays
+the colors of enabled sewing operations; multicolor stacks have striped swatches
+instead of showing the source artwork's original paint.
+
 ## Properties and construction
 
 The selection-aware inspector separates **Artwork**, **Embroidery method**,

@@ -1,5 +1,6 @@
 import { rasterImport } from "./reference-ui.js";
 import { installDrawingStyle } from "./drawing-style-ui.js";
+import { threadColors } from "./operations.js";
 import { satinSummary } from "./creative-ui.js";
 import { EMBROIDERY_STYLES, setEmbroideryStyle } from "./styles.js";
 import { traceDialog } from "./tracing-ui.js";
@@ -467,6 +468,23 @@ function renderPanels() {
   $("object-count").textContent = state.project.objects.length;
   const selectedIds = new Set(selectionIds(state)),
     affected = new Set(selectedLeaves(state).map((o) => o.id));
+  const swatch = (o) => {
+    const colors = o.kind ? [] : threadColors(o),
+      background =
+        colors.length > 1
+          ? `linear-gradient(135deg, ${colors.map((c, i) => `${c} ${(i * 100) / colors.length}% ${((i + 1) * 100) / colors.length}%`).join(", ")})`
+          : colors[0] || "transparent",
+      label = o.kind
+        ? o.kind === "svg"
+          ? "Imported SVG"
+          : "Group"
+        : o.type === "reference"
+          ? "Reference image · no stitches"
+          : colors.length
+            ? `Thread colors: ${colors.join(", ")}`
+            : "No enabled sewing operations";
+    return `<span class="swatch ${o.kind ? "group-icon" : ""}" role="img" aria-label="${esc(label)}" data-help="${esc(label)}" style="background:${esc(background)}">${o.type === "reference" ? "▧" : o.kind ? (o.kind === "svg" ? "▧" : "▱") : ""}</span>`;
+  };
   const row = (
     o,
     depth,
@@ -474,7 +492,7 @@ function renderPanels() {
     <button class="drag-grip" data-tree-grip aria-label="Reorder ${esc(o.name)}">${icon("grip")}</button>
     <button class="selection-check" data-check="${esc(o.id)}" aria-label="Select ${esc(o.name)}" aria-pressed="${selectedIds.has(o.id) ? "true" : affected.has(o.id) ? "mixed" : "false"}"><span>${selectedIds.has(o.id) ? "✓" : affected.has(o.id) ? "−" : ""}</span></button>
     ${o.kind ? `<button class="tree-toggle" data-expand="${esc(o.id)}" aria-label="${state.collapsed.has(o.id) ? "Expand" : "Collapse"} ${esc(o.name)}">${state.collapsed.has(o.id) ? "▸" : "▾"}</button>` : '<span class="tree-toggle"></span>'}
-    <button class="object-select" data-select="${esc(o.id)}"><span class="swatch ${o.kind ? "group-icon" : ""}" style="background:${o.color || "transparent"}">${o.type === "reference" ? "▧" : o.kind ? (o.kind === "svg" ? "▧" : "▱") : ""}</span><span class="object-text"><span class="object-title">${esc(o.name)}</span><span class="object-type">${o.kind ? `${leaves(state.project, [o.id]).length} regions · ${o.kind === "svg" ? "Imported SVG" : "Group"}` : o.operations ? `${o.operations.length} operations` : o.type === "reference" ? "Reference image · no stitches" : o.svgLabel ? esc(o.svgLabel) : o.type === "fill" ? "Tatami fill" : o.type === "satin" ? "Satin centerline" : o.type === "manual" ? "Manual stitches" : "Running stitch"}</span></span></button>
+    <button class="object-select" data-select="${esc(o.id)}">${swatch(o)}<span class="object-text"><span class="object-title">${esc(o.name)}</span><span class="object-type">${o.kind ? `${leaves(state.project, [o.id]).length} regions · ${o.kind === "svg" ? "Imported SVG" : "Group"}` : o.operations ? `${o.operations.length} operations` : o.type === "reference" ? "Reference image · no stitches" : o.svgLabel ? esc(o.svgLabel) : o.type === "fill" ? "Tatami fill" : o.type === "satin" ? "Satin centerline" : o.type === "manual" ? "Manual stitches" : "Running stitch"}</span></span></button>
     <button class="tree-lock" data-lock="${esc(o.id)}" aria-label="${o.locked ? "Unlock" : "Lock"} ${esc(o.name)}" aria-pressed="${isLocked(state.project, o)}">${icon(isLocked(state.project, o) ? "lock" : "unlock")}</button><button class="visibility" data-visibility="${esc(o.id)}" aria-label="${o.visible === false ? "Show" : "Hide"} ${esc(o.name)}" aria-pressed="${!isVisible(state.project, o)}">${icon(isVisible(state.project, o) ? "eye" : "hidden")}</button></div>`;
   $("object-list").setAttribute("role", "tree");
   $("object-list").setAttribute("aria-multiselectable", "true");

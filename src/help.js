@@ -1,4 +1,8 @@
 const descriptions = {
+  "finish-draw":
+    "Complete this path using the placed points. Enter also finishes. The drawing controls stay above the canvas so they do not cover your artwork.",
+  "cancel-draw":
+    "Discard the unfinished path without changing existing artwork. Escape also cancels the current draft.",
   "embroidery-style":
     "Configure outline, fill or combined stitching with existing editable operations. Replacing a multi-step stack requires confirmation; source geometry stays unchanged.",
   "draw-style":

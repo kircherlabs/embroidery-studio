@@ -140,6 +140,16 @@ export function defaultOperation(o) {
 }
 export const operationsOf = (o) =>
   o.type === "reference" ? [] : o.operations || [defaultOperation(o)];
+// Thread displays follow sewing operations, never stale source-artwork paint.
+export function threadColors(o) {
+  return [
+    ...new Set(
+      operationsOf(o)
+        .filter((op) => op.enabled !== false && isSewing(op))
+        .map((op) => (op.color || o.color).toLowerCase()),
+    ),
+  ];
+}
 export function materialize(o) {
   if (!o.operations) o.operations = [{ ...defaultOperation(o), id: uid() }];
   return o.operations;

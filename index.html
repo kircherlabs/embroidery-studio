@@ -209,6 +209,33 @@
             ><span>Changing the hoop does not resize artwork.</span>
           </div>
         </details>
+        <div class="tool-context" aria-label="Active drawing tool">
+          <div class="stage-top">
+            <div>
+              <span class="eyebrow" id="stage-kicker">DESIGN WORKSPACE</span>
+              <span id="stage-hint"
+                >Select an object to refine its stitches</span
+              >
+            </div>
+            <span class="unit-label">mm</span>
+            <span id="navigation-hint"
+              >Wheel to zoom · H to pan · View to fit</span
+            >
+          </div>
+          <div
+            id="draw-actions"
+            role="toolbar"
+            aria-label="Finish or cancel drawing"
+            hidden
+          >
+            <span id="draw-message" role="status" aria-live="polite"></span>
+            <label class="check"
+              ><input id="pen-closed" type="checkbox" />Closed fill</label
+            >
+            <button id="finish-draw" class="primary">Finish path ↵</button>
+            <button id="cancel-draw">Cancel</button>
+          </div>
+        </div>
         <div class="canvas-area">
           <div class="tool-rail">
             <button id="tools-prev" aria-label="Previous drawing tools">
@@ -322,30 +349,11 @@
             <button id="tools-next" aria-label="More drawing tools">›</button>
           </div>
           <div class="canvas-surface">
-            <div class="stage-top">
-              <div>
-                <span class="eyebrow" id="stage-kicker">DESIGN WORKSPACE</span
-                ><span id="stage-hint"
-                  >Select an object to refine its stitches</span
-                >
-              </div>
-              <span class="unit-label">mm</span
-              ><span id="navigation-hint"
-                >Wheel to zoom · H to pan · View to fit</span
-              >
-            </div>
             <canvas
               id="stage"
               tabindex="0"
               aria-label="Embroidery design canvas. Use drawing tools, click to place nodes, Enter to finish, Escape to cancel."
             ></canvas>
-            <div id="draw-actions" hidden>
-              <span id="draw-message"></span
-              ><label class="check"
-                ><input id="pen-closed" type="checkbox" />Closed fill</label
-              ><button id="finish-draw" class="primary">Finish path ↵</button
-              ><button id="cancel-draw">Cancel</button>
-            </div>
           </div>
         </div>
         <div class="canvas-controls">
@@ -537,7 +545,7 @@
     <footer class="status-bar">
       <span id="status">Ready</span
       ><span
-        >40 wt thread presets <i>·</i> v0.6.1 <i>·</i>
+        >40 wt thread presets <i>·</i> v0.6.2 <i>·</i>
         <a
           href="https://github.com/kircherlabs/embroidery-studio"
           target="_blank"

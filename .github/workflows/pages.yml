@@ -42,6 +42,7 @@ jobs:
           node tests/satin-browser.mjs
           node tests/manual-artwork-browser.mjs
           node tests/drawing-style-browser.mjs
+          node tests/tool-context-browser.mjs
       - run: node scripts/build.mjs
       - uses: actions/upload-pages-artifact@v3
         if: github.event_name != 'pull_request'

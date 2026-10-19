@@ -242,6 +242,22 @@
             aria-label="Vector editing options"
             hidden
           >
+            <label class="check" data-vector-option="rails"
+              ><input id="rails-closed" type="checkbox" />Closed rails ·
+              ring</label
+            >
+            <button id="rails-from-selection" data-vector-option="rails node">
+              Create satin from selected paths / ring…
+            </button>
+            <div id="rail-node-controls" hidden>
+              <label
+                >Editing rail<select id="active-rail">
+                  <option value="a">A · amber</option>
+                  <option value="b">B · blue</option>
+                </select></label
+              >
+              <button id="rail-set-seam">Set seam at selected node</button>
+            </div>
             <label data-vector-option="pencil"
               >Smoothing · mm<input
                 id="pencil-smoothing"
@@ -375,6 +391,13 @@
                 aria-label="Draw satin centerline"
               >
                 ≋
+              </button>
+              <button
+                data-tool="rails"
+                aria-label="Draw manual satin rails"
+                data-help="Manual Satin Rails — click-drag Bézier anchors for rail A, Finish rail A, then draw rail B in the same direction. Create column generates stitches across the rails. Use two selected existing paths or nested ring contours as an alternative. Node edits each rail independently. No shortcut is assigned."
+              >
+                ∥
               </button>
               <details id="shape-family" class="shape-family">
                 <summary
@@ -649,7 +672,7 @@
     <footer class="status-bar">
       <span id="status">Ready</span
       ><span
-        >40 wt thread presets <i>·</i> v0.9.0 <i>·</i>
+        >40 wt thread presets <i>·</i> v0.10.0 <i>·</i>
         <a
           href="https://github.com/kircherlabs/embroidery-studio"
           target="_blank"

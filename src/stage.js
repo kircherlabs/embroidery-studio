@@ -3,6 +3,7 @@ import {
   sculptArtwork,
   alignHandle,
   pencilCurve,
+  sculptCurve,
 } from "./path-editing.js";
 import {
   detachSource,
@@ -11,6 +12,8 @@ import {
   inversePoint,
   splitCurve,
   regenerateShape,
+  regenerateRails,
+  railWalk,
 } from "./smart-geometry.js";
 import { objectBounds, pointsOf, bounds, MACHINES } from "./model.js";
 import { inside, distance } from "./engine.js";
@@ -36,11 +39,23 @@ export class Stage {
         (op) =>
           op.id === this.state.satinGuideEdit &&
           op.type === "column" &&
-          op.columnMode === "stroke",
+          ["stroke", "rails"].includes(op.columnMode),
       );
     return op ? { o, op } : null;
   }
 
+  activeCurve(o) {
+    return o?.satinRails ? o.satinRails[this.state.railSide || "a"] : o?.curve;
+  }
+  updateCurve(o, c) {
+    if (o.satinRails) {
+      o.satinRails[this.state.railSide || "a"] = c;
+      regenerateRails(o);
+    } else {
+      o.curve = c;
+      o.rings = curveRings(c);
+    }
+  }
   constructor(canvas, state, actions) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d");
@@ -540,15 +555,16 @@ export class Stage {
         selectionIds(s).length === 1 &&
         s.selection === selected.id
       ) {
-        const points = selected.curve
-          ? selected.curve.nodes.map((p) => mapPoint(p, selected.curve.frame))
+        const editableCurve = this.activeCurve(selected);
+        const points = editableCurve
+          ? editableCurve.nodes.map((p) => mapPoint(p, editableCurve.frame))
           : pointsOf(selected);
-        if (selected.curve)
-          for (const n of selected.curve.nodes)
+        if (editableCurve)
+          for (const n of editableCurve.nodes)
             for (const key of ["in", "out"])
               if (n[key]) {
-                const a = mapPoint(n, selected.curve.frame),
-                  b = mapPoint(n[key], selected.curve.frame);
+                const a = mapPoint(n, editableCurve.frame),
+                  b = mapPoint(n[key], editableCurve.frame);
                 ctx.strokeStyle = "#936c47";
                 ctx.beginPath();
                 ctx.moveTo(a.x, a.y);
@@ -599,6 +615,34 @@ export class Stage {
           ctx.stroke();
         }
       }
+    }
+    if (
+      selected?.satinRails &&
+      s.mode === "design" &&
+      isVisible(s.project, selected)
+    ) {
+      for (const [side, color] of [
+        ["a", "#b67916"],
+        ["b", "#087f99"],
+      ]) {
+        const c = railWalk(selected.satinRails, side),
+          r = curveRings(c)[0];
+        ctx.strokeStyle = color;
+        ctx.lineWidth = (side === (s.railSide || "a") ? 2.2 : 1.3) / scale;
+        this.path(ctx, [r], c.closed);
+        ctx.stroke();
+        const start = mapPoint(c.nodes[0], c.frame);
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.arc(start.x, start.y, 4 / scale, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    if (this.railDraftA) {
+      ctx.strokeStyle = "#b67916";
+      ctx.lineWidth = 2 / scale;
+      this.path(ctx, curveRings(this.railDraftA), this.railDraftA.closed);
+      ctx.stroke();
     }
     if (s.satinStructure || s.satinGuideEdit) {
       ctx.save();
@@ -665,7 +709,7 @@ export class Stage {
         ctx,
         s.tool === "pencil" && this.pencilPreview
           ? curveRings(this.pencilPreview)
-          : s.tool === "pen"
+          : ["pen", "rails"].includes(s.tool)
             ? curveRings({ nodes: this.draft, closed: false })
             : [this.draft],
         s.tool === "polygon",
@@ -896,7 +940,7 @@ export class Stage {
       this.render();
       return;
     }
-    if (s.tool === "pen") {
+    if (["pen", "rails"].includes(s.tool)) {
       const node = { x: p.x, y: p.y };
       this.draft.push(node);
       this.drag = { type: "pen", node, start: p };
@@ -927,29 +971,36 @@ export class Stage {
       isVisible(s.project, selected) &&
       selectionIds(s).length === 1
     ) {
-      if (selected.curve) {
-        const c = selected.curve;
+      if (this.activeCurve(selected)) {
+        const c = this.activeCurve(selected);
+        let best = 8 / this.scale,
+          hit = null;
         for (let i = 0; i < c.nodes.length; i++)
           for (const key of ["anchor", "in", "out"]) {
             const point = key === "anchor" ? c.nodes[i] : c.nodes[i][key];
             if (!point) continue;
-            if (distance(p, mapPoint(point, c.frame)) < 8 / this.scale) {
-              this.node = i;
-              this.drag = {
-                type: "curve",
-                o: selected,
-                index: i,
-                key,
-                start: p,
-                original: structuredClone(c),
-                before: JSON.stringify(s.project),
-              };
-              this.render();
-              return;
+            const d = distance(p, mapPoint(point, c.frame));
+            if (d < best) {
+              best = d;
+              hit = { i, key };
             }
           }
+        if (hit) {
+          this.node = hit.i;
+          this.drag = {
+            type: "curve",
+            o: selected,
+            index: hit.i,
+            key: hit.key,
+            start: p,
+            original: structuredClone(c),
+            before: JSON.stringify(s.project),
+          };
+          this.render();
+          return;
+        }
       }
-      const pts = selected.curve ? [] : pointsOf(selected);
+      const pts = this.activeCurve(selected) ? [] : pointsOf(selected);
       let index = pts.findIndex((q) => distance(p, q) < 7 / this.scale);
       if (index >= 0) {
         this.node = index;
@@ -973,7 +1024,12 @@ export class Stage {
       isVisible(s.project, selected) &&
       selectionIds(s).length === 1
     ) {
-      const hit = nearestSegment(selected, p);
+      const hit = nearestSegment(
+        this.activeCurve(selected)
+          ? { curve: this.activeCurve(selected) }
+          : selected,
+        p,
+      );
       if (hit && hit.distance < 8 / this.scale) {
         this.node = null;
         this.drag = {
@@ -1201,15 +1257,20 @@ export class Stage {
       if (!d.active && distance(p, d.start) * this.scale < 2) return;
       d.active = true;
       Object.assign(d.o, structuredClone(d.original));
-      const curve = d.original.curve,
+      const curve = this.activeCurve(d.original),
         q = curve ? inversePoint(p, curve.frame) : p,
         a = curve ? inversePoint(d.start, curve.frame) : d.start;
-      sculptArtwork(
-        d.o,
-        d.hit,
-        { x: q.x - a.x, y: q.y - a.y },
-        this.state.sculptRadius || 2,
-      );
+      if (d.o.satinRails) {
+        const c = this.activeCurve(d.o);
+        sculptCurve(c, d.hit.index, d.hit.t, { x: q.x - a.x, y: q.y - a.y });
+        this.updateCurve(d.o, c);
+      } else
+        sculptArtwork(
+          d.o,
+          d.hit,
+          { x: q.x - a.x, y: q.y - a.y },
+          this.state.sculptRadius || 2,
+        );
     } else if (d.type === "pen") {
       const dx = p.x - d.start.x,
         dy = p.y - d.start.y;
@@ -1242,8 +1303,7 @@ export class Stage {
         n[d.key] = q;
         alignHandle(n, d.key);
       }
-      d.o.curve = c;
-      d.o.rings = curveRings(c);
+      this.updateCurve(d.o, c);
     } else if (d.type === "node") {
       detachSource(d.o);
       const q = pointsOf(d.o)[d.index];
@@ -1379,8 +1439,8 @@ export class Stage {
       isLocked(this.state.project, o)
     )
       return;
-    if (o.curve) {
-      const c = o.curve;
+    if (this.activeCurve(o)) {
+      const c = this.activeCurve(o);
       let best = 8 / this.scale,
         found = null;
       for (let i = 0; i < c.nodes.length - (c.closed ? 0 : 1); i++) {
@@ -1416,7 +1476,11 @@ export class Stage {
       if (found)
         this.actions.mutate(() => {
           splitCurve(c, found.i, found.t);
-          o.rings = curveRings(c);
+          if (o.satinRails) {
+            const key = this.state.railSide === "b" ? "seamB" : "seamA";
+            if (found.i < o.satinRails[key]) o.satinRails[key]++;
+          }
+          this.updateCurve(o, c);
         });
       return;
     }

@@ -69,6 +69,13 @@ function prepareArtwork(project) {
   };
   for (const [index, o] of project.objects.entries()) {
     if (o.visible === false || o.type === "reference") continue;
+    if (
+      o.satinRails &&
+      (!o.operationId || (o.satinColumn && o.columnMode === "rails"))
+    ) {
+      units.push({ ...o, index, bounds: objectBounds(o) });
+      continue;
+    }
     const duplicateRings = options.skipSvgOutlines
       ? matchingOutline(o, project.artworkReferences || project.objects)
       : new Set();

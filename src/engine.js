@@ -1,5 +1,6 @@
 import { centerlineRails, paceRails, shortInnerTurns } from "./satin-rails.js";
 import { strokeSatin } from "./stroke-satin.js";
+import { manualSatin } from "./manual-satin.js";
 import { designIssues } from "./design-issues.js";
 import { quantizeColumnPaths } from "./column-routing.js";
 import { bounds, MACHINES } from "./model.js";
@@ -235,6 +236,16 @@ export function satin(
   return result;
 }
 function pathsFor(o, from, to) {
+  if (o.satinColumn && o.columnMode === "rails") {
+    try {
+      const result = manualSatin(o);
+      o.manualRailAnalysis = result;
+      return result.paths;
+    } catch (e) {
+      o.manualRailError = e.message;
+      return [];
+    }
+  }
   if (o.satinColumn && o.columnMode === "stroke") {
     const result = strokeSatin(o, from);
     o.strokeAnalysis = result;
@@ -444,7 +455,7 @@ export function generate(project) {
   const sew = (p, o, phase) => {
     const d = distance(last, p),
       limit = Math.min(
-        o.satinColumn && o.columnMode === "stroke"
+        o.satinColumn && ["stroke", "rails"].includes(o.columnMode)
           ? Math.min(o.maxSatin || 6, machine.maxStitch)
           : o.type === "satin" || o.satinColumn
             ? machine.maxStitch
@@ -539,7 +550,7 @@ export function generate(project) {
         : null;
     if (
       o.satinColumn &&
-      o.columnMode !== "stroke" &&
+      !["stroke", "rails"].includes(o.columnMode) &&
       Math.max(o.bounds.width, o.bounds.height) > (o.maxSatin || 6)
     ) {
       const wide = fillRows(
@@ -556,6 +567,61 @@ export function generate(project) {
         );
     }
     const paths = o.type === "manual" ? null : pathsFor(o, last, to);
+    if (o.manualRailError)
+      (diagnostics.operationIssues ||= []).push({
+        severity: "error",
+        code: "manual-satin-rails",
+        objectId: o.id,
+        objectName: o.name,
+        operationId: o.operationId,
+        operationName: o.operationName,
+        message: o.manualRailError,
+        action:
+          "Edit the rails or direction guides, adjust the seam nodes, reduce width/compensation, or split this column. The manual action remains unsewn until repaired.",
+      });
+    if (o.manualRailAnalysis) {
+      const a = o.manualRailAnalysis;
+      if (a.minWidth < 0.8)
+        (diagnostics.operationIssues ||= []).push({
+          severity: "warning",
+          code: "manual-satin-narrow",
+          objectId: o.id,
+          objectName: o.name,
+          operationId: o.operationId,
+          operationName: o.operationName,
+          message: `This manual column narrows to ${a.minWidth.toFixed(2)} mm.`,
+          action:
+            "Review needle crowding and material coverage. Widen this terminal, reduce underlay, or use running stitches for very fine details. Test on the intended fabric.",
+        });
+      (diagnostics.satin ||= []).push({
+        objectId: o.id,
+        operationId: o.operationId,
+        manual: true,
+        wide: a.wide,
+        minWidth: a.minWidth,
+        maxWidth: a.maxWidth,
+        strokes: [
+          {
+            id: 0,
+            closed: a.closed,
+            center: a.sections.map((q) => q.center),
+            sections: a.sections,
+          },
+        ],
+      });
+      if (a.wide)
+        (diagnostics.operationIssues ||= []).push({
+          severity: "warning",
+          code: "manual-satin-wide",
+          objectId: o.id,
+          objectName: o.name,
+          operationId: o.operationId,
+          operationName: o.operationName,
+          message: `${a.wide} wide rail spans use staggered split stitches.`,
+          action:
+            "Review split penetrations; reduce width, split the artwork, or choose tatami for broad areas.",
+        });
+    }
     if (o.satinTightTurn)
       (diagnostics.operationIssues ||= []).push({
         severity: "warning",

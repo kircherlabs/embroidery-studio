@@ -293,6 +293,10 @@ export function pencilCurve(points, tolerance = 0.15, closed = false) {
   return c;
 }
 function editable(o) {
+  if (o.satinRails)
+    throw Error(
+      "Edit the individual satin rails, or use Split into two columns in Artwork. Generic vector cutting would discard rail correspondence.",
+    );
   if (o.locked) throw Error("Unlock this artwork before editing its geometry.");
   if (["reference", "manual"].includes(o.type))
     throw Error(
@@ -418,7 +422,7 @@ function openCurve(o) {
   c.closed = false;
   return c;
 }
-function between(c, start, end) {
+export function curveInterval(c, start, end) {
   const nodes = [];
   for (let i = Math.floor(start); i < Math.ceil(end); i++) {
     const lo = Math.max(0, start - i),
@@ -436,6 +440,7 @@ function between(c, start, end) {
   delete nodes.at(-1).out;
   return { nodes, closed: false, frame: identity() };
 }
+const between = curveInterval;
 export function splitPath(o, hit, allowOpen = false) {
   editable(o);
   if (o.rings.length !== 1)

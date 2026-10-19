@@ -1,7 +1,12 @@
+import { installRailInspector } from "./rail-ui.js";
 import { setNodeMode } from "./path-editing.js";
 import { refitPatch } from "./construction.js";
 import { FONTS, updateLettering } from "./importers.js";
-import { regenerateShape, curveRings } from "./smart-geometry.js";
+import {
+  regenerateShape,
+  curveRings,
+  regenerateRails,
+} from "./smart-geometry.js";
 import {
   combineArtwork,
   cutEyelet,
@@ -25,6 +30,8 @@ const field = (label, id, value, min, max, step = 0.1) =>
   `<label class="field">${label}<input type="number" required id="${id}" value="${value}" placeholder="Mixed" min="${min}" max="${max}" step="${step}"></label>`;
 export function satinSummary(results) {
   if (!results.length) return "Analyzing stroke structure…";
+  if (results.some((d) => d.manual))
+    return `Manual rail construction · ${Math.min(...results.map((d) => d.minWidth || 0)).toFixed(2)}–${Math.max(...results.map((d) => d.maxWidth || 0)).toFixed(2)} mm span. ${results.some((d) => d.wide) ? "Wide spans use staggered split stitches. " : ""}Review seams, corners and coverage with a sew-out.`;
   return `${results.reduce((n, d) => n + d.strokes.length, 0)} stroke sections · ${results.some((d) => d.fallback) ? "Some regions use the selected fallback. Review Design Issues." : "Automatic rails generated."} ${results.some((d) => d.wide) ? "Wide spans have split penetrations. " : ""}Test small serifs, joins and material coverage with a sew-out.`;
 }
 export function creativeInspector(api, leaf, objects, targets) {
@@ -36,7 +43,7 @@ export function creativeInspector(api, leaf, objects, targets) {
   const cornerTargets = targets.filter(
     (op) =>
       cornerTypes.has(op.type) &&
-      (op.type !== "column" || op.columnMode === "stroke"),
+      (op.type !== "column" || ["stroke", "rails"].includes(op.columnMode)),
   );
   const columns = targets.filter((o) => o.type === "column"),
     column = columns[0];
@@ -47,7 +54,9 @@ export function creativeInspector(api, leaf, objects, targets) {
     ? column?.columnMode || "directional"
     : "";
   const guideTarget =
-    leaf && targets.length === 1 && column?.columnMode === "stroke"
+    leaf &&
+    targets.length === 1 &&
+    ["stroke", "rails"].includes(column?.columnMode)
       ? column
       : null;
   const satinInfo = (state.plan?.diagnostics?.satin || []).filter(
@@ -94,7 +103,7 @@ export function creativeInspector(api, leaf, objects, targets) {
      : ""
  }
  ${leaf?.constructionArtworkIds?.length && shape ? `<details><summary>Patch boundary sizing</summary>${field("Refit margin around artwork · mm", "patch-refit-margin", leaf.patchMargin ?? 3, 0, 50)}<button id="patch-refit" data-help="Resize and reposition this boundary around its linked artwork using the chosen margin. Resets boundary rotation to the hoop axes; decorative artwork and operation settings stay unchanged. Undo restores the previous boundary.">Refit boundary to artwork</button><p class="property-note">Uses the current linked artwork bounds. Keep margin at least as large as the finishing band to avoid covering decorative stitches. Manual size controls remain in Smart shape.</p></details>` : ""}
- ${columns.length ? `<details open><summary>Satin column construction</summary><label class="field">Column construction<select id="column-mode">${!mode ? '<option value="" disabled selected>Mixed</option>' : ""}<option value="stroke">Follow individual strokes</option><option value="directional">Directional spans · legacy / manual</option></select></label>${field("Maximum satin span · mm", "column-max", columns.every((o) => o.maxSatin === column.maxSatin) ? (column.maxSatin ?? 6) : "", 1, 6.5)}${mode === "stroke" ? `<p class="property-note">Branches become separate variable-width columns. Stitches cross each stroke and turn with curves. Center-walk underlay follows those strokes. Wide floats use staggered splits.</p><label class="field">When automatic rails are unsuitable<select id="column-fallback"><option value="tatami">Tatami fallback + Design Issue</option><option value="manual">Leave unsewn + Design Issue</option></select></label><label class="check"><input type="checkbox" id="satin-structure" ${state.satinStructure ? "checked" : ""}>Show stroke rails and directions</label>${guideTarget ? `<button id="satin-guide-edit" aria-pressed="${state.satinGuideEdit === column.id}" data-help="Drag across a stroke on the canvas to add a local needle-direction guide. Drag endpoint handles to edit. This changes satin construction without changing artwork. Escape exits guide editing.">${state.satinGuideEdit === column.id ? "Finish direction guides" : "Edit direction guides on canvas"}</button><p class="property-note">${(column.satinGuides || []).length} local guides · drag across a stroke, not along it. Guides remain editable when switching fonts; review their positions afterward.</p><div class="creative-grid">${(column.satinGuides || []).map((g, i) => `<button data-remove-satin-guide="${i}" aria-label="Remove direction guide ${i + 1}">Remove guide ${i + 1}</button>`).join("")}</div>` : '<p class="property-note">Select one artwork object and one column step to edit its direction guides.</p>'}<p id="satin-analysis" class="property-note" data-object="${esc(leaf?.id || "")}" data-operation="${esc(column.id)}">${leaf ? satinSummary(satinInfo) : "Select one artwork object to inspect its stroke analysis."}</p>` : '<p class="property-note">Legacy construction spans region edges along Stitch direction. Holes stay open. It does not automatically follow letter strokes. Fill pattern controls wide-span splits.</p>'}</details>` : ""}
+ ${columns.length ? `<details open><summary>Satin column construction</summary><label class="field">Column construction<select id="column-mode">${!mode ? '<option value="" disabled selected>Mixed</option>' : ""}<option value="stroke">Follow individual strokes</option><option value="directional">Directional spans · legacy / manual</option><option value="rails" ${objects.every((o) => o.satinRails) ? "" : "disabled"}>Manual · two editable rails</option></select></label>${field("Maximum satin span · mm", "column-max", columns.every((o) => o.maxSatin === column.maxSatin) ? (column.maxSatin ?? 6) : "", 1, 6.5)}${["stroke", "rails"].includes(mode) ? `<p class="property-note">${mode === "rails" ? "Your two source rails define one variable-width column. Guides pair positions across them; closed rings use explicit seam nodes." : "Branches become separate variable-width columns."} Stitches cross each stroke and turn with curves. Center-walk underlay follows those strokes. Wide floats use staggered splits.</p>${mode === "stroke" ? `<label class="field">When automatic rails are unsuitable<select id="column-fallback"><option value="tatami">Tatami fallback + Design Issue</option><option value="manual">Leave unsewn + Design Issue</option></select></label>` : ""}<label class="check"><input type="checkbox" id="satin-structure" ${state.satinStructure ? "checked" : ""}>Show stroke rails and directions</label>${guideTarget ? `<button id="satin-guide-edit" aria-pressed="${state.satinGuideEdit === column.id}" data-help="Drag across a stroke on the canvas to add a local needle-direction guide. Drag endpoint handles to edit. This changes satin construction without changing artwork. Escape exits guide editing.">${state.satinGuideEdit === column.id ? "Finish direction guides" : "Edit direction guides on canvas"}</button><p class="property-note">${(column.satinGuides || []).length} local guides · drag across a stroke, not along it. ${mode === "rails" ? "Each guide must cross both rails once. Move or shorten guides that cross other parts of a ring." : "Guides remain editable when switching fonts; review their positions afterward."}</p><div class="creative-grid">${(column.satinGuides || []).map((g, i) => `<button data-remove-satin-guide="${i}" aria-label="Remove direction guide ${i + 1}">Remove guide ${i + 1}</button>`).join("")}</div>` : '<p class="property-note">Select one artwork object and one column step to edit its direction guides.</p>'}<p id="satin-analysis" class="property-note" data-object="${esc(leaf?.id || "")}" data-operation="${esc(column.id)}">${leaf ? satinSummary(satinInfo) : "Select one artwork object to inspect its stroke analysis."}</p>` : '<p class="property-note">Legacy construction spans region edges along Stitch direction. Holes stay open. It does not automatically follow letter strokes. Fill pattern controls wide-span splits.</p>'}</details>` : ""}
 
  <details><summary>Round shape corners</summary>${shape && ["rect", "regular", "star"].includes(shape.kind) ? '<p class="property-note">Use Corner radius in Smart shape for whole-shape rounding and retained parameters. Below, Round active vertex converts a single polygon vertex to a rounded path; Undo restores the Smart shape.</p>' : ""}${field(shape && ["rect", "regular", "star"].includes(shape.kind) ? "Active vertex radius · mm" : "Artwork rounding radius · mm", "round-radius", leaf?.rounding?.radius || 0, 0, 20)}${shape && ["rect", "regular", "star"].includes(shape.kind) ? "" : `<button id="round-geometry" data-help="Explicitly fillet all compatible selected paths. Original contours are retained while adjusting radius; zero restores them. Smart shape parameters and editable lettering are preserved when supported. Bézier filleting converts to a polygon path; Undo restores curve handles.">Apply geometric rounding</button>`}${leaf ? `<button id="round-node" data-help="With the Node tool, select one vertex first. Fillet that vertex only. This converts editable lettering or a Smart shape to a fixed path; Undo restores its source.">Round active vertex</button>` : ""}<p class="property-note">Changes artwork and rebuilds all sewing actions. Satin spacing follows the outer rail; tatami keeps its row spacing. Radius is limited locally to protect counters and neighboring corners.</p></details><details data-section="corners"><summary>Optimize corner stitches</summary><label class="check"><input id="corner-adaptive" type="checkbox" ${targets.length && targets.every((o) => o.cornerControl) ? "checked" : ""}>Protect inner turns &amp; running corners</label>${field("Crowded-corner threshold · mm", "corner-min", cornerTargets.every((o) => (o.minCornerStitch ?? 0.3) === (cornerTargets[0]?.minCornerStitch ?? 0.3)) ? (cornerTargets[0]?.minCornerStitch ?? 0.3) : "", 0.2, 1)}<p id="corner-availability" class="property-note"></p><p class="property-note">Satin coverage is preserved automatically, including outer curves. This option alternates short and full inner stitches where a turn crowds the needle holes, and protects running-path corners. It does not round artwork or reduce outer coverage.</p></details>
  <details><summary>Geometry tools</summary>${
@@ -128,7 +137,7 @@ export function creativeInspector(api, leaf, objects, targets) {
        `<button data-reference-align="${key}" data-help="Align actual selected geometry to the chosen reference. A specific reference remains stationary. Groups move together; locked descendants stay unchanged.">${label}</button>`,
    )
    .join("")}</div></details>`;
-  if (leaf?.curve)
+  if (leaf?.curve || leaf?.satinRails)
     box.insertAdjacentHTML(
       "beforeend",
       '<details><summary>Bézier node controls</summary><p class="property-note">Select an anchor with the Node tool. Drag tangent handles to reshape curves; double-click a curve to split it. Delete removes an anchor.</p><button id="node-smooth">Smooth active anchor</button><button id="node-corner">Make active anchor a corner</button><button id="node-symmetric">Symmetric active anchor</button></details>',
@@ -250,14 +259,15 @@ export function creativeInspector(api, leaf, objects, targets) {
     if ($("node-" + action))
       $("node-" + action).onclick = () => {
         const i = api.node(),
-          c = leaf.curve;
+          c = leaf.satinRails?.[state.railSide || "a"] || leaf.curve;
         if (i === null || !c.nodes[i]) {
           toast("Select an anchor with the Node tool first.");
           return;
         }
         safe(() => {
           setNodeMode(c, i, action);
-          leaf.rings = curveRings(c);
+          if (leaf.satinRails) regenerateRails(leaf);
+          else leaf.rings = curveRings(c);
         });
       };
   $("offset-geometry").onclick = () => {
@@ -317,6 +327,8 @@ export function creativeInspector(api, leaf, objects, targets) {
     $("column-fallback").value = column.columnFallback || "tatami";
     $("column-fallback").onchange = (e) =>
       applyCorner("columnFallback", e.target.value);
+  }
+  if ($("satin-structure")) {
     $("satin-structure").onchange = (e) => {
       state.satinStructure = e.target.checked;
       api.draw();
@@ -366,7 +378,7 @@ export function creativeInspector(api, leaf, objects, targets) {
   $("corner-availability").textContent = cornerTargets.length
     ? cornerTargets.some((o) => o.cornerControl)
       ? "Threshold affects compressed inner satin rails and neighboring running stitches. Straight satin and the outer rail stay full width; spacing remains measured in millimeters."
-      : "Enable corner optimization to adjust the threshold. Applies to running paths and satin borders / centerlines."
+      : "Enable corner optimization to adjust the threshold. Applies to running paths and satin rails, borders or centerlines."
     : "Unavailable for tatami and directional satin columns: those methods place stitches across region spans, not around a contour. Adjust row spacing, direction or split the geometry instead.";
   $("corner-adaptive").checked =
     cornerTargets.length > 0 && cornerTargets.every((op) => op.cornerControl);
@@ -392,4 +404,5 @@ export function creativeInspector(api, leaf, objects, targets) {
     } else art.append(detail);
   }
   box.remove();
+  installRailInspector(api, leaf, objects, targets);
 }

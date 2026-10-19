@@ -15,6 +15,12 @@ export function compose(a, b) {
   ].map((v) => (Object.is(v, -0) ? 0 : v));
 }
 export function sourceTransform(o, m) {
+  if (o.satinRails)
+    for (const side of ["a", "b"])
+      o.satinRails[side].frame = compose(
+        m,
+        o.satinRails[side].frame || identity(),
+      );
   for (const op of [o, ...(o.operations || [])])
     if (op.satinGuides)
       op.satinGuides = op.satinGuides.map((g) => ({
@@ -29,6 +35,7 @@ export function sourceTransform(o, m) {
     );
 }
 export function detachSource(o) {
+  delete o.satinRails;
   delete o.shape;
   delete o.textSource;
   delete o.rounding;
@@ -127,6 +134,10 @@ export function regenerateShape(o) {
   delete o.rounding;
 }
 export function roundArtwork(o, radius, vertices = null) {
+  if (o.satinRails)
+    throw Error(
+      "Edit or round the individual rails under Manual satin rails. Undo preserves their source curves.",
+    );
   if (
     !vertices &&
     o.shape &&
@@ -206,6 +217,37 @@ export function inversePoint(p, m) {
     x: (m[3] * (p.x - m[4]) - m[2] * (p.y - m[5])) / det,
     y: (-m[1] * (p.x - m[4]) + m[0] * (p.y - m[5])) / det,
   };
+}
+
+// Manual satin shares editable rail geometry; the engine still receives a band.
+export function railWalk(source, side) {
+  const c = structuredClone(source[side]),
+    seam = source[side === "a" ? "seamA" : "seamB"] || 0;
+  if (c.closed && seam)
+    c.nodes = [...c.nodes.slice(seam), ...c.nodes.slice(0, seam)];
+  if (side === "b" && source.reverseB) {
+    if (c.closed) c.nodes = [c.nodes[0], ...c.nodes.slice(1).reverse()];
+    else c.nodes.reverse();
+    for (const n of c.nodes) {
+      const a = n.in,
+        b = n.out;
+      if (b) n.in = b;
+      else delete n.in;
+      if (a) n.out = a;
+      else delete n.out;
+    }
+  }
+  return c;
+}
+export function railRings(source) {
+  const a = curveRings(railWalk(source, "a"))[0],
+    b = curveRings(railWalk(source, "b"))[0];
+  return source.a.closed ? [a, b] : [[...a, ...b.reverse()]];
+}
+export function regenerateRails(o) {
+  o.rings = railRings(o.satinRails);
+  o.closed = true;
+  o.fillRule = "evenodd";
 }
 
 export function splitCurve(c, index, t = 0.5) {

@@ -1,4 +1,34 @@
 const descriptions = {
+  "rails-closed":
+    "Create two closed boundaries forming one ring. Rail A and B must enclose the same opening; both seam nodes are editable after creation. This differs from drawing two satin outlines.",
+  "rails-from-selection":
+    "Create an independent manual satin column from two selected single-contour paths, or one shape with two nested contours. The dialog can hide the editable sources so they do not sew twice.",
+  "active-rail":
+    "Choose the boundary edited by Node. A is amber; B is blue. Moving anchors, tangent handles or segments changes local satin width and rebuilds the generated stitches.",
+  "rail-set-seam":
+    "Use the selected node on this closed rail as its marked start/end. Choose corresponding nodes on both rails to keep spans from crossing the opening.",
+  "rail-width-scale":
+    "Scale each local rail span around its midpoint. 100% follows your drawn rails. Pull compensation adds millimeters afterward; maximum satin span limits uninterrupted floats separately.",
+  "rail-underlay":
+    "Choose center-walk, inset rail walks or both. This changes actual underlay stitches only when Light underlay is enabled for the action.",
+  "rail-sew-reverse":
+    "Sew the complete manual column in the opposite direction without moving artwork or reversing only one rail.",
+  "reverse-rail-b":
+    "Reverse B's correspondence with A. Use to correct opposing rail directions. This can invalidate a closed ring if its seams/guides no longer agree; Design Issues explains the required repair.",
+  "rail-seam-a":
+    "One-based node number marking the start/end of closed rail A. Insert a node with Node if you need a different seam position. The marked node stays with transformed geometry.",
+  "rail-seam-b":
+    "One-based node number marking the start/end of closed rail B. Pair it with A's seam across the material, not through the opening.",
+  "rail-round-radius":
+    "Round the active rail's geometry in millimeters. It stays editable; satin pacing is rebuilt along the resulting rails. Undo restores original nodes and handles.",
+  "round-manual-rail":
+    "Round only the active boundary. The nearest rounded node retains its seam. Review tight turns and guide crossings; source geometry and needle spacing remain separate concepts.",
+  "split-manual-column":
+    "Split both rails at the same guided correspondence into two editable columns. Sewing actions and colors are retained; stops repeat per piece. Undo restores the single column.",
+  "rail-split-position":
+    "Position along rail A's current seam-to-end traversal as a percentage. Rail B is divided at its corresponding position, including direction-guide constraints.",
+  "edit-manual-rails":
+    "Activate Node editing for the two independent source rails. Use Editing rail above the canvas to choose A or B; precise handles and curve sculpting remain available.",
   "pencil-smoothing":
     "Approximate freehand fitting tolerance in millimeters. Smaller values follow the captured trace more closely with more editable nodes. Smoothing does not change stitch density.",
   "sculpt-radius":

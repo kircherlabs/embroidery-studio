@@ -1,3 +1,4 @@
+import { paceRails, shortInnerTurns } from "./satin-rails.js";
 import { distance, safeConnector, inside } from "./geometry.js";
 import { skeletonizeRegion, strokeChains } from "./stroke-skeleton.js";
 import { strokeTravel } from "./stroke-travel.js";
@@ -311,64 +312,16 @@ export function strokeSatin(o, from = { x: 0, y: 0 }) {
     if (sections.length < 2) continue;
     // Pace needle stations by the moving rails, rather than just centerline arc
     // length. The outer rail of a curve needs more stations than its center.
-    const railSections = c.closed ? [...sections, sections[0]] : sections,
-      railLengths = [0];
-    for (let i = 1; i < railSections.length; i++)
-      railLengths.push(
-        railLengths.at(-1) +
-          Math.max(
-            distance(railSections[i - 1].a, railSections[i].a),
-            distance(railSections[i - 1].b, railSections[i].b),
-          ),
-      );
-    let stationCount = Math.max(
-      2,
-      Math.ceil(railLengths.at(-1) / (o.spacing / 2)),
-    );
-    if (c.closed && stationCount % 2) stationCount++;
-    if (stationCount > 20000)
+    let paced = paceRails(sections, o.spacing, c.closed);
+    if (!paced)
       return {
         reason:
           "Rail direction changes too abruptly for bounded automatic turning. Adjust guides or split this corner.",
         warnings,
       };
-    const paced = [];
-    let railIndex = 1;
-    for (let i = 0; i < stationCount + (c.closed ? 0 : 1); i++) {
-      const at = (railLengths.at(-1) * i) / stationCount;
-      while (railIndex < railSections.length - 1 && railLengths[railIndex] < at)
-        railIndex++;
-      const a = railSections[railIndex - 1],
-        b = railSections[railIndex],
-        t =
-          (at - railLengths[railIndex - 1]) /
-          (railLengths[railIndex] - railLengths[railIndex - 1] || 1);
-      paced.push({
-        a: lerp(a.a, b.a, t),
-        b: lerp(a.b, b.b, t),
-        center: lerp(a.center, b.center, t),
-        width: a.width + (b.width - a.width) * t,
-        s: a.s + (b.s - a.s) * t,
-      });
-    }
-    sections.splice(0, sections.length, ...paced);
-    // A small inward shortening on crowded rails avoids repeated inner penetrations.
     if (o.cornerControl !== false)
-      for (let i = 2; i < sections.length; i++)
-        for (const side of ["a", "b"]) {
-          // Alternate short and full inner penetrations so the edge stays covered.
-          if (Math.floor(i / 2) % 2 === 0) continue;
-          const prev = sections[i - 2][side],
-            cur = sections[i][side],
-            d = distance(prev, cur),
-            minimum = o.minCornerStitch || 0.3;
-          if (d < minimum)
-            sections[i][side] = lerp(
-              cur,
-              sections[i].center,
-              Math.min(0.4, (1 - d / minimum) * 0.4),
-            );
-        }
+      paced = shortInnerTurns(paced, o.minCornerStitch || 0.3, c.closed);
+    sections.splice(0, sections.length, ...paced);
     strokes.push({ ...c, points, sections });
   }
   if (!strokes.length)

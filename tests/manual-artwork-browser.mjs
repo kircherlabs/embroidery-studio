@@ -460,11 +460,19 @@ try {
     });
   }
   // Live lettering is never silently reversed or converted to fixed outlines.
+  const beforeLetteringCount = (await project()).objects.length;
   await page.locator("#text-tool").click();
   await page.locator("#text-value").fill("AB");
   await page.locator("#text-height").fill("12");
   await page.locator("#dialog-submit").click();
-  await ready();
+  await page.waitForFunction((count) => {
+    const p = window.studio.getProject();
+    return (
+      p.objects.length === count + 1 &&
+      p.objects.at(-1).textSource?.content === "AB" &&
+      window.studio.getPlan()
+    );
+  }, beforeLetteringCount);
   const text = (await project()).objects.at(-1);
   await page.locator("#arrange-selection").click();
   await page.locator('[data-arrange="flip-horizontal"]').click();
@@ -480,7 +488,10 @@ try {
   await page.locator("#arrange-selection").click();
   await page.locator('[data-arrange="flip-horizontal"]').click();
   await page.locator("#dialog-submit").click();
-  await ready();
+  await page.waitForFunction((id) => {
+    const text = window.studio.getProject().objects.find((o) => o.id === id);
+    return text?.textSource?.frame[0] < 0 && window.studio.getPlan();
+  }, text.id);
   let mirroredText = (await project()).objects.find((o) => o.id === text.id);
   assert(mirroredText.textSource.frame[0] < 0);
   assert.equal(mirroredText.textSource.content, "AB");

@@ -1066,7 +1066,8 @@ dialog::backdrop {
 }
 @media (max-width: 680px) {
   .app-header {
-    height: 100px;
+    height: auto;
+    min-height: 100px;
     flex-wrap: wrap;
     padding: 10px 13px;
     gap: 7px 12px;
@@ -1095,6 +1096,9 @@ dialog::backdrop {
   }
   .file-actions {
     flex-basis: 100%;
+    min-width: 0;
+    max-width: 100%;
+    flex-wrap: wrap;
     justify-content: flex-end;
     margin: 0;
   }

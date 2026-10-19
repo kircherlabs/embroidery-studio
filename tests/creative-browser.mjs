@@ -220,7 +220,7 @@ try {
     ),
   );
   // Pen anchors and cubic handles are edited without losing source data.
-  await page.locator('[data-tool="pen"]').click();
+  await chooseTool(page, "pen");
   await drag([-30, -25], [-22, -32]);
   await drag([-10, -25], [-5, -18]);
   await page.locator("#finish-draw").click();
@@ -229,7 +229,7 @@ try {
   assert(curve.curve);
   assert.equal(curve.curve.nodes.length, 2);
   assert(curve.rings[0].length > 5);
-  await page.locator('[data-tool="node"]').click();
+  await chooseTool(page, "node");
   await drag([-22, -32], [-22, -28]);
   await ready();
   curve = (await project()).objects.at(-1);

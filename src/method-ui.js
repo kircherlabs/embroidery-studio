@@ -50,6 +50,19 @@ export function methodCategory(type) {
   if (type in SATIN_METHODS) return "satin";
   return type === "fill" ? "fill" : "construction";
 }
+export function categoryHelp(category) {
+  return (
+    {
+      run: "Sew along a line or shape outline. Reinforcement chooses a single pass, local Bean repeats, or whole-path Triple Run.",
+      fill: METHOD_HELP.fill,
+      satin:
+        "Create smooth, closely spaced stitching along or across a shape. Choose Centerline, Border or Column deliberately; they use different constructions.",
+      construction:
+        "This is a specialized construction action. Edit its purpose under Advanced Construction, or choose an everyday method here to replace it.",
+    }[category] ||
+    "These actions use different method categories. Choose a category to change the actions in the displayed editing scope."
+  );
+}
 const common = (items) =>
   items.length && items.every((x) => x === items[0]) ? items[0] : "";
 export function methodOptions(
@@ -76,7 +89,7 @@ export function methodPicker(
     category = pending ? "satin" : common(types.map(methodCategory)),
     prefix = adding ? "add-" : "",
     categoryId = adding ? "add-operation" : "stitch-type";
-  return `<label class="field">${adding ? "New sewing action" : "Stitch method"}<select id="${categoryId}" data-help="${category === "fill" ? METHOD_HELP.fill : category === "run" ? "Sew along a line or shape outline." : "Create smooth, closely spaced stitching along or across a shape."} Choose how this artwork is sewn: Running Stitch follows a line, Tatami Fill covers an area, and Satin Stitching offers three distinct constructions. ${adding ? "Adding creates one independent action." : "Changing a method updates this action, retaining its color and sewing position."}">${methodOptions(METHOD_CATEGORIES, category, category === "construction" ? "Advanced construction action" : "Mixed")}</select></label>
+  return `<label class="field">${adding ? "New sewing action" : "Stitch method"}<select id="${categoryId}" data-help="${categoryHelp(category)} ${adding ? "Adding creates one independent action." : "Changing a method updates this action, retaining its color and sewing position."}">${methodOptions(METHOD_CATEGORIES, category, category === "construction" ? "Advanced construction action" : "Mixed")}</select></label>
     <label class="field" id="${prefix}reinforcement-field" ${category === "run" ? "" : "hidden"}>Reinforcement<select id="${prefix}reinforcement" data-help="${METHOD_HELP[type in REINFORCEMENTS ? type : "run"]}">${methodOptions(REINFORCEMENTS, type)}</select></label>
     <div id="${prefix}satin-field" ${category === "satin" ? "" : "hidden"}><label class="field">Satin construction<select id="${prefix}satin-construction" aria-describedby="${prefix}satin-guidance" data-help="Choose deliberately: Centerline follows a drawn path, Border follows closed edges, and Column crosses a filled region's strokes. These retain different algorithms.">${methodOptions(SATIN_METHODS, pending ? "" : type, pending ? "Choose satin construction…" : "Mixed", (k) => adding && open && !closed && k !== "satin")}</select></label>
     <p class="property-note" id="${prefix}satin-guidance">${pending ? "Choose a construction to change this action. Current stitches are unchanged." : type === "satin" && closed ? "Centerline follows the contours of this closed artwork. Use Satin Column to span filled letter strokes." : type === "column" ? "Column spans a closed region. Inspect stroke construction and any fallback in Design Issues." : type in SATIN_METHODS ? METHOD_HELP[type] : "Choose the satin construction for this action."}${open ? " Border and Column need a closed area; Centerline can sew an open path." : ""}</p>${pending ? '<button id="cancel-satin-choice">Keep current method</button>' : ""}</div>`;

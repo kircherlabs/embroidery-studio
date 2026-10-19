@@ -1,5 +1,6 @@
 import {
   methodPicker,
+  categoryHelp,
   methodOptions,
   methodCategory,
   CONSTRUCTION_METHODS,
@@ -575,6 +576,9 @@ export function renderInspector(api) {
   const updateAdd = () => {
     const type = additionType(),
       category = $("add-operation").value;
+    $("add-operation").dataset.help =
+      categoryHelp(category) +
+      " Adding creates one independent action; existing actions stay unchanged.";
     $("add-reinforcement-field").hidden = category !== "run";
     $("add-satin-field").hidden = category !== "satin";
     $("add-satin-guidance").textContent =

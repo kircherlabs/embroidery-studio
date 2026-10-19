@@ -2,7 +2,9 @@ const descriptions = {
   "embroidery-style":
     "Configure outline, fill or combined stitching with existing editable operations. Replacing a multi-step stack requires confirmation; source geometry stays unchanged.",
   "draw-style":
-    "Choose the initial stitching style for new closed shapes. Change it later in Properties; open paths and construction tools keep their dedicated methods.",
+    "Set stitching for shapes you draw next. This does not change existing artwork until you choose Apply to selected artwork. Open paths and eyelets keep their dedicated drawing methods.",
+  "apply-draw-style":
+    "Apply the chosen style to compatible selected vector artwork, including SVG groups. Replaces its operation stacks; multiple-step stacks require confirmation. Geometry remains editable and Undo restores previous stitching. Locked objects, images and manual stitches are excluded.",
   "construction-stage":
     "For a linked patch boundary, place this operation before or after the decorative artwork. Within a phase, listed step order is preserved.",
   "close-artwork":

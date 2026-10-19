@@ -1,4 +1,5 @@
 import { rasterImport } from "./reference-ui.js";
+import { installDrawingStyle } from "./drawing-style-ui.js";
 import { satinSummary } from "./creative-ui.js";
 import { EMBROIDERY_STYLES, setEmbroideryStyle } from "./styles.js";
 import { traceDialog } from "./tracing-ui.js";
@@ -434,6 +435,7 @@ function addObjects(objects) {
   );
 }
 function renderPanels() {
+  drawingStyleUI.refresh();
   const focused = document.activeElement?.closest("#object-list button"),
     focusKey =
       focused &&
@@ -1986,6 +1988,7 @@ document.addEventListener("drop", async (e) => {
   e.preventDefault();
   for (const file of e.dataTransfer.files) await importFile(file);
 });
+const drawingStyleUI = installDrawingStyle({ state, ask, mutate, toast });
 renderPanels();
 renderStats();
 scheduleGenerate();

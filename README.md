@@ -13,6 +13,13 @@ software has been tested in browsers and through independent file decoding.
 The PES origin repair matches a file verified by the owner on a physical SE700;
 new exports and sew-out quality still need machine testing.
 
+**Drawing style** sets the stitching for newly drawn closed shapes. To change
+existing artwork, select its objects or SVG group, choose a style, and click
+**Apply to selected artwork** in the same popup. Multi-step replacement requires
+confirmation; Undo restores previous operations. Locked objects, reference images,
+manual stitches and linked patch boundaries are protected, and incompatible open
+paths are explained. The drawing default is remembered on this device.
+
 ## Properties and construction
 
 The selection-aware inspector separates **Artwork**, **Embroidery method**,

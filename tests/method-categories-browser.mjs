@@ -33,13 +33,11 @@ try {
     plan = () => page.evaluate(() => window.studio.getPlan()),
     pick = (id) => page.locator(`[data-select="${id}"]`).click(),
     open = async (p) => {
-      await page
-        .locator("#file-input")
-        .setInputFiles({
-          name: "categories.embstudio",
-          mimeType: "application/json",
-          buffer: Buffer.from(JSON.stringify(p)),
-        });
+      await page.locator("#file-input").setInputFiles({
+        name: "categories.embstudio",
+        mimeType: "application/json",
+        buffer: Buffer.from(JSON.stringify(p)),
+      });
       await page.locator("#dialog-submit").click();
       await page.waitForFunction(
         (name) =>
@@ -249,6 +247,38 @@ try {
   assert.deepEqual(
     bulk.objects.map((o) => o.operations[0].id),
     [a.operations[0].id, b.operations[0].id],
+  );
+
+  const fabricA = structuredClone(a),
+    fabricB = structuredClone(b);
+  fabricA.operations = [makeOperation("placement", fabricA)];
+  fabricB.operations = [makeOperation("tackdown", fabricB)];
+  await open({
+    version: 1,
+    name: "Mixed construction",
+    machine: "se700",
+    objects: [fabricA, fabricB],
+    groups: [{ id: "group", name: "Group", kind: "group", parentId: null }],
+  });
+  await pick("group");
+  await reveal(page.locator("#construction-method"));
+  assert.equal(await page.locator("#construction-method").inputValue(), "");
+  assert.match(
+    await page.locator("#construction-method option:checked").innerText(),
+    /Mixed construction/,
+  );
+  const fabricBefore = await project();
+  await chooseMethod(page, "basting");
+  await ready();
+  const fabricAfter = await project();
+  assert(
+    fabricAfter.objects.every(
+      (o) => o.operations.length === 1 && o.operations[0].type === "basting",
+    ),
+  );
+  assert.deepEqual(
+    fabricAfter.objects.map((o) => o.operations[0].id),
+    fabricBefore.objects.map((o) => o.operations[0].id),
   );
 
   // Fill + independently colored satin border still exports in operation order.

@@ -31,6 +31,19 @@ artwork/steps. Invalid steps preserve the rest of the preview but block export
 until repaired or explicitly disabled. See [Properties audit and construction
 workflow](docs/PROPERTIES.md) for applicability, testing and limitations.
 
+## Manual references and flipping
+
+Raster import now offers **Use as Reference** or **Automatically Trace**. References
+are separate locked background layers with opacity, canvas transforms and shared
+embedded image data. They never sew, export, or affect hoop fit. Select an image
+in Objects and choose **Edit reference** to reposition it, then lock it and draw
+over it with the existing tools.
+
+**Arrange** and the canvas context menu include **Flip Horizontal / Flip Vertical**
+for selected artwork, groups, Bézier paths and manual stitches. Live lettering
+asks before mirroring and stays editable. See [manual digitizing and image storage](docs/MANUAL_DIGITIZING.md)
+for controls, quality choices, project limits and validation.
+
 ## Stroke-following satin lettering
 
 New Satin column steps follow individual letter strokes with variable-width rails,
@@ -43,7 +56,7 @@ remaining physical SE700 sew-out checks.
 
 ## What works
 
-- SVG vector import (including transforms and holes), PNG/JPG color-region
+- SVG vector import (including transforms and holes), PNG/JPG/WebP references or color-region
   digitizing, and existing PES, PEC, DST, EXP, JEF, VP3 and XXX stitch imports.
 - Fill polygons, rectangles, ellipses, running paths, constant-width satin
   centerlines, lettering/monograms, and direct needle-point placement.

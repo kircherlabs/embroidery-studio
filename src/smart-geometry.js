@@ -12,7 +12,7 @@ export function compose(a, b) {
     a[1] * b[2] + a[3] * b[3],
     a[0] * b[4] + a[2] * b[5] + a[4],
     a[1] * b[4] + a[3] * b[5] + a[5],
-  ];
+  ].map((v) => (Object.is(v, -0) ? 0 : v));
 }
 export function sourceTransform(o, m) {
   for (const op of [o, ...(o.operations || [])])
@@ -21,7 +21,7 @@ export function sourceTransform(o, m) {
         a: mapPoint(g.a, m),
         b: mapPoint(g.b, m),
       }));
-  for (const key of ["shape", "textSource", "curve"])
+  for (const key of ["shape", "textSource", "curve", "reference"])
     if (o[key]) o[key].frame = compose(m, o[key].frame || identity());
   if (o.rounding)
     o.rounding.rings = o.rounding.rings.map((r) =>

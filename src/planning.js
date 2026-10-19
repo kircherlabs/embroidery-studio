@@ -53,7 +53,8 @@ function prepareArtwork(project) {
   const options = planningOptions(project),
     units = [],
     diagnostics = {
-      sourceObjects: project.objects.length,
+      sourceObjects: project.objects.filter((o) => o.type !== "reference")
+        .length,
       skippedDetails: 0,
       skippedOutlines: 0,
       topologyFallbacks: 0,
@@ -67,7 +68,7 @@ function prepareArtwork(project) {
       diagnostics.detailExamples.push({ objectId: o.id, bounds: b });
   };
   for (const [index, o] of project.objects.entries()) {
-    if (o.visible === false) continue;
+    if (o.visible === false || o.type === "reference") continue;
     const duplicateRings = options.skipSvgOutlines
       ? matchingOutline(o, project.artworkReferences || project.objects)
       : new Set();
@@ -266,13 +267,15 @@ function prepareBasicPlan(project) {
     const byId = new Map(project.objects.map((o) => [o.id, o]));
     project = {
       ...project,
-      artworkReferences: project.objects.filter((o) => isVisible(project, o)),
+      artworkReferences: project.objects.filter(
+        (o) => o.type !== "reference" && isVisible(project, o),
+      ),
       objects: sewingIds(project).map((id) => byId.get(id)),
       planning: { ...project.planning, optimizeColors: false },
     };
   }
   const objects = project.objects
-    .filter((o) => isVisible(project, o))
+    .filter((o) => o.type !== "reference" && isVisible(project, o))
     .map((o) => ({
       ...o,
       sequenceLocked:
@@ -280,7 +283,9 @@ function prepareBasicPlan(project) {
     }));
   if (!objects.some((o) => o.operations)) {
     const prepared = prepareArtwork({ ...project, objects });
-    prepared.diagnostics.sourceObjects = project.objects.length;
+    prepared.diagnostics.sourceObjects = project.objects.filter(
+      (o) => o.type !== "reference",
+    ).length;
     return prepared;
   }
   // Plan WHOLE objects first. A multi-operation object's footprint is a source
@@ -405,7 +410,9 @@ function prepareBasicPlan(project) {
   prepared.diagnostics.plannedRegions = units.filter(
     (o) => o.type !== "command",
   ).length;
-  prepared.diagnostics.sourceObjects = project.objects.length;
+  prepared.diagnostics.sourceObjects = project.objects.filter(
+    (o) => o.type !== "reference",
+  ).length;
   return prepared;
 }
 

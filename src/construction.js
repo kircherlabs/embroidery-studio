@@ -191,6 +191,7 @@ export function constructionOperations(o, options = {}) {
 }
 
 export function patchBoundary(objects, options = {}) {
+  objects = objects.filter((o) => o.type !== "reference");
   if (!objects.length) throw Error("Select artwork to surround first.");
   const b = selectionBounds(objects),
     margin = Number(options.margin ?? 3),
@@ -243,7 +244,7 @@ export function patchBoundary(objects, options = {}) {
 }
 
 export function createSurroundingPatch(project, ids, options) {
-  const artwork = leaves(project, ids);
+  const artwork = leaves(project, ids).filter((o) => o.type !== "reference");
   if (!artwork.length || artwork.some((o) => isLocked(project, o)))
     throw Error(
       "Select editable artwork; unlock its descendants before grouping a patch.",
@@ -317,8 +318,9 @@ export const constructionStops = (o) =>
 // Explicit refit follows current decorative geometry, keeping all operation IDs,
 // independent settings and shared source identity. It resets orientation to hoop axes.
 export function refitPatch(project, boundary, margin) {
-  const artwork = project.objects.filter((o) =>
-    boundary.constructionArtworkIds?.includes(o.id),
+  const artwork = project.objects.filter(
+    (o) =>
+      o.type !== "reference" && boundary.constructionArtworkIds?.includes(o.id),
   );
   if (!artwork.length)
     throw Error("This boundary has no remaining linked artwork to refit.");

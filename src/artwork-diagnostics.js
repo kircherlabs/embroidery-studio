@@ -18,7 +18,8 @@ export function duplicateArtwork(project) {
   const seen = new Map(),
     result = [];
   for (const o of project.objects) {
-    if (o.type === "manual" || !isVisible(project, o)) continue;
+    if (["manual", "reference"].includes(o.type) || !isVisible(project, o))
+      continue;
     const key = [
       o.type,
       o.color,

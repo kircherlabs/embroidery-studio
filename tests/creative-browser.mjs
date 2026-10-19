@@ -169,11 +169,21 @@ try {
   await fill("shape-sides", 7);
   assert.equal((await project()).objects.at(-1).shape.sides, 7);
   // Lettering remains one object through content/font/direction edits and gets real filled-region satin.
+  const beforeLetteringCount = (await project()).objects.length;
   await page.locator("#text-tool").click();
   await page.locator("#text-value").fill("MTR");
   await page.locator("#text-height").fill("9");
   await page.locator("#dialog-submit").click();
-  await ready();
+  // Dialog close dispatch can follow click completion. Do not accept the previous
+  // object's still-ready plan before lettering is added and regenerated.
+  await page.waitForFunction((count) => {
+    const p = window.studio.getProject();
+    return (
+      p.objects.length === count + 1 &&
+      p.objects.at(-1).textSource?.content === "MTR" &&
+      window.studio.getPlan()
+    );
+  }, beforeLetteringCount);
   let text = (await project()).objects.at(-1),
     textId = text.id;
   await fill("pos-x", 12);
@@ -377,6 +387,8 @@ try {
     mimeType: "image/png",
     buffer: Buffer.from(png, "base64"),
   });
+  await page.locator("#image-import-mode").selectOption("trace");
+  await page.locator("#dialog-submit").click();
   await page.waitForSelector("#trace-preview");
   await page.locator("#raster-colors").fill("3");
   await page.locator("#trace-area").fill("0");

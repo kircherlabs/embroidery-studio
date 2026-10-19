@@ -227,29 +227,50 @@
   white-space: nowrap;
   padding: 8px;
 }
-.drawing-style[open] {
-  position: absolute;
+.drawing-style-panel {
+  position: fixed;
   z-index: 12;
-  bottom: 48px;
-  left: 15px;
-  width: min(300px, calc(100% - 30px));
+  width: min(320px, calc(100vw - 16px));
+  max-height: calc(100dvh - 16px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 12px;
   background: #203129;
+  color: #dce4df;
   border: 1px solid #61715b;
   border-radius: 8px;
   box-shadow: 0 8px 25px #0005;
 }
-.drawing-style label {
+.canvas-controls .drawing-style-panel label {
+  display: grid;
+  white-space: normal;
+  color: #dce4df;
+  gap: 6px;
+  font-size: 12px;
+}
+.canvas-controls .drawing-style-panel select {
   display: block;
-  font-size: 12px;
-}
-.drawing-style select {
   width: 100%;
-  margin-top: 6px;
-}
-.drawing-style p {
+  min-width: 0;
+  max-width: 100%;
+  min-height: 36px;
   font-size: 12px;
-  line-height: 1.7;
+}
+.drawing-style-panel p {
+  font-size: 12px;
+  line-height: 1.5;
+  margin-top: 10px;
+}
+.canvas-controls .drawing-style-panel button {
+  width: 100%;
+  min-height: 36px;
+  margin-top: 12px;
+  color: #f2d4ae;
+  border: 1px solid #71836a;
+  background: #34483a;
+}
+.drawing-style-panel button:disabled {
+  opacity: 0.6;
 }
 @media (max-width: 600px) {
   .patch-layout {

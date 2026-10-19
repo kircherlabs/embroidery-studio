@@ -198,7 +198,7 @@ export async function applyStyle(api, objects, style) {
   )
     return;
   try {
-    api.mutate(() => {
+    return api.mutate(() => {
       objects.forEach((o) => setEmbroideryStyle(o, style));
       api.state.activeOperationId = null;
     });

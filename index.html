@@ -376,20 +376,26 @@
           </details>
           <details class="drawing-style">
             <summary>Drawing style</summary>
-            <label
-              >New closed shapes<select id="draw-style">
-                <option value="auto">Default · tatami fill</option>
-                <option value="run">Outline · running</option>
-                <option value="border">Outline · satin</option>
-                <option value="fill">Filled · tatami</option>
-                <option value="combined">Fill + running outline</option>
-              </select></label
-            >
-            <p>
-              Applies to rectangles, ellipses, polygons, stars and closed Bézier
-              paths. Open running paths, manual stitches and eyelets keep their
-              dedicated methods. Edit any object's style in Properties.
-            </p>
+            <div class="drawing-style-panel">
+              <label
+                >Stitching for new closed shapes<select id="draw-style">
+                  <option value="auto">Filled · tatami (default)</option>
+                  <option value="run">Outline · running</option>
+                  <option value="border">Outline · satin</option>
+                  <option value="combined">Fill + running outline</option>
+                </select></label
+              >
+              <p>
+                Sets the style for shapes you draw next, including closed Bézier
+                paths. Open paths and eyelets keep their dedicated methods.
+                Imported and existing artwork changes only when you apply a
+                style.
+              </p>
+              <button id="apply-draw-style" type="button">
+                Apply to selected artwork
+              </button>
+              <p id="draw-style-selection" role="status"></p>
+            </div>
           </details>
           <button id="arrange-selection" aria-haspopup="menu">Arrange ▾</button>
           <label><input type="checkbox" id="snap-grid" />Grid</label>
@@ -531,7 +537,7 @@
     <footer class="status-bar">
       <span id="status">Ready</span
       ><span
-        >40 wt thread presets <i>·</i> v0.6.0 <i>·</i>
+        >40 wt thread presets <i>·</i> v0.6.1 <i>·</i>
         <a
           href="https://github.com/kircherlabs/embroidery-studio"
           target="_blank"

@@ -304,6 +304,19 @@ try {
     [844, 390],
   ]) {
     await page.setViewportSize({ width, height });
+    // Media-query/ResizeObserver panel updates follow the viewport change.
+    // Await the actual compact mode before deciding whether to open its drawer.
+    await page.waitForFunction((width) => {
+      const layout = window.studio.getWorkspace(),
+        compact = width < 1100,
+        open = (compact ? layout.compactOpen : layout.open).right;
+      return (
+        document
+          .querySelector(".workspace")
+          .classList.contains("compact-workspace") === compact &&
+        document.getElementById("inspector-panel").hidden === !open
+      );
+    }, width);
     if (!(await page.locator("#inspector-panel").isVisible()))
       await page.locator("#toggle-inspector").click();
     const input = page.locator("#text-path-offset");

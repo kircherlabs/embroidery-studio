@@ -57,7 +57,11 @@ try {
   await ready();
   await page.locator("#new-project").click();
   await page.locator("#dialog-submit").click();
-  await ready();
+  await page.waitForFunction(
+    () =>
+      window.studio.getProject().objects.length === 0 &&
+      window.studio.getPlan()?.stats.stitches === 0,
+  );
   await page
     .locator("#file-input")
     .setInputFiles(
@@ -66,7 +70,14 @@ try {
         import.meta.url,
       ).pathname.replace(/^\/(?=[A-Za-z]:)/, ""),
     );
-  await ready();
+  await page.waitForFunction(
+    () =>
+      window.studio
+        .getProject()
+        .groups?.some(
+          (g) => g.kind === "svg" && g.name === "picsvg-outline.svg",
+        ) && window.studio.getPlan(),
+  );
   let original = await project();
   assert.equal(original.objects.length, 11);
   await page.locator("#applique-recipe").click();

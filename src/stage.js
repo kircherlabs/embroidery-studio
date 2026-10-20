@@ -20,6 +20,13 @@ import { objectBounds, pointsOf, bounds, MACHINES } from "./model.js";
 import { inside, distance } from "./engine.js";
 import { movementSegments } from "./preview.js";
 import { closedOutlinePreview, drawClosedOutline } from "./outline-preview.js";
+import {
+  EDITING_STYLE,
+  strokeEditingPath,
+  editingHandle,
+  drawSourceOverlay,
+  sourceThread,
+} from "./editing-overlay.js";
 import { snapTranslation } from "./arrange.js";
 import {
   selectedLeaves,
@@ -334,9 +341,20 @@ export class Stage {
       scale = this.scale,
       c = this.center,
       m = MACHINES[s.project.machine];
+    const selection = selectedLeaves(s, { editable: true, visible: true }),
+      selected = selection.length === 1 ? selection[0] : null,
+      activeIds = new Set(selection.map((o) => o.id));
     const editing =
       this.drag &&
-      ["move", "resize", "rotate", "node"].includes(this.drag.type);
+      [
+        "move",
+        "resize",
+        "rotate",
+        "node",
+        "sculpt",
+        "radius",
+        "satin-guide",
+      ].includes(this.drag.type);
     if (scale <= 0) return;
     ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
     ctx.clearRect(0, 0, this.w, this.h);
@@ -424,15 +442,27 @@ export class Stage {
         (o) => o.type !== "reference" && isVisible(s.project, o),
       )) {
         if (s.isolation && !within(s.project, o, s.isolation)) continue;
-        ctx.globalAlpha = s.showStitches && !editing ? 0.13 : 0.8;
-        ctx.fillStyle = o.color;
-        ctx.strokeStyle = o.color;
+        const activeEditing = editing && activeIds.has(o.id),
+          thread = activeEditing
+            ? sourceThread(o, s.activeOperationId)
+            : { color: o.color, type: o.type, width: o.width };
+        ctx.globalAlpha = s.showStitches ? (activeEditing ? 0.22 : 0.13) : 0.8;
+        ctx.fillStyle = activeEditing ? thread.color : o.color;
+        ctx.strokeStyle = activeEditing ? thread.color : o.color;
         if (o.type === "fill") {
           this.path(ctx, o.rings);
           ctx.fill(o.fillRule || "evenodd");
         } else if (o.type !== "manual") {
-          ctx.globalAlpha = s.showStitches ? 0.25 : 0.85;
-          ctx.lineWidth = o.type === "satin" ? o.width : 0.3;
+          ctx.globalAlpha = s.showStitches
+            ? activeEditing
+              ? 0.4
+              : 0.25
+            : 0.85;
+          ctx.lineWidth = (
+            activeEditing ? thread.type === "satin" : o.type === "satin"
+          )
+            ? thread.width
+            : 0.3;
           this.path(ctx, o.rings, o.closed);
           ctx.stroke();
         }
@@ -454,7 +484,7 @@ export class Stage {
           .map((o) => o.id),
       );
       const included = (e) =>
-        !(editing && focus.has(e.objectId)) &&
+        !(editing && activeIds.has(e.objectId)) &&
         (!s.isolation || !e.objectId || isolated.has(e.objectId)) &&
         (!s.previewSelection ||
           !focus.size ||
@@ -555,15 +585,20 @@ export class Stage {
         ctx.stroke();
       }
     }
-    const selection = selectedLeaves(s, { editable: true }),
-      selected = selection.length === 1 ? selection[0] : null;
     if (selection.length && s.mode === "design") {
+      for (const o of selection)
+        drawSourceOverlay(ctx, o, scale, {
+          band: !!editing,
+          activeOperationId: s.activeOperationId,
+          multiple: selection.length > 1,
+        });
       const b = selectionBounds(selection);
-      ctx.strokeStyle = "#395943";
-      ctx.lineWidth = 1 / scale;
-      ctx.setLineDash([4 / scale, 3 / scale]);
-      ctx.strokeRect(b.minX, b.minY, b.width, b.height);
-      ctx.setLineDash([]);
+      strokeEditingPath(
+        ctx,
+        (c) => c.rect(b.minX, b.minY, b.width, b.height),
+        scale,
+        { width: 1, dash: [4, 3] },
+      );
       if (
         s.tool === "node" &&
         selected &&
@@ -581,32 +616,34 @@ export class Stage {
               if (n[key]) {
                 const a = mapPoint(n, editableCurve.frame),
                   b = mapPoint(n[key], editableCurve.frame);
-                ctx.strokeStyle = "#936c47";
-                ctx.beginPath();
-                ctx.moveTo(a.x, a.y);
-                ctx.lineTo(b.x, b.y);
-                ctx.stroke();
-                ctx.beginPath();
-                ctx.arc(b.x, b.y, 3 / scale, 0, Math.PI * 2);
-                ctx.fillStyle = "#e7b784";
-                ctx.fill();
-                ctx.stroke();
+                strokeEditingPath(
+                  ctx,
+                  (c) => {
+                    c.moveTo(a.x, a.y);
+                    c.lineTo(b.x, b.y);
+                  },
+                  scale,
+                  { color: EDITING_STYLE.guide, width: 1.1, dash: [3, 2] },
+                );
+                editingHandle(ctx, b, scale, {
+                  shape: "circle",
+                  radius: 3,
+                  color: EDITING_STYLE.guide,
+                });
               }
         points.forEach((p, i) => {
-          ctx.fillStyle = this.node === i ? "#e7b784" : "#fcf7e6";
-          ctx.strokeStyle = "#3a5941";
-          ctx.lineWidth = 1 / scale;
-          ctx.beginPath();
-          ctx.rect(p.x - 3 / scale, p.y - 3 / scale, 6 / scale, 6 / scale);
-          ctx.fill();
-          ctx.stroke();
+          editingHandle(ctx, p, scale, { radius: 3, active: this.node === i });
         });
       } else {
-        ctx.fillStyle = "#f8f1df";
-        ctx.beginPath();
-        ctx.moveTo((b.minX + b.maxX) / 2, b.minY);
-        ctx.lineTo((b.minX + b.maxX) / 2, b.minY - 22 / scale);
-        ctx.stroke();
+        strokeEditingPath(
+          ctx,
+          (c) => {
+            c.moveTo((b.minX + b.maxX) / 2, b.minY);
+            c.lineTo((b.minX + b.maxX) / 2, b.minY - 22 / scale);
+          },
+          scale,
+          { width: 1 },
+        );
         if (selected?.shape?.kind === "rect") {
           const sh = selected.shape,
             pt = mapPoint(
@@ -616,19 +653,17 @@ export class Stage {
               },
               sh.frame,
             );
-          ctx.beginPath();
-          ctx.arc(pt.x, pt.y, 4 / scale, 0, Math.PI * 2);
-          ctx.fillStyle = "#e7b784";
-          ctx.fill();
-          ctx.stroke();
-          ctx.fillStyle = "#f8f1df";
+          editingHandle(ctx, pt, scale, {
+            shape: "diamond",
+            radius: 4,
+            color: EDITING_STYLE.guide,
+          });
         }
         for (const { id, x, y } of this.handles(b)) {
-          ctx.beginPath();
-          if (id === "rotate") ctx.arc(x, y, 4 / scale, 0, Math.PI * 2);
-          else ctx.rect(x - 3.5 / scale, y - 3.5 / scale, 7 / scale, 7 / scale);
-          ctx.fill();
-          ctx.stroke();
+          editingHandle(ctx, { x, y }, scale, {
+            shape: id === "rotate" ? "circle" : "square",
+            radius: id === "rotate" ? 4 : 3.5,
+          });
         }
       }
     }
@@ -638,20 +673,22 @@ export class Stage {
       isVisible(s.project, selected)
     ) {
       for (const [side, color] of [
-        ["a", "#b67916"],
-        ["b", "#087f99"],
+        ["a", EDITING_STYLE.railA],
+        ["b", EDITING_STYLE.railB],
       ]) {
         const c = railWalk(selected.satinRails, side),
           r = curveRings(c)[0];
-        ctx.strokeStyle = color;
-        ctx.lineWidth = (side === (s.railSide || "a") ? 2.2 : 1.3) / scale;
-        this.path(ctx, [r], c.closed);
-        ctx.stroke();
+        strokeEditingPath(ctx, () => this.path(ctx, [r], c.closed), scale, {
+          color,
+          width: side === (s.railSide || "a") ? 2.2 : 1.3,
+          dash: side === "a" ? [] : [4, 2],
+        });
         const start = mapPoint(c.nodes[0], c.frame);
-        ctx.fillStyle = color;
-        ctx.beginPath();
-        ctx.arc(start.x, start.y, 4 / scale, 0, Math.PI * 2);
-        ctx.fill();
+        editingHandle(ctx, start, scale, {
+          color,
+          shape: side === "a" ? "circle" : "diamond",
+          radius: 4,
+        });
       }
     }
     if (
@@ -661,16 +698,21 @@ export class Stage {
       isVisible(s.project, selected)
     ) {
       const c = letteringCurve(selected);
-      ctx.strokeStyle = "#86618d";
-      ctx.lineWidth = 1.5 / scale;
-      this.path(ctx, curveRings(c), c.closed);
-      ctx.stroke();
+      strokeEditingPath(
+        ctx,
+        () => this.path(ctx, curveRings(c), c.closed),
+        scale,
+        { color: EDITING_STYLE.guide, width: 1.5, dash: [6, 3] },
+      );
     }
     if (this.railDraftA) {
-      ctx.strokeStyle = "#b67916";
-      ctx.lineWidth = 2 / scale;
-      this.path(ctx, curveRings(this.railDraftA), this.railDraftA.closed);
-      ctx.stroke();
+      strokeEditingPath(
+        ctx,
+        () =>
+          this.path(ctx, curveRings(this.railDraftA), this.railDraftA.closed),
+        scale,
+        { color: EDITING_STYLE.railA, width: 2 },
+      );
     }
     if (s.satinStructure || s.satinGuideEdit) {
       ctx.save();
@@ -680,16 +722,24 @@ export class Stage {
         for (const result of s.plan?.diagnostics?.satin || [])
           if (ids.has(result.objectId))
             for (const stroke of result.strokes) {
-              ctx.strokeStyle = result.fallback ? "#9d6446" : "#597bac";
-              this.path(ctx, [stroke.center], false);
-              ctx.stroke();
-              ctx.globalAlpha = 0.55;
+              const color = result.fallback
+                ? EDITING_STYLE.warning
+                : EDITING_STYLE.railA;
+              strokeEditingPath(
+                ctx,
+                () => this.path(ctx, [stroke.center], false),
+                scale,
+                { color, width: 1.1 },
+              );
               for (let i = 0; i < stroke.sections.length; i += 3) {
                 const q = stroke.sections[i];
-                this.path(ctx, [[q.a, q.b]], false);
-                ctx.stroke();
+                strokeEditingPath(
+                  ctx,
+                  () => this.path(ctx, [[q.a, q.b]], false),
+                  scale,
+                  { color, width: 1, dash: [2, 2], alpha: 0.85 },
+                );
               }
-              ctx.globalAlpha = 1;
             }
       for (const o of selection)
         for (const op of o.operations || [])
@@ -698,86 +748,107 @@ export class Stage {
             (!s.activeOperationId || op.id === s.activeOperationId)
           )
             for (const g of op.satinGuides || []) {
-              ctx.strokeStyle = "#a24779";
-              this.path(ctx, [[g.a, g.b]], false);
-              ctx.stroke();
+              strokeEditingPath(
+                ctx,
+                () => this.path(ctx, [[g.a, g.b]], false),
+                scale,
+                { color: EDITING_STYLE.guide, width: 1.5, dash: [3, 2] },
+              );
               for (const p of [g.a, g.b]) {
-                ctx.beginPath();
-                ctx.arc(p.x, p.y, 5 / scale, 0, Math.PI * 2);
-                ctx.fillStyle = "#fff4e3";
-                ctx.fill();
-                ctx.stroke();
+                editingHandle(ctx, p, scale, {
+                  shape: "diamond",
+                  radius: 5,
+                  color: EDITING_STYLE.guide,
+                });
               }
             }
       ctx.restore();
     }
     if (this.guides?.length) {
       ctx.save();
-      ctx.strokeStyle = "#a95636";
-      ctx.lineWidth = 1.3 / scale;
-      ctx.setLineDash([5 / scale, 3 / scale]);
       for (const guide of this.guides) {
-        ctx.beginPath();
-        if (guide.axis === "x") {
-          ctx.moveTo(guide.position, -c.y / scale);
-          ctx.lineTo(guide.position, (this.h - c.y) / scale);
-        } else {
-          ctx.moveTo(-c.x / scale, guide.position);
-          ctx.lineTo((this.w - c.x) / scale, guide.position);
-        }
-        ctx.stroke();
+        strokeEditingPath(
+          ctx,
+          (cx) => {
+            if (guide.axis === "x") {
+              cx.moveTo(guide.position, -c.y / scale);
+              cx.lineTo(guide.position, (this.h - c.y) / scale);
+            } else {
+              cx.moveTo(-c.x / scale, guide.position);
+              cx.lineTo((this.w - c.x) / scale, guide.position);
+            }
+          },
+          scale,
+          { color: EDITING_STYLE.snap, width: 1.1, dash: [5, 3] },
+        );
       }
       ctx.restore();
     }
     if (this.draft.length) {
-      ctx.strokeStyle = "#3d5b40";
-      ctx.fillStyle = "#59794d25";
-      ctx.lineWidth = 1.5 / scale;
       if (s.tool === "polygon")
         drawClosedOutline(ctx, closedOutlinePreview(this.draft), scale);
       else {
-        this.path(
+        strokeEditingPath(
           ctx,
-          s.tool === "pencil" && this.pencilPreview
-            ? curveRings(this.pencilPreview)
-            : ["pen", "rails"].includes(s.tool)
-              ? curveRings({ nodes: this.draft, closed: false })
-              : [this.draft],
-          false,
+          () =>
+            this.path(
+              ctx,
+              s.tool === "pencil" && this.pencilPreview
+                ? curveRings(this.pencilPreview)
+                : ["pen", "rails"].includes(s.tool)
+                  ? curveRings({ nodes: this.draft, closed: false })
+                  : [this.draft],
+              false,
+            ),
+          scale,
+          {
+            color:
+              s.tool === "rails"
+                ? this.railDraftA
+                  ? EDITING_STYLE.railB
+                  : EDITING_STYLE.railA
+                : EDITING_STYLE.ink,
+          },
         );
-        ctx.stroke();
       }
       for (const p of s.tool === "pencil" ? [] : this.draft) {
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, 3 / scale, 0, Math.PI * 2);
-        ctx.fillStyle = "#e7b784";
-        ctx.fill();
-        ctx.stroke();
+        editingHandle(ctx, p, scale, { shape: "circle", radius: 3 });
       }
     }
     if (this.drag?.type === "vector-stroke") {
       const erasing = this.drag.kind === "eraser";
       ctx.save();
-      ctx.strokeStyle = erasing ? "#bf554866" : "#b14c31";
-      ctx.lineWidth = erasing ? s.eraseWidth || 2 : 1.5 / scale;
-      ctx.lineCap = "round";
-      ctx.lineJoin = "round";
-      this.path(ctx, [this.drag.points], false);
-      ctx.stroke();
+      if (erasing) {
+        ctx.strokeStyle = EDITING_STYLE.warning;
+        ctx.lineWidth = s.eraseWidth || 2;
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        ctx.globalAlpha = 0.22;
+        this.path(ctx, [this.drag.points], false);
+        ctx.stroke();
+      }
+      strokeEditingPath(
+        ctx,
+        () => this.path(ctx, [this.drag.points], false),
+        scale,
+        { color: EDITING_STYLE.warning, dash: erasing ? [] : [5, 2] },
+      );
       ctx.restore();
     }
     if (this.shape || this.marquee) {
       const { start: a, end: b } = this.shape || this.marquee;
-      ctx.strokeStyle = "#345b3f";
-      ctx.lineWidth = 1 / scale;
-      ctx.setLineDash([3 / scale, 2 / scale]);
-      ctx.strokeRect(
-        Math.min(a.x, b.x),
-        Math.min(a.y, b.y),
-        Math.abs(a.x - b.x),
-        Math.abs(a.y - b.y),
+      strokeEditingPath(
+        ctx,
+        (c) =>
+          c.rect(
+            Math.min(a.x, b.x),
+            Math.min(a.y, b.y),
+            Math.abs(a.x - b.x),
+            Math.abs(a.y - b.y),
+          ),
+        scale,
+        { width: 1.1, dash: [3, 2] },
       );
-      ctx.setLineDash([]);
     }
     document.getElementById("zoom-value").textContent =
       Math.round(this.zoom * 100) + "%";

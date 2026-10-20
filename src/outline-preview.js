@@ -1,3 +1,4 @@
+import { EDITING_STYLE, strokeEditingPath } from "./editing-overlay.js";
 // Drawing feedback only. Source vertices, their order, and generated stitches
 // are never changed by this analysis or renderer. All coordinates are in mm.
 const EPS = 1e-8;
@@ -83,27 +84,35 @@ export function drawClosedOutline(ctx, preview, scale) {
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
   for (const { a, b, closing, crossing } of preview.segments) {
-    ctx.strokeStyle = crossing ? "#b13e32" : "#3d5b40";
-    ctx.globalAlpha = closing && !crossing ? 0.55 : 1;
-    ctx.lineWidth = (crossing ? 2 : 1.8) / scale;
-    ctx.setLineDash(closing ? [4 / scale, 4 / scale] : []);
-    ctx.beginPath();
-    ctx.moveTo(a.x, a.y);
-    ctx.lineTo(b.x, b.y);
-    ctx.stroke();
+    strokeEditingPath(
+      ctx,
+      (c) => {
+        c.moveTo(a.x, a.y);
+        c.lineTo(b.x, b.y);
+      },
+      scale,
+      {
+        color: crossing ? EDITING_STYLE.warning : EDITING_STYLE.ink,
+        width: crossing ? 2 : 1.8,
+        dash: closing ? [4, 4] : [],
+        alpha: closing && !crossing ? 0.65 : 1,
+      },
+    );
   }
   ctx.globalAlpha = 1;
-  ctx.strokeStyle = "#b13e32";
-  ctx.lineWidth = 1.8 / scale;
-  ctx.setLineDash([]);
   const r = 4 / scale;
   for (const p of preview.intersections) {
-    ctx.beginPath();
-    ctx.moveTo(p.x - r, p.y - r);
-    ctx.lineTo(p.x + r, p.y + r);
-    ctx.moveTo(p.x - r, p.y + r);
-    ctx.lineTo(p.x + r, p.y - r);
-    ctx.stroke();
+    strokeEditingPath(
+      ctx,
+      (c) => {
+        c.moveTo(p.x - r, p.y - r);
+        c.lineTo(p.x + r, p.y + r);
+        c.moveTo(p.x - r, p.y + r);
+        c.lineTo(p.x + r, p.y - r);
+      },
+      scale,
+      { color: EDITING_STYLE.warning, width: 1.8 },
+    );
   }
   ctx.restore();
 }

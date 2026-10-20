@@ -24,7 +24,7 @@ const descriptions = {
   "rails-from-selection":
     "Create an independent manual satin column from two selected single-contour paths, or one shape with two nested contours. The dialog can hide the editable sources so they do not sew twice.",
   "active-rail":
-    "Choose the boundary edited by Node. A is amber; B is blue. Moving anchors, tangent handles or segments changes local satin width and rebuilds the generated stitches.",
+    "Choose the boundary edited by Node. A is solid blue with a circular seam; B is dashed plum with a diamond seam. Both have light halos. Moving anchors, tangent handles or segments changes local satin width and rebuilds the generated stitches.",
   "rail-set-seam":
     "Use the selected node on this closed rail as its marked start/end. Choose corresponding nodes on both rails to keep spans from crossing the opening.",
   "rail-width-scale":

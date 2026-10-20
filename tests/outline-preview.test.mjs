@@ -172,16 +172,22 @@ test("outline rendering never fills a region, keeps committed edges solid and cl
     ),
     2,
   );
-  assert.equal(strokes.length, 3);
+  assert.equal(strokes.length, 6); // coincident halo and foreground per edge.
+  for (let i = 0; i < strokes.length; i += 2) {
+    assert.deepEqual(strokes[i].path, strokes[i + 1].path);
+    assert.deepEqual(strokes[i].dash, strokes[i + 1].dash);
+    assert(strokes[i].width > strokes[i + 1].width);
+  }
+  const foreground = strokes.filter((_, i) => i % 2 === 1);
   assert(
-    strokes.slice(0, 2).every((s) => s.dash.length === 0 && s.alpha === 1),
+    foreground.slice(0, 2).every((s) => s.dash.length === 0 && s.alpha === 1),
   );
-  assert.deepEqual(strokes[2].path, [
+  assert.deepEqual(foreground[2].path, [
     ["M", 8, 8],
     ["L", 0, 0],
   ]);
-  assert.deepEqual(strokes[2].dash, [2, 2]);
-  assert(strokes[2].alpha < 1);
+  assert.deepEqual(foreground[2].dash, [2, 2]);
+  assert(foreground[2].alpha < 1);
   strokes.length = 0;
   drawClosedOutline(
     ctx,
@@ -195,8 +201,8 @@ test("outline rendering never fills a region, keeps committed edges solid and cl
     ),
     1,
   );
-  assert.equal(strokes.length, 5); // four edges and one X, not a filled bow-tie.
+  assert.equal(strokes.length, 10); // four double-stroked edges and an X, no filled bow-tie.
   assert.equal(strokes.at(-1).path.length, 4);
-  assert.notEqual(strokes[0].color, strokes[1].color);
-  assert.deepEqual(strokes[3].dash, [4, 4]);
+  assert.notEqual(strokes[1].color, strokes[3].color);
+  assert.deepEqual(strokes[7].dash, [4, 4]);
 });

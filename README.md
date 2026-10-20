@@ -29,6 +29,10 @@ Rounded satin borders, centerlines and stroke columns preserve spacing on the
 outer rail of bends. Running outlines follow rounded curves; tight turns report
 located Design Issues. See [corner coverage and validation](docs/CORNER_DENSITY.md).
 
+Active editing geometry has a light halo and dark outline across selections,
+transforms, nodes, rails, drafts and construction guides. Original thread colors
+and machine output stay unchanged. See [the rendering audit and pixel tests](docs/EDITING_OVERLAYS.md).
+
 ## Design tools and workspace
 
 The compact SVG toolbar above the canvas groups selection/editing, geometry,

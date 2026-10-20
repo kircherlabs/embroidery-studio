@@ -32,6 +32,7 @@ jobs:
           node tests/workspace-browser.mjs
           node tests/toolbar-browser.mjs
           node tests/closed-shape-browser.mjs
+          node tests/geometry-contrast-browser.mjs
           node tests/text-path-browser.mjs
           node tests/artwork-tools-browser.mjs
           node tests/browser.mjs

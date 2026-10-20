@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { createRequire } from "node:module";
 import { mkdir, readFile } from "node:fs/promises";
 import { chooseTool, reveal } from "./helpers/ui.mjs";
+import { EDITING_STYLE } from "../src/editing-overlay.js";
 import {
   decodePes,
   declaredRect,
@@ -144,7 +145,7 @@ try {
     const strokes = paint.filter(
       (p) =>
         p.kind === "stroke" &&
-        ["#3d5b40", "#b13e32"].includes(p.color) &&
+        [EDITING_STYLE.ink, EDITING_STYLE.warning].includes(p.color) &&
         p.path.length === 2 &&
         p.path[0][0] === "moveTo" &&
         p.path[1][0] === "lineTo",
@@ -171,7 +172,9 @@ try {
     assert.equal(
       paint.some(
         (p) =>
-          p.color === "#b13e32" && p.path.length === 4 && p.kind === "stroke",
+          p.color === EDITING_STYLE.warning &&
+          p.path.length === 4 &&
+          p.kind === "stroke",
       ),
       crossing,
     );

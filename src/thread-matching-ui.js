@@ -1,4 +1,5 @@
 import { matchIndex, matchGroups } from "./thread-matching.js";
+import { libraryThreads } from "./thread-records.js";
 import { assignThread } from "./thread-assignment.js";
 export function matchingUI({
   dialog,
@@ -10,9 +11,12 @@ export function matchingUI({
   option,
   display,
   dot,
+  ownedOnly = false,
 }) {
   const $ = (id) => dialog.querySelector("#" + id);
-  const brands = new Map(library.records.map((r) => [r.brandId, r.brandName]));
+  const brands = new Map(
+    libraryThreads(library).map((r) => [r.brandId, r.brandName]),
+  );
   dialog.innerHTML = `<form method="dialog"><div class="dialog-heading"><h2>Match design colors to thread</h2><button value="cancel" formnovalidate aria-label="Close thread matching">×</button></div><p class="property-note">Suggestions compare digital colors using CIELAB ΔE76. Physical thread, lighting and fabric differ. These are algorithmic suggestions, not manufacturer conversions. Review alternatives before applying. Original design colors remain available.</p><div class="thread-filters"><label>Brand<select id="match-brand">${option("", "All personal catalogs")}${[...brands].map(([id, n]) => option(id, n)).join("")}</select></label><label>Product line<select id="match-line"></select></label><label>Match from<select id="match-source">${option("design", "Original design colors")}${option("current", "Current thread approximation · substitute")}</select></label><label class="check"><input type="checkbox" id="match-owned">Use owned threads only</label></div><p id="match-count" role="status"></p><div id="match-results" class="thread-match-results"></div><div class="thread-pagination"><button type="button" id="match-prev">Previous</button><button type="button" id="match-next">Next</button></div><div class="dialog-actions"><button type="button" id="match-back">Back</button><button type="button" class="primary" id="thread-match-apply">Apply reviewed matches</button></div></form>`;
   let groups = [],
     choices = new Map(),
@@ -46,7 +50,7 @@ export function matchingUI({
   }
   function calculate() {
     groups = matchGroups(targets, $("match-source").value === "current");
-    const nearest = matchIndex(library.records, {
+    const nearest = matchIndex(libraryThreads(library), {
       brand: $("match-brand").value,
       line: $("match-line").value,
       owned: $("match-owned").checked ? owned() : null,
@@ -66,7 +70,7 @@ export function matchingUI({
   function lines() {
     const brand = $("match-brand").value,
       lines = new Map(
-        library.records
+        libraryThreads(library)
           .filter((r) => !brand || r.brandId === brand)
           .map((r) => [
             r.brandId + "|" + r.lineId,
@@ -77,6 +81,7 @@ export function matchingUI({
       option("", "All product lines") +
       [...lines].map(([id, n]) => option(id, n)).join("");
   }
+  $("match-owned").checked = ownedOnly;
   $("match-brand").value = library.preferences.brandId || "";
   if ($("match-brand").selectedIndex < 0) $("match-brand").value = "";
   lines();

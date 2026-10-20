@@ -2830,7 +2830,12 @@ document.addEventListener("drop", async (e) => {
   e.preventDefault();
   for (const file of e.dataTransfer.files) await importFile(file);
 });
-threadUI = installThreads({ state, mutate, toast });
+threadUI = installThreads({
+  state,
+  mutate,
+  toast,
+  settingsChanged: () => equipmentUI.reload(),
+});
 $("thread-library").onclick = () => {
   const ids = selectionIds(state),
     one = ids.length === 1 ? nodeById(state.project, ids[0]) : null;

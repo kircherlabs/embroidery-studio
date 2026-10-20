@@ -132,7 +132,7 @@ original-palette preservation, substitution labels and smart-import handoff. Aud
 all color-edit paths (image palette revisions/style transfer) for stale assignments.
 Commit D only after it passes. No intermediate deployment has been made.
 
-## Stage D — reviewed perceptual matching complete and verified (commit containing this entry)
+## Stage D — reviewed perceptual matching complete and verified (`143b467`)
 
 Added `src/thread-matching.js`, `src/thread-matching-ui.js`,
 `tests/thread-matching.test.mjs`, `tests/thread-matching-browser.mjs`.
@@ -168,10 +168,49 @@ shopping/backup UI follow E; the matching filter already handles an empty collec
 strictly rather than silently choosing unowned threads. Next: implement E, test and
 commit it, then run F's full regression/release checks. No intermediate deployment.
 
-## Remaining Stages E–F
+## Stage E — personal inventory and portable settings complete and verified (commit containing this entry)
 
-- E: inventory, owned-only matching, project requirements, shopping list, personal
-  settings backup/restore, clear storage failure feedback.
+Added `src/thread-inventory-ui.js`, `src/thread-requirements.js`,
+`src/personal-settings.js`, `tests/thread-inventory.test.mjs`,
+`tests/thread-inventory-browser.mjs`. Integrated thread-records/thread-ui/matching-ui,
+equipment-ui reload, app settings callback and responsive workspace CSS.
+Collection: bulk mark-owned without adding to existing quantities; quantity, optional
+spool size/remaining metres, notes/favorites, all/owned/not-owned/favorite filters,
+default owned-only preference, snapshot fallback after catalog removal. No automatic
+stock deduction. Strict owned-only matching excludes missing-HEX records and never
+falls back to unowned catalogs.
+
+Project requirements use actual generated commands and block order, distinguishing
+physical identities, unassigned paints, owned/missing spools and approximate owned
+alternatives. Copy/select/export a missing-spool CSV with exact codes, desired quantity
+one per missing color, escaped text and spreadsheet-formula protection. No invented
+prices, retailer links or thread-consumption claims. Corrected outgoing-lock thread
+metadata to stay with the previously sewn region; no needle coordinates changed.
+
+Personal JSON backup/restore covers local catalogs, stock, preferences, custom
+machines/hoops, My Machine and per-model formats. Validate before writes, preview
+counts, keep duplicates by default / explicitly replace, never sum quantities,
+idempotent merge, rollback both stores on a failed write, report rollback failure.
+Loading/closing dialogs cannot apply stale backup previews. Current project stays intact.
+
+Validation: all 294 automated tests pass (`inventory-final-units.log`). Browser suites
+for inventory, catalog, matching (all six real formats) and equipment pass
+(`inventory-*-regression.log`). They cover bulk/individual entry, owned matching and
+original colors, Undo, no export decrement, catalog loss, shopping CSV, notes/favorites,
+validated restore/reimport, current-project retention, synthetic quota rollback,
+5,000 catalog entries with only 50 DOM rows, 64-source-color matching and mobile.
+Latest local matching measurement: 52.7 ms (`inventory-performance.json`), not a timing
+guarantee. Desktop requirements/mobile collection screenshots are in test-results.
+Build passed. CI includes inventory browser tests. README and THREAD_LIBRARY updated.
+
+Remaining limits: collection quantities/remaining metres are user estimates; no stock
+usage accounting, no manufacturer conversion dataset or licensed preloaded color packs.
+Personal preference edits are separate from project Undo. Next exact step: F full
+regression (34 browser suites + 294 JS + 10 native Python), release docs/version,
+merge/push and verify successful GitHub Pages deployment. Backups remain untouched.
+
+## Remaining Stage F
+
 - F: desktop/mobile integration, thousands-of-entries performance, full existing suites,
   machine decoding, documentation, clean release and GitHub Pages verification.
 
@@ -188,6 +227,6 @@ unlicensed chart images, raw catalogs, PANTONE references or conversion tables.
 
 ## Resume rules
 
-Read this file and inspect current branch/commit/status first. Stages A–D are validated; start E from the latest stage commit. Record each stage's actual checks and commit in this
+Read this file and inspect current branch/commit/status first. Stages A–E are validated; start F from the latest stage commit. Record each stage's actual checks and commit in this
 file. Never label later stages complete until implemented and tested. Keep source research
 outside `src`, `vendor`, `assets` (the directories copied into public builds).

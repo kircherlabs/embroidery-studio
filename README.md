@@ -375,3 +375,12 @@ readable. See [editing architecture and limits](docs/EDITING.md).
 MIT licensed. pyembroidery is vendored under MIT with its license. Pyodide loads
 unmodified under its own license. No Ink/Stitch GPL code is copied. See
 [third-party notices](THIRD_PARTY_NOTICES.md).
+
+
+Physical threads are optional: **Threads** opens personal CSV/JSON/GPL catalogs,
+reviewed perceptual matches and spool assignment. Record owned spools in **Collection
+details**, filter to owned threads, and use **Project threads** for actual requirements
+and a missing-spool shopping list. **Backup / restore** transfers local equipment and
+thread preferences separately from projects. No unlicensed manufacturer color tables
+are bundled; screen matches are approximate. See [thread library](docs/THREAD_LIBRARY.md)
+and the [stage report](docs/EQUIPMENT_THREADS_PROGRESS.md) for verification and limits.

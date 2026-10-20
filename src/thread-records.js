@@ -215,9 +215,23 @@ export function validateThreadLibrary(d) {
   for (const key of ["brandId", "lineId", "brandName"])
     if (d.preferences[key] !== undefined && !str(d.preferences[key]))
       throw Error("Invalid thread preference.");
-  if (d.inventory.length || d.conversions.length)
+  if (
+    d.preferences.ownedOnly !== undefined &&
+    typeof d.preferences.ownedOnly !== "boolean"
+  )
+    throw Error("Invalid owned collection preference.");
+  if (d.inventory.length > 50000)
+    throw Error("Thread collection exceeds 50,000 spools.");
+  const owned = new Set();
+  for (const i of d.inventory) {
+    validateInventory(i);
+    if (owned.has(i.thread.id))
+      throw Error("Duplicate inventory spool identity.");
+    owned.add(i.thread.id);
+  }
+  if (d.conversions.length)
     throw Error(
-      "This catalog version does not yet accept inventory or conversion records.",
+      "No verified conversion-table import is implemented. Use reviewed algorithmic or user substitutions.",
     );
   return d;
 }
@@ -225,3 +239,41 @@ export function validateThreadLibrary(d) {
 // Physical spool identity is separate from its approximate screen color.
 export const sewingThreadKey = (o) =>
   o.physicalThread?.thread.id || o.color?.toLowerCase();
+
+export function validateInventory(i) {
+  if (
+    !i ||
+    !Number.isFinite(i.quantity) ||
+    i.quantity < 0 ||
+    i.quantity > 1000000 ||
+    !Number.isInteger(i.quantity) ||
+    (i.remainingMetres !== null &&
+      (!Number.isFinite(i.remainingMetres) ||
+        i.remainingMetres < 0 ||
+        i.remainingMetres > 10000000)) ||
+    (i.spoolSize !== null && !str(i.spoolSize, 80)) ||
+    typeof i.notes !== "string" ||
+    i.notes.length > 2000 ||
+    typeof i.favorite !== "boolean"
+  )
+    throw Error(
+      "Invalid inventory quantity, spool size, remaining estimate or notes.",
+    );
+  validateThread(i.thread);
+  return i;
+}
+export const inventoryEntry = (thread, quantity = 1) =>
+  validateInventory({
+    thread: structuredClone(thread),
+    quantity,
+    spoolSize: null,
+    remainingMetres: null,
+    notes: "",
+    favorite: false,
+  });
+export function libraryThreads(library) {
+  // Removed catalogs do not erase personally recorded spool identities.
+  const map = new Map(library.inventory.map((i) => [i.thread.id, i.thread]));
+  for (const r of library.records) if (!map.has(r.id)) map.set(r.id, r);
+  return [...map.values()];
+}

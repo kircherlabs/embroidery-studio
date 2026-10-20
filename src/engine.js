@@ -421,6 +421,7 @@ export function generate(project) {
     regionId = activeRegion,
     operationId = activeOperation,
   ) => {
+    const source = regionId === activeRegion ? activeUnit : previousObject;
     const e = {
       cmd,
       x: Math.round(p.x * 10) / 10,
@@ -435,9 +436,7 @@ export function generate(project) {
           ? activeOperationName
           : last.operationName,
       tieOff: activeUnit?.tieOff !== false,
-      ...(activeUnit?.physicalThread
-        ? { threadKey: sewingThreadKey(activeUnit) }
-        : {}),
+      ...(source?.physicalThread ? { threadKey: sewingThreadKey(source) } : {}),
     };
     if (
       cmd === "stitch" &&

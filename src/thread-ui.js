@@ -1,5 +1,16 @@
+import {
+  collectionUI,
+  requirementsUI,
+  personalUI,
+} from "./thread-inventory-ui.js";
+import { isVisible, isLocked } from "./hierarchy.js";
 import { matchingUI } from "./thread-matching-ui.js";
-import { THREAD_BRANDS, mergeCatalog } from "./thread-records.js";
+import {
+  THREAD_BRANDS,
+  mergeCatalog,
+  libraryThreads,
+  inventoryEntry,
+} from "./thread-records.js";
 import {
   CATALOG_FIELDS,
   catalogInput,
@@ -33,6 +44,7 @@ export function installThreads(api) {
   let library = null,
     targets = [],
     chosen = null,
+    collectionChecks = new Set(),
     pageIndex = 0,
     importInput = null,
     sourceName = "",
@@ -49,7 +61,9 @@ export function installThreads(api) {
     if (e.key !== "Enter" || e.target.matches("button,select,textarea")) return;
     e.preventDefault();
     const action =
-      $("thread-match-apply") && !$("thread-match-apply").disabled
+      $("personal-apply") ||
+      $("inventory-save") ||
+      ($("thread-match-apply") && !$("thread-match-apply").disabled)
         ? $("thread-match-apply")
         : $("catalog-apply") && !$("catalog-apply").disabled
           ? $("catalog-apply")
@@ -94,7 +108,7 @@ export function installThreads(api) {
   }
   const family = () => {
     const map = new Map(Object.entries(THREAD_BRANDS));
-    for (const r of library.records) map.set(r.brandId, r.brandName);
+    for (const r of libraryThreads(library)) map.set(r.brandId, r.brandName);
     if (library.preferences.brandId && !map.has(library.preferences.brandId))
       map.set(
         library.preferences.brandId,
@@ -105,7 +119,7 @@ export function installThreads(api) {
   function lines() {
     const brand = $("thread-brand").value,
       items = new Map();
-    for (const r of library.records)
+    for (const r of libraryThreads(library))
       if (!brand || r.brandId === brand)
         items.set(
           r.brandId + "|" + r.lineId,
@@ -120,8 +134,13 @@ export function installThreads(api) {
       line = $("thread-line").value,
       material = $("thread-material").value,
       weight = $("thread-weight").value;
-    let rows = library.records.filter(
+    const collection = $("thread-collection").value,
+      inventory = new Map(library.inventory.map((i) => [i.thread.id, i]));
+    let rows = libraryThreads(library).filter(
       (r) =>
+        (collection !== "owned" || inventory.get(r.id)?.quantity > 0) &&
+        (collection !== "missing" || !(inventory.get(r.id)?.quantity > 0)) &&
+        (collection !== "favorites" || inventory.get(r.id)?.favorite) &&
         (!brand || r.brandId === brand) &&
         (!line || r.brandId + "|" + r.lineId === line) &&
         (!material || r.material === material) &&
@@ -152,7 +171,7 @@ export function installThreads(api) {
         .slice(pageIndex * 50, pageIndex * 50 + 50)
         .map(
           (r) =>
-            `<button type="button" class="thread-result ${chosen === r.id ? "selected" : ""}" data-thread="${esc(r.id)}" aria-pressed="${chosen === r.id}">${dot(r)}<span><strong>${esc(r.number || "Unnumbered swatch")} · ${esc(r.colorName || "Name unavailable")}</strong><small>${esc(r.brandName)} · ${esc(r.lineName)}${r.material ? " · " + esc(r.material) : ""}${r.weight ? " · " + esc(r.weight) : ""}</small></span></button>`,
+            `<div class="thread-library-row"><button type="button" class="thread-result ${chosen === r.id ? "selected" : ""}" data-thread="${esc(r.id)}" aria-pressed="${chosen === r.id}">${dot(r)}<span><strong>${esc(r.number || "Unnumbered swatch")} · ${esc(r.colorName || "Name unavailable")}</strong><small>${esc(r.brandName)} · ${esc(r.lineName)}${r.material ? " · " + esc(r.material) : ""}${r.weight ? " · " + esc(r.weight) : ""}${inventory.get(r.id)?.quantity > 0 ? " · Owned ×" + inventory.get(r.id).quantity : " · Not owned"}${inventory.get(r.id)?.favorite ? " · Favorite" : ""}</small></span></button><label class="collection-mark"><input type="checkbox" data-collection-check="${esc(r.id)}" aria-label="Select ${esc(r.number || r.colorName || "spool")} for collection" ${collectionChecks.has(r.id) ? "checked" : ""}></label></div>`,
         )
         .join("") ||
       '<p class="property-note">No catalog colors match. Import a personal catalog or add a thread manually. No third-party color catalog is bundled.</p>';
@@ -160,40 +179,56 @@ export function installThreads(api) {
       `${rows.length.toLocaleString()} entries · page ${pageIndex + 1} of ${count}`;
     $("thread-prev").disabled = pageIndex === 0;
     $("thread-next").disabled = pageIndex === count - 1;
-    const selected = library.records.find((r) => r.id === chosen);
+    const selected = libraryThreads(library).find((r) => r.id === chosen);
     $("thread-detail").innerHTML = selected
       ? `${dot(selected)}<strong>${esc(display(selected))}</strong><p>${selected.hex ? esc(selected.hex) + " · digital approximation" : "No HEX reference; assignment retains the design color."}</p><p>${esc(selected.material || "Material unknown")} · ${esc(selected.weight || "Weight unknown")}${selected.spoolSizes.length ? " · " + esc(selected.spoolSizes.join(", ")) : ""}</p><details><summary>Source &amp; accuracy</summary><p>${esc(selected.source.name || "Source not provided")} · ${esc(selected.source.catalogVersion || "Version unknown")}<br>${esc(selected.source.verification)} · ${esc(selected.source.colorAccuracy)}</p><p>${esc(selected.source.url || "")}</p><p>${esc(selected.source.license || "Redistribution rights not established")}<br>${esc(selected.source.attribution || "")}</p></details>`
       : '<p class="property-note">Choose a color to view its spool identity and source. Screen approximations do not reproduce physical thread exactly.</p>';
     $("thread-use").disabled = !selected || !targets.length;
+    $("thread-collection-edit").disabled = !selected;
+    $("thread-owned-add").textContent =
+      `Mark checked owned (${collectionChecks.size})`;
+    $("thread-owned-add").disabled = !collectionChecks.size;
   }
   function picker() {
     chosen = null;
+    collectionChecks.clear();
     pageIndex = 0;
     dialog.innerHTML =
       head("Thread library") +
-      `<p class="property-note">Personal catalogs stay on this device. Import does not grant redistribution rights. PEC machine colors are separate from physical thread products.</p><div class="thread-top-actions">${button("thread-match", "Match design colors…")}${button("thread-import", "Import catalog…")}${button("thread-manual", "Add thread…")}${button("thread-prefer", "Use brand / line as default")}${button("thread-remove-line", "Remove selected line…")}</div><div class="thread-filters"><label>Brand<select id="thread-brand">${option("", "All brands")}${family()
+      `<p class="property-note">Personal catalogs stay on this device. Import does not grant redistribution rights. PEC machine colors are separate from physical thread products.</p><div class="thread-top-actions">${button("thread-match", "Match design colors…")}${button("thread-requirements", "Project threads…")}${button("thread-collection-edit", "Collection details…")}${button("thread-owned-add", "Mark checked owned")}${button("thread-personal", "Backup / restore…")}${button("thread-import", "Import catalog…")}${button("thread-manual", "Add thread…")}${button("thread-prefer", "Use brand / line as default")}${button("thread-remove-line", "Remove selected line…")}</div><div class="thread-filters"><label>Brand<select id="thread-brand">${option("", "All brands")}${family()
         .map(([id, n]) => option(id, n))
         .join(
           "",
         )}</select></label><label>Product line<select id="thread-line"></select></label><label>Search spool number or name<input id="thread-search" type="search" autocomplete="off"></label><label>Material<select id="thread-material">${option("", "All materials")}${[
-        ...new Set(library.records.map((r) => r.material).filter(Boolean)),
+        ...new Set(
+          libraryThreads(library)
+            .map((r) => r.material)
+            .filter(Boolean),
+        ),
       ]
         .sort()
         .map((m) => option(m, m))
         .join(
           "",
         )}</select></label><label>Weight<select id="thread-weight">${option("", "All weights")}${[
-        ...new Set(library.records.map((r) => r.weight).filter(Boolean)),
+        ...new Set(
+          libraryThreads(library)
+            .map((r) => r.weight)
+            .filter(Boolean),
+        ),
       ]
         .sort()
         .map((m) => option(m, m))
         .join(
           "",
-        )}</select></label><label>Sort<select id="thread-sort">${option("number", "Spool number")}${option("color", "Digital color")}</select></label></div><div class="thread-browse"><div><p id="thread-result-count" role="status"></p><div id="thread-results"></div><div class="thread-pagination">${button("thread-prev", "Previous")}${button("thread-next", "Next")}</div></div><aside id="thread-detail"></aside></div><p class="property-note">${targets.length ? `Assign to ${targets.length} selected sewing action${targets.length === 1 ? "" : "s"}. Other actions, geometry and original design colors are retained.` : "Select artwork or a sewing action in Properties to assign physical thread. Browsing and custom HEX colors remain optional."}</p>` +
+        )}</select></label><label>Sort<select id="thread-sort">${option("number", "Spool number")}${option("color", "Digital color")}</select></label><label>Collection<select id="thread-collection">${option("all", "All threads")}${option("owned", "Owned threads")}${option("missing", "Not owned")}${option("favorites", "Favorites")}</select></label></div><div class="thread-browse"><div><p id="thread-result-count" role="status"></p><div id="thread-results"></div><div class="thread-pagination">${button("thread-prev", "Previous")}${button("thread-next", "Next")}</div></div><aside id="thread-detail"></aside></div><p class="property-note">${targets.length ? `Assign to ${targets.length} selected sewing action${targets.length === 1 ? "" : "s"}. Other actions, geometry and original design colors are retained.` : "Select artwork or a sewing action in Properties to assign physical thread. Browsing and custom HEX colors remain optional."}</p>` +
       end(
         '<button value="cancel" formnovalidate>Close</button>' +
           button("thread-use", "Assign selected thread"),
       );
+    $("thread-collection").value = library.preferences.ownedOnly
+      ? "owned"
+      : "all";
     $("thread-brand").value = library.preferences.brandId || "";
     if ($("thread-brand").selectedIndex < 0) $("thread-brand").value = "";
     const updateLines = () => {
@@ -215,6 +250,7 @@ export function installThreads(api) {
     };
     for (const id of [
       "thread-line",
+      "thread-collection",
       "thread-material",
       "thread-weight",
       "thread-sort",
@@ -230,6 +266,15 @@ export function installThreads(api) {
         pageIndex = 0;
         renderList();
       }, 100);
+    };
+    $("thread-results").onchange = (e) => {
+      const id = e.target.dataset.collectionCheck;
+      if (!id) return;
+      if (e.target.checked) collectionChecks.add(id);
+      else collectionChecks.delete(id);
+      $("thread-owned-add").disabled = !collectionChecks.size;
+      $("thread-owned-add").textContent =
+        `Mark checked owned (${collectionChecks.size})`;
     };
     $("thread-results").onclick = (e) => {
       const row = e.target.closest("[data-thread]");
@@ -249,7 +294,9 @@ export function installThreads(api) {
     $("thread-prefer").onclick = async () => {
       const next = structuredClone(library),
         line = $("thread-line").value.split("|");
-      next.preferences = {};
+      next.preferences = {
+        ownedOnly: $("thread-collection").value === "owned",
+      };
       if ($("thread-brand").value)
         next.preferences.brandId = $("thread-brand").value;
       if (line[1]) {
@@ -265,7 +312,7 @@ export function installThreads(api) {
     };
     $("thread-use").className = "primary";
     $("thread-use").onclick = () => {
-      const r = library.records.find((r) => r.id === chosen);
+      const r = libraryThreads(library).find((r) => r.id === chosen);
       if (!r) return;
       let count = 0;
       api.mutate(() => (count = assignThread(targets, r)));
@@ -319,7 +366,67 @@ export function installThreads(api) {
       input.click();
     };
     $("thread-manual").onclick = () => manual();
-    $("thread-match").onclick = match;
+    $("thread-match").onclick = () => match();
+    const common = () => ({
+      dialog,
+      library,
+      api,
+      back: picker,
+      esc,
+      display,
+      dot,
+      head,
+      end,
+      button,
+      persist,
+    });
+    $("thread-collection-edit").onclick = () => {
+      const thread = libraryThreads(library).find((r) => r.id === chosen);
+      if (thread) collectionUI({ ...common(), thread });
+    };
+    $("thread-owned-add").onclick = async () => {
+      const next = structuredClone(library),
+        ids = new Set(next.inventory.map((i) => i.thread.id));
+      for (const thread of libraryThreads(library).filter((r) =>
+        collectionChecks.has(r.id),
+      )) {
+        if (ids.has(thread.id)) {
+          const entry = next.inventory.find((i) => i.thread.id === thread.id);
+          entry.quantity = Math.max(1, entry.quantity);
+        } else next.inventory.push(inventoryEntry(thread));
+      }
+      if (await persist(next)) {
+        collectionChecks.clear();
+        renderList();
+        api.toast("Checked spools marked owned; existing quantities retained.");
+      }
+    };
+    $("thread-requirements").onclick = () =>
+      requirementsUI({
+        ...common(),
+        matchProject: () => {
+          targets = threadTargets(
+            api.state.project.objects.filter(
+              (o) =>
+                isVisible(api.state.project, o) &&
+                !isLocked(api.state.project, o),
+            ),
+            { bulkOperations: "all" },
+            false,
+          );
+          match(true);
+        },
+      });
+    $("thread-personal").onclick = () =>
+      personalUI({
+        ...common(),
+        onImported: (data) => {
+          library = data.threads;
+          api.settingsChanged?.();
+          picker();
+        },
+      });
+
     renderList();
   }
   function importer() {
@@ -440,13 +547,14 @@ export function installThreads(api) {
       }
     };
   }
-  function match() {
+  function match(ownedOnly = library.preferences.ownedOnly || false) {
     matchingUI({
       dialog,
       library,
       targets,
       api,
       back: picker,
+      ownedOnly,
       esc,
       option,
       display,

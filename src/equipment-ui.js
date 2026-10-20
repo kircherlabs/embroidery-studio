@@ -323,6 +323,10 @@ export function installEquipment(api) {
   return {
     render,
     getSettings: () => structuredClone(settings),
+    reload() {
+      settings = loadEquipment(localStorage);
+      render();
+    },
     applyDefault(p) {
       if (settings.default) {
         p.machine = settings.default.machineId;

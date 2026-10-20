@@ -1192,3 +1192,34 @@
   width: 100%;
   min-width: 0;
 }
+
+.thread-library-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 44px;
+  align-items: center;
+  gap: 4px;
+}
+.thread-library-row > input {
+  width: 22px;
+  height: 22px;
+  margin: 7px;
+  cursor: pointer;
+}
+.thread-dialog textarea {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.collection-mark {
+  min-height: 44px;
+  min-width: 44px;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  cursor: pointer;
+}
+.collection-mark input {
+  width: 22px;
+  height: 22px;
+  margin: 0;
+}

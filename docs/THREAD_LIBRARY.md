@@ -94,3 +94,43 @@ at those pauses. Export guidance explains this; decoded needles and pause order
 are verified before download. Physical identity is retained in the project; machine
 files may carry only approximate RGB/palette entries. No official cross-brand
 conversion data is bundled or claimed.
+
+## My thread collection and project requirements
+
+In **Threads**, check spool rows and choose **Mark checked owned** for quick bulk
+entry. This sets previously missing quantities to one and keeps existing quantities;
+it never increments them accidentally. Select a spool and use **Collection details…**
+for whole-spool quantity, optional size and remaining-metres estimate, notes and
+favorite status. Removing a collection entry does not remove catalog or project data.
+A manual thread entry can be recorded in the collection even without a digital HEX.
+
+The Collection filter supports all, owned, not owned and favorites. **Use brand / line
+as default** also remembers an owned-only collection preference. Owned snapshots
+remain available if their source catalog is removed. **Match design colors…** and
+**Project threads… → Match editable project actions using owned threads…** offer
+strict owned-only matching; unknown HEX cannot participate and there is no silent
+fallback to unowned spools. Review large differences before applying substitutions.
+
+**Project threads…** derives requirements from generated sewing commands, including
+actual order, thread changes and construction stops. Hidden/disabled/reference
+artwork does not add requirements. It shows exact physical IDs, owned/missing stock,
+color-block positions and approximate owned alternatives. Unassigned custom colors
+are identified without inventing product numbers. The shopping list requests one
+spool for each missing physical color and can be selected/copied or exported as CSV.
+CSV fields are quoted, leading zeros retained as text in the file, and formula-like
+values prefixed for spreadsheet safety. No prices, stock availability or retailer
+links are fabricated. There is no automatic stock deduction or unvalidated thread-use
+estimate. Collection edits are local preferences, separate from project Undo.
+
+## Portable personal settings
+
+**Threads → Backup / restore…** exports catalogs, collection snapshots, thread
+preferences, custom machine/hoop profiles, My Machine and per-machine format choices.
+Projects are saved separately. Restoring previews counts and merges stable IDs,
+keeping existing duplicates by default; an explicit checkbox replaces matching
+entries/preferences. Quantities are never summed. Unrelated entries remain.
+Malformed data is rejected before writing. Because IndexedDB and localStorage do
+not share transactions, both old stores are retained and rolled back on a write
+failure, with explicit feedback if even rollback fails. Keep a backup outside browser
+storage. Backups remain personal data and do not establish catalog redistribution rights.
+The importer validates a versioned schema and accepts backup files up to 64 MB.

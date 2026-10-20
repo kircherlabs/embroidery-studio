@@ -19,6 +19,7 @@ import {
 import { objectBounds, pointsOf, bounds, MACHINES } from "./model.js";
 import { inside, distance } from "./engine.js";
 import { movementSegments } from "./preview.js";
+import { closedOutlinePreview, drawClosedOutline } from "./outline-preview.js";
 import { snapTranslation } from "./arrange.js";
 import {
   selectedLeaves,
@@ -732,17 +733,20 @@ export class Stage {
       ctx.strokeStyle = "#3d5b40";
       ctx.fillStyle = "#59794d25";
       ctx.lineWidth = 1.5 / scale;
-      this.path(
-        ctx,
-        s.tool === "pencil" && this.pencilPreview
-          ? curveRings(this.pencilPreview)
-          : ["pen", "rails"].includes(s.tool)
-            ? curveRings({ nodes: this.draft, closed: false })
-            : [this.draft],
-        s.tool === "polygon",
-      );
-      if (s.tool === "polygon") ctx.fill();
-      ctx.stroke();
+      if (s.tool === "polygon")
+        drawClosedOutline(ctx, closedOutlinePreview(this.draft), scale);
+      else {
+        this.path(
+          ctx,
+          s.tool === "pencil" && this.pencilPreview
+            ? curveRings(this.pencilPreview)
+            : ["pen", "rails"].includes(s.tool)
+              ? curveRings({ nodes: this.draft, closed: false })
+              : [this.draft],
+          false,
+        );
+        ctx.stroke();
+      }
       for (const p of s.tool === "pencil" ? [] : this.draft) {
         ctx.beginPath();
         ctx.arc(p.x, p.y, 3 / scale, 0, Math.PI * 2);
@@ -976,10 +980,14 @@ export class Stage {
       return;
     }
     if (["polygon", "run", "satin", "manual"].includes(s.tool)) {
-      this.draft.push({
-        x: Math.round(p.x * 10) / 10,
-        y: Math.round(p.y * 10) / 10,
-      });
+      this.draft.push(
+        s.tool === "polygon"
+          ? { x: p.x, y: p.y }
+          : {
+              x: Math.round(p.x * 10) / 10,
+              y: Math.round(p.y * 10) / 10,
+            },
+      );
       this.actions.draft();
       this.render();
       return;

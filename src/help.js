@@ -375,7 +375,7 @@ function description(el) {
         "Select and drag artwork (V). Shift/Ctrl-click to multiselect; drag empty space to select a box. Alt-click selects a region within an SVG.",
       node: "Edit actual vector or manual needle points (N). Drag a node; double-click an edge to insert a point. Stitches regenerate after geometry edits.",
       polygon:
-        "Draw a closed region for tatami fill (P). Click vertices, then Enter to finish.",
+        "Draw a custom closed outline by placing points. Apply satin borders, tatami fills, or other stitch styles.",
       run: "Draw an open running-stitch contour (R). Click vertices, then Enter to finish.",
       satin:
         "Draw a satin centerline (S). Satin width and row spacing determine the generated column.",

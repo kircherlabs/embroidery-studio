@@ -85,6 +85,7 @@ import {
 import { installReordering } from "./reorder-ui.js";
 import { installHelp } from "./help.js";
 import { installWorkspace } from "./workspace-layout.js";
+import { closedOutlinePreview } from "./outline-preview.js";
 import { arrangeArtwork, installArrangeMenu } from "./arrange.js";
 installDesignToolbar();
 const icon = (name) =>
@@ -386,7 +387,8 @@ function setTool(tool) {
     knife:
       "Select artwork · drag fully across to split · click a path to open it",
     eraser: "Select artwork · brush away vector areas or line segments",
-    polygon: "Click outline points · Enter to finish a fill",
+    polygon:
+      "Click outline points · dashed edge closes shape · Enter to finish",
     run: "Click path points · Enter to finish a running stitch",
     satin: "Click a centerline · Enter to finish satin",
     manual: "Click each needle point · Enter to finish stitches",
@@ -414,6 +416,18 @@ function updateDraft() {
     state.tool === "rails"
       ? `Rail ${stage.railDraftA ? "B" : "A"} · ${stage.draft.length} anchors`
       : `${stage.draft.length} points placed`;
+  const crossings =
+    state.tool === "polygon"
+      ? closedOutlinePreview(stage.draft).intersections.length
+      : 0;
+  $("draw-message").classList.toggle("outline-warning", crossings > 0);
+  if (crossings)
+    $("draw-message").textContent =
+      `${stage.draft.length} points · ${crossings} crossing${crossings === 1 ? "" : "s"}`;
+  $("draw-message").dataset.help =
+    state.tool === "polygon"
+      ? "Solid segments follow your placed points; the dashed edge previews closure. Red segments and X markers identify crossings or overlaps. Finish preserves your exact point order and applies the selected drawing style; use Edit Points to adjust the completed outline."
+      : "Placed points remain editable until Finish path. Cancel discards only the unfinished path.";
   $("finish-draw").textContent =
     state.tool === "rails"
       ? stage.railDraftA
@@ -801,7 +815,7 @@ function finishPath(options = {}) {
   if (pts.length < (type === "polygon" ? 3 : 2)) return;
   let o = object(
     type === "polygon"
-      ? "Fill region"
+      ? "Closed shape"
       : type === "manual"
         ? "Manual stitches"
         : type === "satin"
@@ -2474,7 +2488,7 @@ new ResizeObserver(toolOverflow).observe(rail);
 $("help").onclick = () =>
   ask(
     "Your embroidery workbench",
-    '<p><strong>Workspace:</strong> Drag panel boundaries to resize. Objects, Properties and Sequence toggle each panel. Tools hides or restores the design-tool bar and remembers your choice. Canvas temporarily maximizes the workspace; Restore or Escape brings back the previous layout. Drawing tools scroll horizontally above the canvas. Tooltips name each tool; Hints adds descriptions. Arrange opens positioning actions, also available with right-click or Shift F10.</p><p><strong>Navigation:</strong> Choose Auto, Mouse or Trackpad beside the canvas. Trackpad scrolling pans; pinch or Ctrl/Command-scroll zooms. H or Space-drag pans, +/− zooms, F fits selected artwork, and Home fits the hoop. View offers Fit Design, Fit Selection, Center and Reset. Guides snap dragging to artwork edges/centers and hoop center; Alt bypasses snapping.</p><p><strong>Artwork tree:</strong> Imported SVGs contain their original regions and nested groups. Select a parent to edit the whole SVG; expand it to edit a child. Shift/Ctrl-click or drag a box to multiselect. Drag corner/edge handles to resize, or the round handle to rotate. Ctrl A selects all, Ctrl G groups, Ctrl Shift G ungroups, Ctrl D duplicates, and F fits selection. Locked artwork still sews; focus mode changes only the view.</p><p><strong>Operations:</strong> Add independent steps in the inspector. The appliqué recipe creates placement, stop, tackdown, stop and satin finishing steps on closed regions. Stops require operator action; test pauses and clearance on your machine.</p><p><strong>Draw:</strong> Use polygon for filled regions, running path for outlines, and satin for narrow columns. Click points, then press <kbd>Enter</kbd> or Finish path. Drag to create rectangles and ellipses.</p><p><strong>Edit:</strong> Select and drag objects. The node tool lets you move individual points; double-click an edge to insert a node. Use the properties panel for exact dimensions, angles and stitch settings. Automatic sequencing completes each object and batches compatible colors while preserving construction order. Drag grips in the artwork tree to change layers and set manual sewing order. Drag grips in Object sewing order to change sewing order only. Switch back to Automatic to resume optimization; Keep sequence position pins an object. Alt+arrow keys on a grip are the keyboard equivalent.</p><p><strong>Simulate:</strong> Open Stitch preview. Play, step through, scrub, click a stitch, or click a color block. Command positions, underlay and jump paths are inspectable. Export replaces the preview with commands decoded from the saved file.</p><p><strong>Manual editing:</strong> Make a vector object’s stitches editable, then adjust needle points with the node tool or command index editor. Imported embroidery files are editable stitch blocks.</p><p><strong>Shortcuts:</strong> <kbd>V</kbd> select · <kbd>N</kbd> nodes · <kbd>P</kbd> fill · <kbd>R</kbd> run · <kbd>S</kbd> satin · <kbd>T</kbd> text · <kbd>E</kbd> ellipse · <kbd>H</kbd> pan · <kbd>Space</kbd> temporary pan / preview playback · <kbd>Ctrl Z</kbd> undo · <kbd>Ctrl Shift Z</kbd> redo · <kbd>Delete</kbd> selected object / vector node.</p><p>SVG import supports paths, basic shapes, transforms, holes and inline solid paints. Convert text to paths and expand clipping or effects first. Image digitizing is intended for flat artwork. Core editing works locally; machine conversion loads a pinned Python/WASM runtime from jsDelivr on first use. Thread colors are visual approximations.</p><p><a href="https://github.com/kircherlabs/embroidery-studio#readme" target="_blank" rel="noreferrer">Documentation & known limitations ↗</a></p>',
+    '<p><strong>Workspace:</strong> Drag panel boundaries to resize. Objects, Properties and Sequence toggle each panel. Tools hides or restores the design-tool bar and remembers your choice. Canvas temporarily maximizes the workspace; Restore or Escape brings back the previous layout. Drawing tools scroll horizontally above the canvas. Tooltips name each tool; Hints adds descriptions. Arrange opens positioning actions, also available with right-click or Shift F10.</p><p><strong>Navigation:</strong> Choose Auto, Mouse or Trackpad beside the canvas. Trackpad scrolling pans; pinch or Ctrl/Command-scroll zooms. H or Space-drag pans, +/− zooms, F fits selected artwork, and Home fits the hoop. View offers Fit Design, Fit Selection, Center and Reset. Guides snap dragging to artwork edges/centers and hoop center; Alt bypasses snapping.</p><p><strong>Artwork tree:</strong> Imported SVGs contain their original regions and nested groups. Select a parent to edit the whole SVG; expand it to edit a child. Shift/Ctrl-click or drag a box to multiselect. Drag corner/edge handles to resize, or the round handle to rotate. Ctrl A selects all, Ctrl G groups, Ctrl Shift G ungroups, Ctrl D duplicates, and F fits selection. Locked artwork still sews; focus mode changes only the view.</p><p><strong>Operations:</strong> Add independent steps in the inspector. The appliqué recipe creates placement, stop, tackdown, stop and satin finishing steps on closed regions. Stops require operator action; test pauses and clearance on your machine.</p><p><strong>Draw:</strong> Use Closed Shape to place a custom closed outline, then apply the selected drawing style. Solid edges are placed segments; the dashed edge previews closure. Red segments and X markers identify crossings or overlaps without reordering your points. Use Running Stitch for open contours and Satin Line for centerline columns. Click points, then press <kbd>Enter</kbd> or Finish path. Drag to create rectangles and ellipses.</p><p><strong>Edit:</strong> Select and drag objects. The node tool lets you move individual points; double-click an edge to insert a node. Use the properties panel for exact dimensions, angles and stitch settings. Automatic sequencing completes each object and batches compatible colors while preserving construction order. Drag grips in the artwork tree to change layers and set manual sewing order. Drag grips in Object sewing order to change sewing order only. Switch back to Automatic to resume optimization; Keep sequence position pins an object. Alt+arrow keys on a grip are the keyboard equivalent.</p><p><strong>Simulate:</strong> Open Stitch preview. Play, step through, scrub, click a stitch, or click a color block. Command positions, underlay and jump paths are inspectable. Export replaces the preview with commands decoded from the saved file.</p><p><strong>Manual editing:</strong> Make a vector object’s stitches editable, then adjust needle points with the node tool or command index editor. Imported embroidery files are editable stitch blocks.</p><p><strong>Shortcuts:</strong> <kbd>V</kbd> select · <kbd>N</kbd> nodes · <kbd>P</kbd> Closed Shape · <kbd>R</kbd> run · <kbd>S</kbd> satin · <kbd>T</kbd> text · <kbd>E</kbd> ellipse · <kbd>H</kbd> pan · <kbd>Space</kbd> temporary pan / preview playback · <kbd>Ctrl Z</kbd> undo · <kbd>Ctrl Shift Z</kbd> redo · <kbd>Delete</kbd> selected object / vector node.</p><p>SVG import supports paths, basic shapes, transforms, holes and inline solid paints. Convert text to paths and expand clipping or effects first. Image digitizing is intended for flat artwork. Core editing works locally; machine conversion loads a pinned Python/WASM runtime from jsDelivr on first use. Thread colors are visual approximations.</p><p><a href="https://github.com/kircherlabs/embroidery-studio#readme" target="_blank" rel="noreferrer">Documentation & known limitations ↗</a></p>',
     "Got it",
   );
 document.addEventListener("keydown", (e) => {

@@ -40,6 +40,9 @@ width. The sequence pane belongs to **Stitch preview** and automatically hides i
 The canvas has no permanent workspace-description banner; necessary drawing and
 editing controls stay outside the artwork, including when the icon bar is hidden.
 See [tool names, shortcuts and workspace behavior](docs/DESIGN_TOOLBAR.md).
+**Closed Shape (P)** places custom outline points, with solid placed edges,
+dashed closure and crossing indicators. The chosen Drawing style is applied on
+completion; unfinished outlines are not filled or digitized.
 
 ## Effects, sewing styles and repeats
 

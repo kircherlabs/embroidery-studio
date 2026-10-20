@@ -14,7 +14,11 @@ export const TOOL_INFO = {
   pen: ["Bézier Pen", "Create cubic curves using click-and-drag anchors."],
   shapes: ["Shapes", "Create geometric shapes."],
   knife: ["Knife", "Cut or split vector paths."],
-  polygon: ["Tatami Fill", "Draw closed regions for tatami stitching.", "P"],
+  polygon: [
+    "Closed Shape",
+    "Draw a custom closed outline by placing points. Apply satin borders, tatami fills, or other stitch styles.",
+    "P",
+  ],
   run: ["Running Stitch", "Draw open running-stitch contours.", "R"],
   satin: ["Satin Line", "Create satin columns from a centerline.", "S"],
   rails: ["Satin Rails", "Create satin columns using manually defined rails."],
@@ -56,7 +60,7 @@ const paths = {
   knife:
     '<path d="M4 18 16 3a2.4 2.4 0 0 1 4 3L9 17 4 20ZM5 16l4 1"/><path d="M3 22h18" stroke-dasharray="3 3"/>',
   polygon:
-    '<path d="m3 7 10-4 8 5-2 12-13 1Z M4 11l8-7M5 15 16 5M6 19 19 7M9 21 21 10M13 21l7-7M17 20l2-2"/>',
+    '<path d="m3 7 10-4 8 5-2 12-13 1Z"/><circle cx="3" cy="7" r="1.3"/><circle cx="13" cy="3" r="1.3"/><circle cx="21" cy="8" r="1.3"/><circle cx="19" cy="20" r="1.3"/><circle cx="6" cy="21" r="1.3"/>',
   run: '<path d="M4 19C12 21 10 3 20 5" stroke-dasharray="3 2.8"/><circle cx="3" cy="19" r="1.6"/><circle cx="21" cy="5" r="1.6"/>',
   satin:
     '<path d="M2 16C8 16 15 5 22 7v5C15 10 9 21 2 21Z" fill="currentColor" stroke="none" opacity=".14"/><path d="m3 15 1 7m2-8 1 7m2-9 2 7m1-10 2 7m1-10 2 7m1-8 2 7m1-8 1 7"/><path d="M3 18.5C9 18 15 7 22 9.5" stroke-dasharray="1.5 2.3" stroke-width="1"/>',

@@ -407,6 +407,10 @@
 .tool-context #draw-message {
   display: block;
 }
+.tool-context #draw-message.outline-warning {
+  color: #a6372c;
+  font-weight: 600;
+}
 @container drawing-workspace (max-width: 640px) {
   .tool-context #draw-actions {
     width: 100%;

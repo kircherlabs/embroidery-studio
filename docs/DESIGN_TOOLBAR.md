@@ -1,4 +1,4 @@
-# Design toolbar — 0.12.2
+# Design toolbar — 0.12.3
 
 The design tools use native 24 × 24 SVG icons in four compact groups above the
 canvas. Dividers separate groups without permanent headings or descriptions.
@@ -30,7 +30,7 @@ even when tool icons are hidden; unfinished paths and active tools are retained.
 |                     | Bézier Pen        | `pen`                                                            |
 |                     | Shapes            | `shape-family`; Rectangle, Ellipse (E), Polygon, Star and Eyelet |
 |                     | Knife             | `knife`                                                          |
-| Embroidery          | Tatami Fill       | `polygon` · P; existing closed-region tool                       |
+| Embroidery          | Closed Shape      | `polygon` · P; existing closed-region tool                       |
 |                     | Running Stitch    | `run` · R                                                        |
 |                     | Satin Line        | `satin` · S; existing centerline method                          |
 |                     | Satin Rails       | `rails`; existing paired-rail construction                       |
@@ -41,6 +41,23 @@ even when tool icons are hidden; unfinished paths and active tools are retained.
 names, descriptions and SVGs to existing controls. Geometry, action handlers,
 shortcuts, history, project schema, digitizing and exporters remain unchanged.
 Drawing-style presets still configure compatible newly drawn closed shapes.
+
+## Closed Shape (P)
+
+Formerly labeled Tatami Fill, this is the same `polygon` drawing action. Click
+vertices in the intended order, then use Enter or Finish path. The tool retains
+the pointer's precise source coordinates; machine export still uses its existing
+0.1 mm resolution. Existing projects and internal source identifiers are retained.
+
+Placed segments are solid. Only the last-to-first closing edge is dashed and
+subtle, and it is replaced when the next vertex is placed. The unfinished shape
+has no area fill or generated stitches. Red segments and X markers identify
+crossings, nonadjacent touches and overlapping edges, including problems caused
+by closure. The point counter shows the number of crossing locations. These are
+advisory: Finish keeps the vertices in their placed order and applies the current
+Drawing style (running outline, satin border, tatami or combined fill/outline).
+Edit Points can adjust the finished shape. No automatic repair or point
+reordering occurs; Undo/Redo and project persistence work as for other artwork.
 
 ## Hints
 

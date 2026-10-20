@@ -33,6 +33,11 @@ Active editing geometry has a light halo and dark outline across selections,
 transforms, nodes, rails, drafts and construction guides. Original thread colors
 and machine output stay unchanged. See [the rendering audit and pixel tests](docs/EDITING_OVERLAYS.md).
 
+Sculpting imported contours now compacts redundant local samples within a physical
+accuracy tolerance. Repeated edits retain the points needed for the bend without
+continually subdividing whole edges. Sharp turns, other contours and existing
+Bézier controls are preserved. See [vertex counts and accuracy tests](docs/SCULPT_CONTOURS.md).
+
 ## Design tools and workspace
 
 The compact SVG toolbar above the canvas groups selection/editing, geometry,

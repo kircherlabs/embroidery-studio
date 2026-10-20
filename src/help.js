@@ -52,7 +52,7 @@ const descriptions = {
   "pencil-smoothing":
     "Approximate freehand fitting tolerance in millimeters. Smaller values follow the captured trace more closely with more editable nodes. Smoothing does not change stitch density.",
   "sculpt-radius":
-    "Local influence distance in millimeters when pulling imported polygon contours. Bézier segments instead update their own tangent handles. Other contours and holes stay separate.",
+    "Local influence distance in millimeters when pulling imported polygon contours. Bézier segments instead update their own tangent handles. Redundant local polygon samples are compacted within 0.025 mm (tighter for small reaches); sharp turns, other contours and holes stay separate. This does not change stitch density.",
   "knife-mode":
     "Split regions creates closed pieces with real Boolean geometry and retains holes. Split contours opens line pieces; incompatible fill/border actions need explicit conversion to Running.",
   "erase-mode":

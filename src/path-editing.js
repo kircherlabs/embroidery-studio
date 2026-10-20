@@ -1,3 +1,4 @@
+import { sculptContour } from "./sculpt-contour.js";
 import {
   distance,
   simplifyPath,
@@ -182,44 +183,17 @@ export function sculptArtwork(o, hit, delta, radius = 2) {
     o.rings = curveRings(o.curve);
     return;
   }
-  const ring = o.rings[hit.ring],
-    closed = o.closed || o.type === "fill",
-    cumulative = [0];
-  for (let i = 1; i < ring.length; i++)
-    cumulative.push(cumulative.at(-1) + distance(ring[i - 1], ring[i]));
-  const total =
-      cumulative.at(-1) + (closed ? distance(ring.at(-1), ring[0]) : 0),
-    at = cumulative[hit.index] + distance(ring[hit.index], hit.point);
+  const result = sculptContour(
+    o.rings[hit.ring],
+    hit,
+    delta,
+    radius,
+    o.closed === true || o.type === "fill",
+    o.rings.filter((_, i) => i !== hit.ring),
+  );
+  if (result === o.rings[hit.ring]) return;
   detachSource(o);
-  // A compact cosine influence moves only this contour, preserving other holes.
-  const refined = [];
-  for (let i = 0; i < ring.length - (closed ? 0 : 1); i++) {
-    const a = ring[i],
-      b = ring[(i + 1) % ring.length],
-      near = Math.min(
-        ...[-total, 0, total].map((shift) =>
-          Math.max(
-            cumulative[i] + shift - at,
-            at - (cumulative[i] + distance(a, b) + shift),
-            0,
-          ),
-        ),
-      ),
-      n =
-        near <= radius
-          ? Math.max(1, Math.ceil(distance(a, b) / Math.max(0.1, radius / 8)))
-          : 1;
-    for (let j = 0; j < n; j++) {
-      const q = mix(a, b, j / n),
-        s = cumulative[i] + distance(a, q),
-        raw = Math.abs(s - at),
-        d = closed ? Math.min(raw, total - raw) : raw,
-        w = d < radius ? (1 + Math.cos((Math.PI * d) / radius)) / 2 : 0;
-      refined.push({ x: q.x + delta.x * w, y: q.y + delta.y * w });
-    }
-  }
-  if (!closed) refined.push({ ...ring.at(-1) });
-  o.rings[hit.ring] = refined;
+  o.rings[hit.ring] = result;
 }
 export function pencilCurve(points, tolerance = 0.15, closed = false) {
   if (!Number.isFinite(tolerance) || tolerance < 0.02 || tolerance > 1)

@@ -1,3 +1,4 @@
+import { sculptIntersections } from "./sculpt-contour.js";
 import { railArtwork, railCandidates } from "./rail-ui.js";
 import { installDesignToolbar } from "./tool-icons.js";
 import { captureStyle } from "./style-transfer.js";
@@ -492,7 +493,7 @@ function updateVectorOptions() {
           : tool === "pencil"
             ? "Smoothing controls trace tolerance in millimeters. Start a new stroke to finish the previous one."
             : tool === "node"
-              ? "Pull a segment to sculpt; drag handles for precision. Imported contours use a local influence. Vector edits convert Smart Shapes/text to paths; Undo restores them."
+              ? "Pull a segment to sculpt; drag handles for precision. Imported contours use a local influence with automatic node compaction. Vector edits convert Smart Shapes/text to paths; Undo restores them."
               : "Pieces retain sewing actions; construction stops repeat per piece. Parametric shapes/text become paths; Undo restores them. Erasing keeps small fragments for review.";
   state.pencilSmoothing = $("pencil-smoothing").checkValidity()
     ? Number($("pencil-smoothing").value)
@@ -573,13 +574,19 @@ function sculptChanged(before) {
     };
     for (const o of state.project.objects) {
       const old = original.objects.find((n) => n.id === o.id);
-      if (
-        old &&
-        (o.closed || o.type === "fill") &&
-        JSON.stringify(old.rings) !== JSON.stringify(o.rings) &&
-        JSON.stringify(topology(old)) !== JSON.stringify(topology(o))
-      )
-        throw Error("The drag would merge islands or lose a counter.");
+      if (old && JSON.stringify(old.rings) !== JSON.stringify(o.rings)) {
+        const closed = o.closed || o.type === "fill";
+        if (
+          !sculptIntersections(old.rings, closed) &&
+          sculptIntersections(o.rings, closed)
+        )
+          throw Error("The drag crossed or touched another contour.");
+        if (
+          closed &&
+          JSON.stringify(topology(old)) !== JSON.stringify(topology(o))
+        )
+          throw Error("The drag would merge islands or lose a counter.");
+      }
     }
     validateProject(state.project);
     record(before);

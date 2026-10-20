@@ -51,6 +51,7 @@ jobs:
           node tests/sewing-actions-browser.mjs
           node tests/corner-density-browser.mjs
           node tests/method-categories-browser.mjs
+          node tests/sculpt-browser.mjs
           node tests/path-editing-browser.mjs
           node tests/manual-rails-browser.mjs
       - run: node scripts/build.mjs

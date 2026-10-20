@@ -333,145 +333,36 @@
             <div
               class="drawing-tools"
               role="toolbar"
-              aria-label="Drawing tools"
+              aria-label="Design tools"
+              aria-orientation="horizontal"
             >
               <button
                 data-tool="select"
-                title="Select / move (V)"
-                aria-label="Select and move"
+                aria-label="Select"
                 class="active"
-              >
-                ↖
-              </button>
-              <button
-                data-tool="node"
-                title="Edit nodes (N)"
-                aria-label="Edit vector nodes"
-              >
-                ◇</button
-              ><span></span>
-              <button
-                data-tool="pencil"
-                aria-label="Freehand Pencil"
-                data-help="Pencil — drag to trace a continuous editable curve. Adjust smoothing above the canvas, then Finish path or choose Closed fill. No needle commands are baked into the artwork."
-              >
-                ✎
-              </button>
-              <button
-                data-tool="knife"
-                aria-label="Knife / split artwork"
-                data-help="Knife — drag a line fully across selected regions to split their actual geometry. Click a path to split it there. Path repair also splits at the selected node. Undo restores the pieces."
-              >
-                ╱
-              </button>
-              <button
-                data-tool="eraser"
-                aria-label="Vector eraser"
-                data-help="Vector Eraser — brush across selected artwork. Area subtracts material from closed regions; Line removes path segments. This edits vectors, not individual embroidery stitches. Undo restores the geometry."
-              >
-                ▰
-              </button>
-              <button
-                data-tool="polygon"
-                title="Draw closed polygon (P)"
-                aria-label="Draw closed polygon"
-              >
-                ⬡
-              </button>
-              <button
-                data-tool="run"
-                title="Running stitch path (R)"
-                aria-label="Draw running stitch path"
-              >
-                ⌁
-              </button>
-              <button
-                data-tool="satin"
-                title="Satin centerline (S)"
-                aria-label="Draw satin centerline"
-              >
-                ≋
-              </button>
-              <button
-                data-tool="rails"
-                aria-label="Draw manual satin rails"
-                data-help="Manual Satin Rails — click-drag Bézier anchors for rail A, Finish rail A, then draw rail B in the same direction. Create column generates stitches across the rails. Use two selected existing paths or nested ring contours as an alternative. Node edits each rail independently. No shortcut is assigned."
-              >
-                ∥
-              </button>
+              ></button>
+              <button data-tool="node" aria-label="Edit Points"></button>
+              <button data-tool="pan" aria-label="Pan"></button>
+              <button data-tool="eraser" aria-label="Vector Eraser"></button>
+              <button data-tool="pencil" aria-label="Pencil"></button>
+              <button data-tool="pen" aria-label="Bézier Pen"></button>
               <details id="shape-family" class="shape-family">
-                <summary
-                  aria-label="Shapes"
-                  data-help="Shapes — expand to choose Rectangle, Ellipse, Polygon, Star or Eyelet. Each keeps its existing editable parameters."
-                >
-                  ▱<small>Shapes</small>
-                </summary>
+                <summary aria-label="Shapes"></summary>
                 <div>
-                  <button
-                    data-tool="rect"
-                    title="Rectangle"
-                    aria-label="Draw rectangle"
-                  >
-                    □
-                  </button>
-                  <button
-                    data-tool="regular"
-                    aria-label="Draw regular polygon"
-                    data-help="Drag a polygon, then adjust the number of sides and corner radius in Smart shape."
-                  >
-                    ⬟
-                  </button>
-                  <button
-                    data-tool="star"
-                    aria-label="Draw star"
-                    data-help="Drag a star; edit points, inner radius and rounding afterwards."
-                  >
-                    ☆
-                  </button>
-                  <button
-                    data-tool="eyelet"
-                    aria-label="Place eyelet reinforcement"
-                    data-help="Place a satin reinforcement for a future manually punched hole. Configure diameter and band width; optional geometric subtraction is explicit."
-                  >
-                    ◎
-                  </button>
-                  <button
-                    data-tool="ellipse"
-                    title="Ellipse (E)"
-                    aria-label="Draw ellipse"
-                  >
-                    ○
-                  </button>
+                  <button data-tool="rect" aria-label="Rectangle"></button>
+                  <button data-tool="ellipse" aria-label="Ellipse"></button>
+                  <button data-tool="regular" aria-label="Polygon"></button>
+                  <button data-tool="star" aria-label="Star"></button>
+                  <button data-tool="eyelet" aria-label="Eyelet"></button>
                 </div>
               </details>
-              <button
-                data-tool="pen"
-                aria-label="Draw Bézier path"
-                data-help="Click and drag anchors to create cubic curves. Enter finishes the path; edit anchors and tangent handles with the Node tool."
-              >
-                ✒
-              </button>
-              <button
-                id="text-tool"
-                title="Lettering (T)"
-                aria-label="Add lettering"
-              >
-                T
-              </button>
-              <button
-                data-tool="manual"
-                title="Place individual stitches"
-                aria-label="Place manual stitches"
-              >
-                ⁙</button
-              ><span></span>
-              <button
-                data-tool="pan"
-                title="Pan (H) or hold Space"
-                aria-label="Pan canvas"
-              >
-                ✥
-              </button>
+              <button data-tool="knife" aria-label="Knife"></button>
+              <button data-tool="polygon" aria-label="Tatami Fill"></button>
+              <button data-tool="run" aria-label="Running Stitch"></button>
+              <button data-tool="satin" aria-label="Satin Line"></button>
+              <button data-tool="rails" aria-label="Satin Rails"></button>
+              <button data-tool="manual" aria-label="Manual Stitch"></button>
+              <button id="text-tool" aria-label="Lettering"></button>
             </div>
             <button id="tools-next" aria-label="More drawing tools">›</button>
           </div>
@@ -672,7 +563,7 @@
     <footer class="status-bar">
       <span id="status">Ready</span
       ><span
-        >40 wt thread presets <i>·</i> v0.12.0 <i>·</i>
+        >40 wt thread presets <i>·</i> v0.12.1 <i>·</i>
         <a
           href="https://github.com/kircherlabs/embroidery-studio"
           target="_blank"

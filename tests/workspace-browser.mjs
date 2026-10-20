@@ -35,6 +35,11 @@ try {
   };
   await page.goto(base);
   await ready();
+  assert(await page.locator("#simulator").isHidden());
+  const designCanvas = await box();
+  await page.locator("#preview-tab").click();
+  assert(await page.locator("#simulator").isVisible());
+  assert((await box()).height < designCanvas.height - 150);
   await page.locator("#save-project").click();
   const initial = await project(),
     original = JSON.stringify(initial),

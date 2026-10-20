@@ -31,7 +31,7 @@ export function panelLimits(side, width, height, other = 0, compact = false) {
         );
   return { min: Math.min(side === "bottom" ? 150 : 240, max), max };
 }
-export function installWorkspace({ fit }) {
+export function installWorkspace({ fit, openPreview }) {
   const $ = (id) => document.getElementById(id),
     root = document.querySelector(".workspace"),
     shell = document.querySelector(".stage-shell"),
@@ -47,13 +47,15 @@ export function installWorkspace({ fit }) {
     },
     compactMedia = matchMedia("(max-width: 1099px)");
   let state = defaultLayout(),
+    viewMode = "design",
     maximized = false,
     drag = null;
   try {
     state = readLayout(JSON.parse(localStorage.getItem(KEY)));
   } catch {}
   const mode = () => (compactMedia.matches ? state.compactOpen : state.open);
-  const visible = (key) => !maximized && mode()[key];
+  const visible = (key) =>
+    !maximized && (key !== "bottom" || viewMode === "preview") && mode()[key];
   const save = () => {
     try {
       localStorage.setItem(KEY, JSON.stringify(state));
@@ -166,7 +168,10 @@ export function installWorkspace({ fit }) {
       apply();
       save();
     });
-    toggles[key].onclick = () => set(key, maximized || !visible(key));
+    toggles[key].onclick = () =>
+      key === "bottom" && viewMode !== "preview"
+        ? openPreview?.()
+        : set(key, maximized || !visible(key));
     document
       .querySelectorAll(`[data-close-panel="${key}"]`)
       .forEach((button) => (button.onclick = () => set(key, false)));
@@ -249,6 +254,12 @@ export function installWorkspace({ fit }) {
   compactMedia.addEventListener("change", apply);
   apply();
   return {
+    setMode: (value) => {
+      const entering = viewMode !== value;
+      viewMode = value;
+      if (entering && value === "preview") mode().bottom = true;
+      apply();
+    },
     show: (key) => set(key, true),
     close: (key) => set(key, false),
     getState: () =>

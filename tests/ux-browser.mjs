@@ -162,6 +162,7 @@ try {
   assert(changed.objects.every((o) => o.parentId === parent));
   assert.deepEqual(await actual(), [c, a, b]);
   assert.equal(changed.sequencing.origin, "tree");
+  await page.locator("#preview-tab").click();
   assert.match(await page.locator("#order-relationship").innerText(), /Linked/);
   assert.equal(await page.locator("#optimize-colors").isDisabled(), true);
   await page.locator("#undo").click();
@@ -226,6 +227,7 @@ try {
       window.studio.getPlan(),
   );
   assert.deepEqual(await actual(), [b, c, a]);
+  await page.locator("#preview-tab").click();
   await page.locator("#order-mode").selectOption("auto");
   await ready();
   assert.equal((await project()).sequencing, undefined);
@@ -441,6 +443,7 @@ try {
   );
   await mobile.screenshot({ path: "test-results/ux-mobile.png" });
   await mobile.setViewportSize({ width: 360, height: 640 });
+  await mobile.locator("#design-tab").click();
   assert(await mobile.evaluate(() => document.body.scrollWidth <= innerWidth));
   await mobile.locator('[data-tool="pan"]').scrollIntoViewIfNeeded();
   assert(await mobile.locator('[data-tool="pan"]').isVisible());

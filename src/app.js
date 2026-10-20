@@ -1,4 +1,5 @@
 import { railArtwork, railCandidates } from "./rail-ui.js";
+import { installDesignToolbar } from "./tool-icons.js";
 import { captureStyle } from "./style-transfer.js";
 import { syncLinkedArtwork } from "./linked-artwork.js";
 import { sewingStyleDialog, repeatDialog } from "./artwork-tools-ui.js";
@@ -85,6 +86,7 @@ import { installReordering } from "./reorder-ui.js";
 import { installHelp } from "./help.js";
 import { installWorkspace } from "./workspace-layout.js";
 import { arrangeArtwork, installArrangeMenu } from "./arrange.js";
+installDesignToolbar();
 const icon = (name) =>
   `<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${{ eye: '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>', hidden: '<path d="m3 3 18 18M9.5 5.3A12 12 0 0 1 12 5c6.5 0 10 7 10 7a18 18 0 0 1-3.1 3.7M6 6.4A20 20 0 0 0 2 12s3.5 7 10 7a12 12 0 0 0 5.4-1.3M10 10a3 3 0 0 0 4 4"/>', lock: '<rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>', unlock: '<rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 7.5-2"/>', grip: '<path d="M9 5h.01M15 5h.01M9 12h.01M15 12h.01M9 19h.01M15 19h.01" stroke-width="3"/>' }[name]}</svg>`;
 const $ = (id) => document.getElementById(id),
@@ -330,6 +332,7 @@ function select(id, options = {}) {
 }
 function setMode(mode) {
   state.mode = mode;
+  workspaceLayout?.setMode(mode);
   stage.railDraftA = null;
   pause();
   stage.draft = [];
@@ -2421,7 +2424,13 @@ $("rewind").onclick = () => scrub(0);
 $("step-back").onclick = () => scrub(state.cursor - 1);
 $("step-next").onclick = () => scrub(state.cursor + 1);
 $("end").onclick = () => scrub(state.plan?.events.length || 0);
-workspaceLayout = installWorkspace({ fit: () => stage.fit() });
+workspaceLayout = installWorkspace({
+  fit: () => stage.fit(),
+  openPreview: () => {
+    setMode("preview");
+    workspaceLayout.show("bottom");
+  },
+});
 arrangeMenu = installArrangeMenu({
   state,
   command: editCommand,
@@ -2457,6 +2466,7 @@ $("tools-next").onclick = () => {
   );
 };
 rail.addEventListener("scroll", toolOverflow);
+rail.addEventListener("toggle", toolOverflow, true);
 new ResizeObserver(toolOverflow).observe(rail);
 $("help").onclick = () =>
   ask(

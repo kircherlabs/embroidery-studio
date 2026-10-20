@@ -26,8 +26,7 @@ try {
         mimeType: "application/json",
         buffer: Buffer.from(JSON.stringify(p)),
       });
-      if (await page.locator("#dialog-submit").isVisible())
-        await page.locator("#dialog-submit").click();
+      await page.locator("#dialog-submit").click();
       await page.waitForFunction(
         (name) => window.studio?.getProject().name === name,
         p.name,

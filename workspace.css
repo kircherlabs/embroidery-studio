@@ -1064,3 +1064,13 @@
     flex-basis: 100%;
   }
 }
+
+#export-safety {
+  border-inline-start: 3px solid var(--gold, #e9b77f);
+  padding-inline-start: 10px;
+}
+#export-safety .export-error {
+  color: #ffb4a6;
+  font-weight: 600;
+  font-size: 12px;
+}

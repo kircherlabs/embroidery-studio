@@ -3,7 +3,7 @@
 Starting point: stable main `34d6ab6` (v0.12.8, smart image import integrated).
 Protected backups `backup-before-creative-update` and `BACKUP-V0.12.6` must remain untouched.
 
-## Stage A — complete and verified (commit containing this entry)
+## Stage A — complete and verified (`5f99fd9`)
 
 Implemented:
 - `src/equipment.js`: versioned manufacturer/model/hoop reference data, evidence URLs,
@@ -45,7 +45,48 @@ physical outer dimensions, machine movement limits and reposition support are no
 invented. Oval checks use the documented envelope with explicit template guidance.
 Personal settings transfer UI is deferred to Stage E (project snapshots already travel).
 
-## Stage B — next: machine-format evidence and export safety
+## Stage B — complete and verified (commit containing this entry)
+
+Files: `src/export-safety.js`, `src/app.js`, `src/codec.py`, `src/format-worker.js`,
+`src/vp3_compat.py`, `src/equipment.js`, `workspace.css`, `THIRD_PARTY_NOTICES.md`,
+`tests/export-safety.test.mjs`, `tests/test_format_safety.py`,
+`tests/export-safety-browser.mjs`.
+
+Audit findings and corrections:
+- Existing six writers remain PES, PEC, DST, EXP, JEF, VP3. HUS/VIP/PHC have no
+  writers in the pinned dependency; do not offer them as implemented exports.
+- VP3 drops standalone STOP; block those exports rather than silently dropping
+  construction requirements. DST/EXP encode STOP as a color pause; explain this.
+- JEF writer only knows legacy hoop header codes and falls back to 110 × 110
+  for dimensions reaching 200 mm. Guard those exports; RE28b full-field export is
+  not verified. Explain legacy code selection and missing explicit JEF trims.
+- PEC/PES and VP3 byte-sized palette block counts are checked; PEC origin guard
+  remains intact. Surface fixed-palette colors, missing palettes and oval limits.
+- Validate actual decoded needles and pause order before download. No preview-only
+  workaround. Keep project data and original sewing actions unchanged.
+- Correct VP3 reader absolute starts on X=0, Y=0, and origin between color blocks;
+  adapted MIT reader with attribution. Vendor archive and writer bytes unchanged.
+- Janome MC500E now defaults to documented JEF; B 500 SDT to EXP, with documented
+  alternative formats. Jade 35 format evidence still needs a readable primary
+  manual; its field profile does not imply a verified export format.
+
+Validation: 275 automated JS tests, four original Python codec tests plus six new
+native format-safety tests passed. Real browser downloads of all six formats pass
+with every decoded needle checked, independently decoded PES extents, blocked
+unsafe STOP/header cases, model defaults, mobile warnings and untouched projects.
+Equipment, smart import (including 64-color PES), PES, sewing-action and reference
+browser regressions also pass. Production build passed.
+Logs: `test-results/format-safety-*.log`. Conversion notices remain in Design Issues
+following download. CI includes both new safety suites. No intermediate deployment.
+
+Remaining limitations are explicit in `docs/EXPORT_COMPATIBILITY.md`: no full-field
+RE28b JEF, standalone STOP in VP3, HUS/VIP/PHC writers, official Jade format evidence
+or additional hardware sew-outs. Do not bypass guards to claim these are supported.
+The initial export fixture incorrectly put COLOR commands inside a manual object;
+corrected the test to valid separate manual color objects and added local validation.
+Import helpers now await actual confirmation instead of conditionally racing it.
+
+Original Stage B validation plan:
 
 Audit six existing writers (PES, PEC, JEF, EXP, DST, VP3) and independent round trips.
 Research HUS/VIP capabilities; do not add extensions without a tested writer/reader.
@@ -78,6 +119,6 @@ unlicensed chart images, raw catalogs, PANTONE references or conversion tables.
 
 ## Resume rules
 
-Read this file and inspect current branch/commit/status first. Stage A is validated; start Stage B from its commit. Record each stage's actual checks and commit in this
+Read this file and inspect current branch/commit/status first. Stages A and B are validated; start C from the latest stage commit. Record each stage's actual checks and commit in this
 file. Never label later stages complete until implemented and tested. Keep source research
 outside `src`, `vendor`, `assets` (the directories copied into public builds).

@@ -1,3 +1,4 @@
+import { exportPreflight, checkRoundTrip } from "./export-safety.js";
 import { installEquipment } from "./equipment-ui.js";
 import { getMachine, hoopOf } from "./equipment.js";
 import {
@@ -1693,11 +1694,26 @@ async function exportDialog() {
     "afterend",
     '<p class="property-note" id="export-format-guidance"></p>',
   );
-  const updateFormat = () =>
-    ($("export-format-guidance").textContent = exportGuidance(
+  $("export-format-guidance").insertAdjacentHTML(
+    "afterend",
+    '<div id="export-safety" role="status"></div>',
+  );
+  const updateFormat = () => {
+    const format = $("export-format").value,
+      check = exportPreflight(state.project, plan.events, format);
+    $("export-format-guidance").textContent = exportGuidance(
       state.project,
-      $("export-format").value,
-    ));
+      format,
+    );
+    $("export-safety").innerHTML =
+      check.errors
+        .map((e) => `<p class="export-error">${esc(e)}</p>`)
+        .join("") +
+      check.warnings
+        .map((w) => `<p class="property-note">${esc(w)}</p>`)
+        .join("");
+    $("dialog-submit").disabled = !!check.errors.length;
+  };
   $("export-format").onchange = updateFormat;
   updateFormat();
   if (!(await pending)) return;
@@ -1711,6 +1727,8 @@ async function exportDialog() {
       events: plan.events,
       name: state.project.name,
     });
+    const integrity = checkRoundTrip(plan.events, result.events, ext);
+    if (integrity.errors.length) throw Error(integrity.errors.join(" "));
     const stats = analyze(result.events, getMachine(state.project));
     if (!stats.fits)
       throw Error(
@@ -1721,7 +1739,28 @@ async function exportDialog() {
       preferences[state.project.machine] = ext;
       localStorage.setItem(EXPORT_PREFERENCE_KEY, JSON.stringify(preferences));
     } catch {}
-    state.plan = { events: result.events, stats, warnings: [] };
+    const conversionIssues = exportPreflight(
+      state.project,
+      plan.events,
+      ext,
+    ).warnings.map((message) => ({
+      severity: "info",
+      message,
+      action:
+        "Review the decoded preview and exact machine manual before stitching.",
+    }));
+    if (integrity.addedNeedles)
+      conversionIssues.push({
+        severity: "warning",
+        message: `${integrity.addedNeedles} extra needle positions were required by file-format movement limits.`,
+        action: "Inspect the actual decoded needle sequence before sewing.",
+      });
+    state.plan = {
+      events: result.events,
+      stats,
+      warnings: [],
+      issues: conversionIssues,
+    };
     state.cursor = result.events.length;
     machinePlan = true;
     state.previewSelection = false;
@@ -1736,7 +1775,11 @@ async function exportDialog() {
     stage.render();
     $("status").textContent =
       `Exported ${ext.toUpperCase()} · simulator now shows the decoded machine file`;
-    toast("Machine file downloaded. Preview updated from exported bytes.");
+    toast(
+      integrity.addedNeedles
+        ? `Machine file downloaded with ${integrity.addedNeedles} additional needle positions. Review the decoded preview and Design issues.`
+        : "Machine file downloaded. Preview updated from exported bytes.",
+    );
   } catch (e) {
     toast("Export failed: " + e.message);
     $("status").textContent = "Export failed · " + e.message;

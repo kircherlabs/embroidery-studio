@@ -173,6 +173,8 @@ export const MACHINE_CATALOG = {
     280,
     ["janome-re28b", "janome-sq20b", "janome-re20b", "janome-sq14b"],
     ["janome"],
+    ["jef"],
+    "jef",
   ),
   "babylock-flourish2": machine(
     "babylock-flourish2",
@@ -193,6 +195,8 @@ export const MACHINE_CATALOG = {
     150,
     ["bernina-large-oval", "bernina-medium"],
     ["bernina"],
+    ["exp", "dst", "pes", "pec", "jef"],
+    "exp",
   ),
   "viking-jade35": machine(
     "viking-jade35",

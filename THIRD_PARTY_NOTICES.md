@@ -9,6 +9,11 @@ License: MIT. Copyright (c) 2018. The full license is included in the archive an
 in `vendor/pyembroidery-LICENSE.txt`. Only `.py` source modules and the license
 are packaged. No third-party executable is bundled.
 
+`src/vp3_compat.py` adapts the VP3 reader from the same MIT-licensed pinned
+source. It corrects absolute color-block start handling when X or Y is zero.
+The archive remains unchanged; the compatibility reader retains upstream license
+and copyright attribution. No writer bytes are altered by this reader correction.
+
 ## Pyodide
 
 Machine import/export lazily loads Pyodide **0.27.7** from

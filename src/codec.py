@@ -3,6 +3,8 @@ import json
 from pathlib import Path
 import pyembroidery as emb
 from pec_compat import correct_pec_origin
+import math
+import vp3_compat
 
 COMMANDS = {'stitch':emb.STITCH,'jump':emb.JUMP,'trim':emb.TRIM,'stop':emb.STOP,'color':emb.COLOR_CHANGE,'end':emb.END}
 REVERSE = {v:k for k,v in COMMANDS.items()}
@@ -28,7 +30,12 @@ class BrotherReadPattern(emb.EmbPattern):
                 index += 1
 
 def decode_file(path):
-    pattern = emb.read(path, pattern=BrotherReadPattern()) if Path(path).suffix.lower() in ('.pes', '.pec') else emb.read(path)
+    if Path(path).suffix.lower() == '.vp3':
+        pattern = emb.EmbPattern()
+        with open(path, 'rb') as stream:
+            vp3_compat.read(stream, pattern)
+    else:
+        pattern = emb.read(path, pattern=BrotherReadPattern()) if Path(path).suffix.lower() in ('.pes', '.pec') else emb.read(path)
     if pattern is None:
         raise ValueError('Unsupported or unreadable embroidery file.')
     events, color_index = [], 0
@@ -59,8 +66,23 @@ def encode_file(payload, path):
     data = json.loads(payload) if isinstance(payload,str) else payload
     pattern = emb.EmbPattern()
     events = data['events']
+    ext = Path(path).suffix.lower()
+    if ext not in ('.pes', '.pec', '.dst', '.exp', '.jef', '.vp3'):
+        raise ValueError('No tested export writer for this format.')
+    if len(events) > 250000 or any(e.get('cmd') not in COMMANDS or not all(isinstance(e.get(k),(int,float)) and math.isfinite(e[k]) for k in ('x','y')) for e in events):
+        raise ValueError('Invalid or excessive machine commands.')
+    stops = sum(e['cmd']=='stop' for e in events)
+    blocks = 1 + sum(e['cmd']=='color' for e in events) + (stops if ext in ('.pes','.pec') else 0)
+    if ext in ('.pes','.pec','.vp3') and blocks > 255:
+        raise ValueError('Too many encoded color / pause blocks for this format.')
+    if ext == '.vp3' and stops:
+        raise ValueError('VP3 writer cannot preserve standalone machine stops.')
     if not events:
         raise ValueError('There are no stitches to export.')
+    if ext == '.jef':
+        moves = [e for e in events if e['cmd'] in ('stitch','jump')]
+        if moves and any(round((max(e[k] for e in moves)-min(e[k] for e in moves))*10) >= 2000 for k in ('x','y')):
+            raise ValueError('JEF hoop header for 200 mm or larger designs is not verified.')
     pattern.metadata('name', data.get('name','Studio design')[:16])
     first = next((e for e in events if e['cmd']=='stitch'),None)
     if first is None:

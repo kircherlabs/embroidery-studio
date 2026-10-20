@@ -324,6 +324,12 @@ try {
   await page.locator("#edit-command").selectOption("isolate");
   assert.equal((await selection()).isolation, "inner");
   await page.setViewportSize({ width: 390, height: 844 });
+  // setViewportSize resolves before the media-query change handler necessarily
+  // runs. Wait for the actual compact layout before reading the panel toggle;
+  // otherwise desktop's "open" can be read just before mobile closes the panel.
+  await page.waitForFunction(() =>
+    document.querySelector(".workspace").classList.contains("compact-workspace"),
+  );
   if (
     (await page.locator("#toggle-layers").getAttribute("aria-expanded")) !==
     "true"

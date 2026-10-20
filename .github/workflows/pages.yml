@@ -33,6 +33,7 @@ jobs:
           node tests/toolbar-browser.mjs
           node tests/closed-shape-browser.mjs
           node tests/geometry-contrast-browser.mjs
+          node tests/sculpt-browser.mjs
           node tests/text-path-browser.mjs
           node tests/artwork-tools-browser.mjs
           node tests/browser.mjs
@@ -51,7 +52,6 @@ jobs:
           node tests/sewing-actions-browser.mjs
           node tests/corner-density-browser.mjs
           node tests/method-categories-browser.mjs
-          node tests/sculpt-browser.mjs
           node tests/path-editing-browser.mjs
           node tests/manual-rails-browser.mjs
       - run: node scripts/build.mjs

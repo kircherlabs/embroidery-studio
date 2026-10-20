@@ -203,7 +203,7 @@ try {
   await page.locator("#dialog-submit").click();
   await page.waitForFunction(
     () =>
-      window.studio.getProject().groups.some((g) => g.imageSource) &&
+      window.studio.getProject().groups?.some((g) => g.imageSource) &&
       window.studio.getPlan(),
   );
   const imported = await project(),

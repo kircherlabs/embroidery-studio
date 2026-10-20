@@ -23,13 +23,11 @@ try {
   const ready = () => page.waitForFunction(() => window.studio?.getPlan()),
     project = () => page.evaluate(() => window.studio.getProject());
   const load = async (p) => {
-    await page
-      .locator("#file-input")
-      .setInputFiles({
-        name: "matching.embstudio",
-        mimeType: "application/json",
-        buffer: Buffer.from(JSON.stringify(p)),
-      });
+    await page.locator("#file-input").setInputFiles({
+      name: "matching.embstudio",
+      mimeType: "application/json",
+      buffer: Buffer.from(JSON.stringify(p)),
+    });
     await page.locator("#dialog-submit").click();
     await page.waitForFunction(
       (name) => window.studio.getProject().name === name,
@@ -172,47 +170,56 @@ try {
       method: "user",
     };
   console.log("Substitution passed");
-  for (const format of ["pes", "pec", "dst", "exp", "jef", "vp3"]) {
-    console.log("Same RGB export", format);
-    await load({
-      version: 1,
-      name: "Same RGB " + format,
-      machine: "se700",
-      objects: [a, b],
-    });
-    const source = await page.evaluate(() => window.studio.getPlan().events);
-    assert.equal(source.filter((e) => e.cmd === "color").length, 1);
-    await page.locator("#export").click();
-    await page.locator("#export-format").selectOption(format);
-    const download = page.waitForEvent("download");
-    await page.locator("#dialog-submit").click();
-    await download;
-    await page.waitForFunction(() =>
-      document
-        .getElementById("sequence-source")
-        .textContent.includes("decoded"),
-    );
-    const decoded = await page.evaluate(() => window.studio.getPlan().events),
-      pauses = decoded.filter((e) => ["color", "stop"].includes(e.cmd));
-    assert.equal(pauses.length, 1);
-    assert.equal(
-      pauses[0].cmd,
-      ["pes", "pec"].includes(format) ? "stop" : "color",
-    );
-    const needles = decoded.filter((e) => e.cmd === "stitch");
-    let at = 0;
-    for (const needle of source.filter((e) => e.cmd === "stitch")) {
-      while (
-        at < needles.length &&
-        (Math.abs(needle.x - needles[at].x) > 0.11 ||
-          Math.abs(needle.y - needles[at].y) > 0.11)
-      )
+  const assignedFirst = structuredClone([a, b]),
+    assignedLast = structuredClone([a, b]);
+  delete assignedFirst[1].physicalThread;
+  delete assignedLast[0].physicalThread;
+  for (const [label, objects] of [
+    ["Both assigned", [a, b]],
+    ["Assigned first", assignedFirst],
+    ["Assigned last", assignedLast],
+  ])
+    for (const format of ["pes", "pec", "dst", "exp", "jef", "vp3"]) {
+      console.log("Same RGB export", label, format);
+      await load({
+        version: 1,
+        name: label + " " + format,
+        machine: "se700",
+        objects,
+      });
+      const source = await page.evaluate(() => window.studio.getPlan().events);
+      assert.equal(source.filter((e) => e.cmd === "color").length, 1);
+      await page.locator("#export").click();
+      await page.locator("#export-format").selectOption(format);
+      const download = page.waitForEvent("download");
+      await page.locator("#dialog-submit").click();
+      await download;
+      await page.waitForFunction(() =>
+        document
+          .getElementById("sequence-source")
+          .textContent.includes("decoded"),
+      );
+      const decoded = await page.evaluate(() => window.studio.getPlan().events),
+        pauses = decoded.filter((e) => ["color", "stop"].includes(e.cmd));
+      assert.equal(pauses.length, 1);
+      assert.equal(
+        pauses[0].cmd,
+        ["pes", "pec"].includes(format) ? "stop" : "color",
+      );
+      const needles = decoded.filter((e) => e.cmd === "stitch");
+      let at = 0;
+      for (const needle of source.filter((e) => e.cmd === "stitch")) {
+        while (
+          at < needles.length &&
+          (Math.abs(needle.x - needles[at].x) > 0.11 ||
+            Math.abs(needle.y - needles[at].y) > 0.11)
+        )
+          at++;
+        assert.ok(at < needles.length);
         at++;
-      assert.ok(at < needles.length);
-      at++;
+      }
+      assert.deepEqual((await project()).objects, objects);
     }
-    assert.deepEqual((await project()).objects, [a, b]);
-  }
   // Smart import can hand off directly to reviewed matches; source image and editable regions stay intact.
   console.log("Import handoff");
   const image = await page.evaluate(() => {
@@ -225,13 +232,11 @@ try {
     g.fillRect(20, 0, 20, 40);
     return c.toDataURL().split(",")[1];
   });
-  await page
-    .locator("#file-input")
-    .setInputFiles({
-      name: "matching.png",
-      mimeType: "image/png",
-      buffer: Buffer.from(image, "base64"),
-    });
+  await page.locator("#file-input").setInputFiles({
+    name: "matching.png",
+    mimeType: "image/png",
+    buffer: Buffer.from(image, "base64"),
+  });
   await page.locator("#image-import-mode").selectOption("trace");
   await page.locator("#dialog-submit").click();
   await page.locator("#trace-match-threads").check();

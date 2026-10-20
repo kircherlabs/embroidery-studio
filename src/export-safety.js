@@ -102,13 +102,13 @@ export function exportPreflight(project, events, format) {
       if (
         events.some((e) => {
           if (e.cmd !== "color") return false;
-          const same = e.threadKey && e.color === previous;
+          const same = e.color === previous;
           previous = e.color;
           return same;
         })
       )
         warnings.push(
-          "Different physical spools share a digital color. PES/PEC represents those thread changes as repeated-color operator pauses. Change to the next spool in the project thread list at each such pause.",
+          "Separate thread assignments share a digital color. PES/PEC represents those thread changes as repeated-color operator pauses. Follow the next assignment in the project thread list at each such pause; choose a spool for unassigned colors.",
         );
     }
   }
@@ -203,6 +203,7 @@ export function checkRoundTrip(source, decoded, format) {
   }
   const pause = (e) =>
     e.filter((x) => ["stop", "color"].includes(x.cmd)).map((x) => x.cmd);
+  const physicalAssignments = source.some((e) => e.threadKey);
   let previousColor = source.find((e) => e.cmd === "stitch")?.color;
   const expected = source
     .filter((e) => ["stop", "color"].includes(e.cmd))
@@ -210,8 +211,8 @@ export function checkRoundTrip(source, decoded, format) {
       let cmd = e.cmd;
       if (cmd === "color") {
         if (
+          physicalAssignments &&
           ["pes", "pec"].includes(format) &&
-          e.threadKey &&
           e.color === previousColor
         )
           cmd = "stop";

@@ -168,7 +168,7 @@ shopping/backup UI follow E; the matching filter already handles an empty collec
 strictly rather than silently choosing unowned threads. Next: implement E, test and
 commit it, then run F's full regression/release checks. No intermediate deployment.
 
-## Stage E — personal inventory and portable settings complete and verified (commit containing this entry)
+## Stage E — personal inventory and portable settings complete and verified (`282526d`)
 
 Added `src/thread-inventory-ui.js`, `src/thread-requirements.js`,
 `src/personal-settings.js`, `tests/thread-inventory.test.mjs`,
@@ -209,10 +209,41 @@ Personal preference edits are separate from project Undo. Next exact step: F ful
 regression (34 browser suites + 294 JS + 10 native Python), release docs/version,
 merge/push and verify successful GitHub Pages deployment. Backups remain untouched.
 
-## Remaining Stage F
+## Stage F — local release validation complete; publication gate pending
 
-- F: desktop/mobile integration, thousands-of-entries performance, full existing suites,
-  machine decoding, documentation, clean release and GitHub Pages verification.
+Release version: **0.13.0**. All 295 JavaScript tests, 10 native Python codec/format
+tests and all 34 browser suites pass, plus production build / public-asset policy
+and whitespace checks. Logs: `equipment-threads-final-units.log`,
+`equipment-threads-release-codec.log`, `equipment-threads-release-formats.log`,
+`equipment-threads-release-browsers.json`, `release-*-browser.log` under test-results.
+A final added regression verifies mixed physical/unassigned same-HEX assignments in
+both directions. The matching browser now exports 18 same-color identity fixtures
+across the six writers; each decoded needle and operator pause is checked. The final
+matching and export-safety suites passed again after that localized validation fix.
+No existing test was weakened. Satin fonts/rails/guides, Tatami, drawing/node/sculpt,
+hierarchy/focus/transforms, references, tracing, recipes, sewing actions, travel,
+old projects, Undo/Redo and PES origin regressions all pass.
+
+Screenshots reviewed: desktop project requirements, mobile collection and matching;
+all controls stay within the dialog, with limited paged catalog DOM. CI runs all new
+suites. No unrelated stitch-generation algorithm or machine writer was rewritten.
+The VP3 reader repair and export safety restrictions are documented separately.
+
+Exact next steps: push this release commit, open/attach the PR, wait for GitHub's
+full CI checks, merge it, wait for successful main Pages deployment, compare public
+runtime sources/version with the release, and run equipment/catalog/matching/inventory
+browser workflows on the public URL. Record the verified publication below after
+it actually succeeds. Do not label the live deployment verified before these checks.
+
+Remaining product limitations (not hidden completed features): licensed preloaded
+manufacturer color packs and official conversion tables are NOT approved/bundled;
+users import personal catalogs or enter spool labels. Digital/physical matching stays
+approximate. More documented models/hoops can be added to the sourced schema later.
+JEF designs reaching 200 mm lack a verified writer hoop header and are blocked; VP3
+standalone stops are blocked. No new physical hardware sew-out claims. See the
+machine and export compatibility docs for exact model/format evidence and limits.
+Protected backup branches remain unchanged, including newly observed BACKUP-V0.12.8
+at the original v0.12.8 main commit.
 
 ## Research and licensing boundary
 
@@ -227,6 +258,6 @@ unlicensed chart images, raw catalogs, PANTONE references or conversion tables.
 
 ## Resume rules
 
-Read this file and inspect current branch/commit/status first. Stages A–E are validated; start F from the latest stage commit. Record each stage's actual checks and commit in this
+Read this file and inspect current branch/commit/status first. Stages A–E and F local release checks are validated; complete/check F publication from the latest release commit. Record each stage's actual checks and commit in this
 file. Never label later stages complete until implemented and tested. Keep source research
 outside `src`, `vendor`, `assets` (the directories copied into public builds).

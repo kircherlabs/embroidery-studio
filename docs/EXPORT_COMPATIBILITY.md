@@ -54,3 +54,11 @@ Tests: `tests/export-safety.test.mjs`, `tests/test_format_safety.py`,
 `tests/export-safety-browser.mjs`, existing codec/PES suites. These inspect real needle
 coordinates, signed movement, orientation, colors/pauses, origins, headers and rejection
 paths. They are not physical machine tests.
+
+
+Physical spool IDs are distinct from approximate RGB. With physical assignments,
+PES/PEC same-RGB transitions (including transitions to/from an unassigned paint)
+decode as repeated-color operator stops. The required pauses remain present; follow
+the project thread list and choose spools for unassigned entries. Round-trip safety
+checks verify pause count/order as well as every original needle position. Six-format
+browser tests cover both assigned spools and mixed assigned/unassigned directions.

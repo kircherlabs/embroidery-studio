@@ -144,3 +144,29 @@ test("Distinct physical spools sharing HEX retain real machine-change pauses and
   for (const point of before)
     assert.ok(after.some((q) => q[0] === point[0] && q[1] === point[1]));
 });
+
+test("Mixed physical and unassigned same-HEX actions preserve repeated-color pauses in either direction", () => {
+  for (const index of [0, 1]) {
+    const objects = [shape(-10), shape(10)];
+    assignThread(threadTargets([objects[index]], {}), record("001", "#e64caa"));
+    const p = {
+        version: 1,
+        name: "Mixed assignments",
+        machine: "se700",
+        objects,
+      },
+      plan = generate(p);
+    assert.equal(plan.stats.changes, 1);
+    const decoded = plan.events.map((e) => ({
+      ...e,
+      cmd: e.cmd === "color" ? "stop" : e.cmd,
+    }));
+    assert.deepEqual(checkRoundTrip(plan.events, decoded, "pes").errors, []);
+    assert.deepEqual(checkRoundTrip(plan.events, decoded, "pec").errors, []);
+    assert.ok(
+      exportPreflight(p, plan.events, "pes").warnings.some((s) =>
+        s.includes("repeated-color"),
+      ),
+    );
+  }
+});

@@ -1,9 +1,57 @@
 import { railArtwork } from "../src/rail-ui.js";
+import { setArtworkEffects } from "../src/artwork-effects.js";
+import { repeatArtwork } from "../src/repeats.js";
+import { captureStyle, transferStyle } from "../src/style-transfer.js";
 import { regeneratePathText } from "../src/text-path.js";
 import { addReference } from "../src/references.js";
 import { arrangeArtwork } from "../src/arrange.js";
 import { createSurroundingPatch } from "../src/construction.js";
 import { smartShape } from "../src/creative.js";
+
+test("effects, transferred construction and linked radial copies export the complete actual needles with corrected PEC origin", () => {
+  const source = smartShape("rect", 8, 6, {
+      radius: 1,
+      frame: [1, 0, 0, 1, 15, 0],
+    }),
+    style = smartShape("ellipse", 6, 6);
+  style.operations = [
+    makeOperation("run", style),
+    makeOperation("stop", style),
+    { ...makeOperation("border", style), color: "#ff0000", width: 1 },
+  ];
+  transferStyle([source], captureStyle(style), "stack");
+  setArtworkEffects(source, { offset: 0.5, simplify: 0.01 });
+  const project = {
+    version: 1,
+    name: "Effects and linked repeats",
+    machine: "se700",
+    objects: [source],
+    planning: { smallDetail: 0 },
+  };
+  repeatArtwork(project, [source.id], {
+    mode: "radial",
+    count: 3,
+    angle: 120,
+    linked: true,
+  });
+  // Editing the source updates machine data even before cached linked rings refresh.
+  setArtworkEffects(project.objects[0], { offset: 0.8, simplify: 0.01 });
+  const plan = generate(project),
+    { result, dec } = check(plan.events);
+  assert(plan.stats.fits);
+  assert.equal(plan.stats.stops, 3);
+  assert.equal(result.preview.filter((e) => e.cmd === "stop").length, 3);
+  assert.equal(
+    dec.pec.events.filter((e) => e.type === "colorChange").length,
+    plan.stats.stops + plan.stats.changes,
+  );
+  assert.equal(
+    new Set(
+      plan.events.filter((e) => e.cmd === "stitch").map((e) => e.objectId),
+    ).size,
+    3,
+  );
+});
 import test from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";

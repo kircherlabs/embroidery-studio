@@ -1,4 +1,5 @@
 import { installRailInspector } from "./rail-ui.js";
+import { installEffectInspector } from "./artwork-tools-ui.js";
 import { installPathTextInspector } from "./text-path-ui.js";
 import { letteringCurve, updateLetteringCurve } from "./text-path.js";
 import { setNodeMode } from "./path-editing.js";
@@ -12,7 +13,6 @@ import {
 import {
   combineArtwork,
   cutEyelet,
-  contourArtwork,
   alignReference,
   roundChecked,
 } from "./creative.js";
@@ -122,7 +122,7 @@ export function creativeInspector(api, leaf, objects, targets) {
          )
          .join("")}</div>`
      : ""
- }${field("Contour offset · mm", "geometry-offset", 1, -5, 5)}<button id="offset-geometry" data-help="Expand positive or inset negative closed artwork with round joins. Holes contract or expand accordingly. Undo restores source geometry.">Apply contour to artwork</button></details>
+ }</details>
  <details><summary>Align to reference</summary><label class="field">Reference<select id="align-reference"><option value="hoop">Machine hoop</option><option value="selection">Combined selection</option>${[...(p.groups || []), ...p.objects].map((n) => `<option value="${esc(n.id)}">${n.kind ? "Group · " : ""}${esc(n.name)}</option>`).join("")}</select></label><div class="creative-grid">${[
    ["left", "Left"],
    ["center-x", "H center"],
@@ -276,11 +276,6 @@ export function creativeInspector(api, leaf, objects, targets) {
           else leaf.rings = curveRings(c);
         });
       };
-  $("offset-geometry").onclick = () => {
-    if (!valid($("geometry-offset"))) return;
-    const delta = Number($("geometry-offset").value);
-    safe(() => vectors.forEach((o) => contourArtwork(o, delta)));
-  };
   box.querySelectorAll("[data-combine]").forEach(
     (el) =>
       (el.onclick = () =>
@@ -410,6 +405,11 @@ export function creativeInspector(api, leaf, objects, targets) {
     } else art.append(detail);
   }
   box.remove();
+  const geometry = [...art.querySelectorAll("details")].find(
+    (d) => d.dataset.section === "Geometry tools",
+  );
+  if (geometry && !geometry.querySelector("button")) geometry.remove();
+  installEffectInspector(api, objects);
   installRailInspector(api, leaf, objects, targets);
   installPathTextInspector(api, leaf);
 }

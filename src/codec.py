@@ -7,8 +7,28 @@ from pec_compat import correct_pec_origin
 COMMANDS = {'stitch':emb.STITCH,'jump':emb.JUMP,'trim':emb.TRIM,'stop':emb.STOP,'color':emb.COLOR_CHANGE,'end':emb.END}
 REVERSE = {v:k for k,v in COMMANDS.items()}
 
+class BrotherReadPattern(emb.EmbPattern):
+    def interpolate_duplicate_color_as_stop(self):
+        """Classify every PEC pause, including adjacent stop/color-change events.
+
+        The pinned reader normally waits for a sewing stitch before inspecting a
+        color transition, so consecutive pauses overwrite its pending transition.
+        Brother represents STOP as a repeated thread entry. Consume each pause in
+        order; retain its coordinates and every instruction. This changes reading
+        only, never encoded bytes, origin metadata or needle placement.
+        """
+        index = 0
+        for stitch in self.stitches:
+            if stitch[2] & emb.COMMAND_MASK != emb.COLOR_CHANGE:
+                continue
+            if index + 1 < len(self.threadlist) and self.threadlist[index] == self.threadlist[index + 1]:
+                stitch[2] = (stitch[2] & ~emb.COMMAND_MASK) | emb.STOP
+                del self.threadlist[index + 1]
+            else:
+                index += 1
+
 def decode_file(path):
-    pattern = emb.read(path)
+    pattern = emb.read(path, pattern=BrotherReadPattern()) if Path(path).suffix.lower() in ('.pes', '.pec') else emb.read(path)
     if pattern is None:
         raise ValueError('Unsupported or unreadable embroidery file.')
     events, color_index = [], 0

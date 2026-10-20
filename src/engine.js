@@ -370,6 +370,7 @@ function pathsFor(o, from, to) {
 export function generate(project) {
   const prepared = preparePlan(project),
     diagnostics = prepared.diagnostics;
+  project = prepared.project;
   for (const o of project.objects)
     for (const op of o.operations || [])
       if (

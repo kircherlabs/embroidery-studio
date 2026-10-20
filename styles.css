@@ -875,6 +875,18 @@ dialog::backdrop {
   flex-direction: row;
   align-items: center;
 }
+#dialog-content label.check {
+  flex-direction: row;
+  align-items: flex-start;
+  line-height: 1.6;
+}
+#dialog-content label.check input {
+  flex: 0 0 16px;
+  margin-top: 2px;
+}
+#dialog-content [hidden] {
+  display: none !important;
+}
 #dialog-content input,
 #dialog-content select {
   width: 100%;

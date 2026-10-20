@@ -66,5 +66,25 @@ class CodecTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             codec.encode_file({'events':[]},'/tmp/empty.pes')
 
+    def test_adjacent_stops_and_color_changes_keep_order_and_thread_colors(self):
+        def event(cmd,x,color):
+            return dict(cmd=cmd,x=x,y=0,color=color)
+        payload={'name':'Pause order','events':[
+            event('stitch',0,'#ff0000'),event('stitch',2,'#ff0000'),
+            event('stop',2,'#ff0000'),event('color',2,'#0000ff'),
+            event('stitch',4,'#0000ff'),event('stop',4,'#0000ff'),
+            event('color',4,'#ff0000'),event('stitch',6,'#ff0000'),
+            event('stop',6,'#ff0000'),event('stitch',8,'#ff0000'),event('end',8,'#ff0000')]}
+        with tempfile.TemporaryDirectory() as directory:
+            for ext in ['pes','pec']:
+                with self.subTest(format=ext):
+                    path=str(pathlib.Path(directory)/('pause.'+ext))
+                    events=codec.encode_file(payload,path)
+                    pauses=[e['cmd'] for e in events if e['cmd'] in ('stop','color')]
+                    self.assertEqual(pauses,['stop','color','stop','color','stop'])
+                    self.assertEqual([(e['x'],e['y']) for e in events if e['cmd']=='stitch'],[(0,0),(2,0),(4,0),(6,0),(8,0)])
+                    if ext=='pes':
+                        self.assertEqual([e['color'] for e in events if e['cmd']=='stitch'],['#ff0000','#ff0000','#0000ff','#ff0000','#ff0000'])
+
 if __name__=='__main__':
     unittest.main()

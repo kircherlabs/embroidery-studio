@@ -29,6 +29,18 @@ Rounded satin borders, centerlines and stroke columns preserve spacing on the
 outer rail of bends. Running outlines follow rounded curves; tight turns report
 located Design Issues. See [corner coverage and validation](docs/CORNER_DENSITY.md).
 
+## Effects, sewing styles and repeats
+
+**Properties → Artwork → Artwork effects** applies reversible simplification and
+contour expansion/contraction while retaining the editable original. **Arrange →
+Transfer sewing style** samples thread color, one action's settings or a confirmed
+complete sewing setup. **Arrange → Repeat artwork** creates linear, radial or
+mirrored copies, with optional linked geometry and independent sewing settings.
+The same commands are available from canvas right-click. Sources, links and effects
+survive projects and Undo/Redo; previews and exports use the actual resulting geometry.
+See [controls, construction behavior and limits](docs/ARTWORK_TOOLS.md) and the
+[completed milestone roadmap](docs/WORKSPACE_MILESTONES.md).
+
 ## Editable text along paths
 
 Select a curve or circle and choose **Add lettering → Follow a copy**. Or select

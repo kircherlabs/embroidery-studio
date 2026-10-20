@@ -15,6 +15,9 @@ export function compose(a, b) {
   ].map((v) => (Object.is(v, -0) ? 0 : v));
 }
 export function sourceTransform(o, m) {
+  if (o.linkedGeometry)
+    o.linkedGeometry.frame = compose(m, o.linkedGeometry.frame);
+  if (o.effects) o.effects.frame = compose(m, o.effects.frame);
   if (o.satinRails)
     for (const side of ["a", "b"])
       o.satinRails[side].frame = compose(
@@ -35,6 +38,8 @@ export function sourceTransform(o, m) {
     );
 }
 export function detachSource(o) {
+  delete o.linkedGeometry;
+  delete o.effects;
   delete o.satinRails;
   delete o.shape;
   delete o.textSource;
@@ -134,6 +139,14 @@ export function regenerateShape(o) {
   delete o.rounding;
 }
 export function roundArtwork(o, radius, vertices = null) {
+  if (o.linkedGeometry)
+    throw Error(
+      "Edit the linked original or unlink this copy before rounding it.",
+    );
+  if (o.effects)
+    throw Error(
+      "Remove or bake Artwork effects before rounding the source. Undo preserves both stages.",
+    );
   if (o.satinRails)
     throw Error(
       "Edit or round the individual rails under Manual satin rails. Undo preserves their source curves.",

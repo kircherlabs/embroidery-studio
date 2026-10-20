@@ -239,6 +239,13 @@
             <label class="check"
               ><input id="pen-closed" type="checkbox" />Closed fill</label
             >
+            <button
+              id="undo-draw-point"
+              aria-label="Undo last drawing point"
+              data-help="Remove the last placed point without changing completed artwork. Ctrl/Cmd Z removes points; Shift Ctrl/Cmd Z restores them. Backspace also removes a point."
+            >
+              ↶
+            </button>
             <button id="finish-draw" class="primary">Finish path ↵</button>
             <button id="cancel-draw">Cancel</button>
           </div>
@@ -571,7 +578,7 @@
     <footer class="status-bar">
       <span id="status">Ready</span
       ><span
-        >40 wt thread presets <i>·</i> v0.12.7 <i>·</i>
+        >40 wt thread presets <i>·</i> v0.12.8 <i>·</i>
         <a
           href="https://github.com/kircherlabs/embroidery-studio"
           target="_blank"

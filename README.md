@@ -44,6 +44,18 @@ between Object and Canvas without altering the design. Shift toggles corner
 proportions; Alt resizes about the center. Shared-axis groups use a rotated frame;
 mixed orientations use Canvas. See [controls, compatibility and tests](docs/OBJECT_TRANSFORMS.md).
 
+Image tracing now keeps backgrounds by default, detects up to **128 colors**,
+and merges unchecked shades without deleting their artwork. Background removal
+uses a confirmed border-connected preview; deliberate transparency is separate.
+Select a traced parent → **Artwork → Image tracing reference → Colors & tracing**
+for safe color-only edits or a revised trace. Original image bytes are retained
+unless optimized storage is explicitly chosen. See [workflow, storage and tests](docs/SMART_IMAGE_IMPORT.md).
+
+While drawing points, **Ctrl/Cmd Z** removes the last point, **Shift Ctrl/Cmd Z**
+restores it, and **Backspace** or the contextual undo icon removes one point.
+Finishing/canceling restores ordinary project history. Export remembers successful
+format choices per machine; the exact SE700 profile initially selects PES.
+
 ## Design tools and workspace
 
 The compact SVG toolbar above the canvas groups selection/editing, geometry,

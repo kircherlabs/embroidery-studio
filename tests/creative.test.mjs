@@ -287,10 +287,19 @@ test("explicit tracing noise filter preserves a meaningful counter while removin
     simplify: 0,
     smoothing: true,
   });
-  assert(keep[0].rings.length > clean[0].rings.length);
-  assert.equal(clean[0].rings.length, 2);
-  assert(!inside({ x: 0, y: 0 }, clean[0].rings, "nonzero"));
-  assert(fillPolygons(clean[0].rings, "nonzero"));
+  const blackKeep = keep.find((o) => o.color === "#000000"),
+    blackClean = clean.find((o) => o.color === "#000000");
+  assert(blackKeep.rings.length > blackClean.rings.length);
+  assert.equal(blackClean.rings.length, 2);
+  assert(!inside({ x: 0, y: 0 }, blackClean.rings, "nonzero"));
+  assert(fillPolygons(blackClean.rings, "nonzero"));
+  // Border removal now preserves the same-colored enclosed foreground region.
+  assert(
+    clean.some(
+      (o) =>
+        o.color === "#ffffff" && inside({ x: 0, y: 0 }, o.rings, "nonzero"),
+    ),
+  );
 });
 test("source validation rejects invalid shape, curve and editable lettering data", () => {
   for (const props of [

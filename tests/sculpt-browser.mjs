@@ -192,6 +192,9 @@ try {
   await page.locator("#dialog-submit").click();
   await page.locator("#raster-colors").fill("2");
   await page.locator("#raster-bg").uncheck();
+  await page
+    .locator("#trace-simplify")
+    .evaluate((el) => (el.closest("details").open = true));
   await page.locator("#trace-simplify").fill("0.08");
   await page.waitForFunction(
     () =>

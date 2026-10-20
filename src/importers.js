@@ -1,3 +1,4 @@
+import { borderMask } from "./image-colors.js";
 import { roundChecked } from "./creative.js";
 import { layoutPathText } from "./text-path.js";
 import { mapPoint, identity } from "./smart-geometry.js";
@@ -563,7 +564,7 @@ export function traceLabels(labels, w, h, label, scale = 1, options = {}) {
 export function vectorizePixels(
   image,
   colors = 5,
-  removeBackground = true,
+  removeBackground = false,
   widthMM = 70,
   options = {},
 ) {
@@ -651,8 +652,11 @@ export function vectorizePixels(
       ? border.indexOf(Math.max(...border))
       : -2,
     result = [];
+  if (background >= 0) {
+    const { mask } = borderMask({ labels, width: w, height: h }, background);
+    for (let i = 0; i < labels.length; i++) if (mask[i]) labels[i] = -1;
+  }
   palette.forEach((p, i) => {
-    if (i === background) return;
     let rings = traceLabels(labels, w, h, i, widthMM / w, options);
     if (options.smoothing)
       rings = rings.map((r) => {

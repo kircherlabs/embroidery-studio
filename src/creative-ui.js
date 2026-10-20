@@ -40,7 +40,8 @@ export function creativeInspector(api, leaf, objects, targets) {
   const { state, mutate, toast } = api,
     p = state.project,
     vectors = objects.filter((o) => !["manual", "reference"].includes(o.type));
-  if (!vectors.length) return;
+  if (!vectors.length && !nodeById(p, selectionIds(state)[0])?.imageSource)
+    return;
   const cornerTypes = CORNER_TYPES;
   const cornerTargets = targets.filter(
     (op) =>
@@ -69,7 +70,7 @@ export function creativeInspector(api, leaf, objects, targets) {
   const shape = leaf?.shape,
     text = leaf?.textSource,
     group = nodeById(p, selectionIds(state)[0]);
-  box.innerHTML = `${group?.imageSource ? `<details><summary>Image tracing reference</summary><img src="${esc(group.imageSource.data)}" alt="Preserved image reference" style="width:100%;max-height:120px;object-fit:contain"><button id="retrace-image" data-help="Repeat tracing from the preserved image with new settings. Replaces this group's edited regions and operations; Undo restores them. Current group size and position are retained.">Adjust tracing…</button></details>` : ""}${
+  box.innerHTML = `${group?.imageSource ? `<details><summary>Image tracing reference</summary><img src="${esc(group.imageSource.data)}" alt="Preserved image reference" style="width:100%;max-height:120px;object-fit:contain"><button id="retrace-image" data-help="Reduce colors without changing edited geometry or sewing actions, or create a revised trace from the preserved source. Replacement is an explicit confirmed choice.">Colors & tracing…</button></details>` : ""}${
     text
       ? `<details open><summary>Editable lettering</summary><label class="field">Text<textarea id="live-text" maxlength="120" rows="2">${esc(text.content)}</textarea></label><label class="field">Font<select id="live-font">${Object.entries(
           FONTS,

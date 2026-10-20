@@ -110,11 +110,11 @@ const descriptions = {
   "pen-closed":
     "Close this Pen or Pencil path and generate a filled artwork region when finishing. Leave off for an open running-stitch curve.",
   "raster-colors":
-    "Reduce the image to this maximum number of colors before tracing. Fewer colors generally produce fewer regions and thread changes.",
+    "Detect up to 128 meaningful color clusters. Uncheck shades in the palette to merge their artwork into retained colors. Higher counts preserve detail and may need lower processing resolution.",
   "raster-bg":
-    "Omit the palette color most common along the image border. Turn off if that border color belongs to the artwork.",
+    "Propose removal of border-connected background areas. Nothing is removed until you confirm the red preview. Enclosed foreground details of the same color are retained.",
   "trace-area":
-    "Discard isolated color components smaller than this area in square millimeters. Set to zero to retain tiny islands. Holes remain boundaries of surviving regions.",
+    "Merge tiny color islands below this area in square millimeters into a touching color. No transparent pinholes are created. Set zero to keep all islands; existing holes remain open.",
   "trace-simplify":
     "Maximum contour simplification tolerance in millimeters. Larger values reduce nodes but can remove fine edge detail; inspect the vector preview.",
   "trace-smooth":

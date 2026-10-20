@@ -394,6 +394,9 @@ try {
   await page.locator("#dialog-submit").click();
   await page.waitForSelector("#trace-preview");
   await page.locator("#raster-colors").fill("3");
+  await page
+    .locator("#trace-area")
+    .evaluate((el) => (el.closest("details").open = true));
   await page.locator("#trace-area").fill("0");
   await page.locator("#trace-smooth").check();
   await page.waitForTimeout(250);
@@ -403,14 +406,27 @@ try {
   let traced = p.groups.find((g) => g.imageSource);
   assert(traced);
   assert(traced.traceSettings.smoothing);
-  assert(p.objects.filter((o) => o.parentId === traced.id).length === 2);
+  assert(p.objects.filter((o) => o.parentId === traced.id).length === 3);
   await pick(traced.id);
   await details("Image tracing reference");
   await page.locator("#retrace-image").click();
+  await page.locator("#trace-apply-mode").selectOption("replace");
+  await page
+    .locator("#trace-area")
+    .evaluate((el) => (el.closest("details").open = true));
   await page.locator("#trace-area").fill("1");
   await page.waitForTimeout(200);
   await page.locator("#dialog-submit").click();
-  await ready();
+  await page
+    .getByRole("heading", { name: "Replace edited trace?", exact: true })
+    .waitFor();
+  await page.locator("#dialog-submit").click();
+  await page.waitForFunction(
+    (id) =>
+      window.studio.getProject().groups.find((g) => g.id === id).traceSettings
+        .minArea === 1 && window.studio.getPlan(),
+    traced.id,
+  );
   p = await project();
   assert.equal(
     p.groups.find((g) => g.id === traced.id).traceSettings.minArea,

@@ -54,7 +54,8 @@ export async function rasterImport(file, api, trace) {
     if (!ok) return;
     // ask resolves with its fields still available, as in the existing trace workflow.
     const mode = document.getElementById("image-import-mode").value;
-    if (mode === "trace") return trace(file, api.ask);
+    if (mode === "trace")
+      return trace(new File([blob], file.name, { type: mime }), api.ask);
     const optimize =
       document.getElementById("reference-storage-mode").value === "optimized";
     if (!optimize && Math.max(bitmap.width, bitmap.height) > 12000)

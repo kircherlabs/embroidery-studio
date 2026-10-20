@@ -956,6 +956,22 @@ export class Stage {
       return false;
     });
   }
+  undoDraft(redo = false) {
+    if (
+      this.state.mode !== "design" ||
+      !["polygon", "run", "satin", "manual", "pen"].includes(this.state.tool) ||
+      !this.draftEditing
+    )
+      return false;
+    this.draftRedo ||= [];
+    if (redo) {
+      if (this.draftRedo.length) this.draft.push(this.draftRedo.pop());
+    } else if (this.draft.length) this.draftRedo.push(this.draft.pop());
+    if (this.drag?.type === "pen") this.drag = null;
+    this.actions.draft();
+    this.render();
+    return true;
+  }
   down(e) {
     if (e.button !== 0 && e.button !== 1) return;
     if (e.button === 1) e.preventDefault();
@@ -964,7 +980,11 @@ export class Stage {
       p = this.toWorld(e);
     this.canvas.setPointerCapture(e.pointerId);
     if (e.pointerType === "touch") {
-      if (!this.pointers.size) this.touchDraft = structuredClone(this.draft);
+      if (!this.pointers.size) {
+        this.touchDraft = structuredClone(this.draft);
+        this.touchDraftEditing = this.draftEditing;
+        this.touchDraftRedo = structuredClone(this.draftRedo || []);
+      }
       this.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
       if (this.pointers.size === 2) {
         if (this.drag?.before)
@@ -973,6 +993,8 @@ export class Stage {
         this.shape = null;
         this.marquee = null;
         this.draft = this.touchDraft || [];
+        this.draftEditing = this.touchDraftEditing;
+        this.draftRedo = structuredClone(this.touchDraftRedo || []);
         this.actions.draft();
         this.actions.refresh();
         const [a, b] = [...this.pointers.values()];
@@ -1063,6 +1085,8 @@ export class Stage {
     }
     if (["pen", "rails"].includes(s.tool)) {
       const node = { x: p.x, y: p.y };
+      this.draftRedo = [];
+      this.draftEditing = true;
       this.draft.push(node);
       this.drag = { type: "pen", node, start: p };
       this.actions.draft();
@@ -1070,6 +1094,8 @@ export class Stage {
       return;
     }
     if (["polygon", "run", "satin", "manual"].includes(s.tool)) {
+      this.draftRedo = [];
+      this.draftEditing = true;
       this.draft.push(
         s.tool === "polygon"
           ? { x: p.x, y: p.y }
@@ -1539,6 +1565,8 @@ export class Stage {
     this.guides = [];
     if (this.pointers.size && this.touchDraft) {
       this.draft = this.touchDraft;
+      this.draftEditing = this.touchDraftEditing;
+      this.draftRedo = structuredClone(this.touchDraftRedo || []);
       this.actions.draft();
     }
     if (this.drag?.type === "pencil") {

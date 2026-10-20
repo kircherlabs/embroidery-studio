@@ -229,6 +229,10 @@ export function validateProject(p) {
   }
   if (new Set(all.map((n) => n?.id)).size !== all.length)
     throw Error("Duplicate artwork identifiers.");
+  let traceBytes = Object.values(p.referenceAssets || {}).reduce(
+    (n, a) => n + (a?.data?.length || 0),
+    0,
+  );
   for (const n of all) {
     if (
       !n ||
@@ -247,27 +251,35 @@ export function validateProject(p) {
         !n.kind ||
         !image ||
         typeof image.data !== "string" ||
-        image.data.length > 2000000 ||
-        !/^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(image.data) ||
+        image.data.length > 28000000 ||
+        !/^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(
+          image.data,
+        ) ||
         typeof image.name !== "string" ||
         image.name.length > 200 ||
         !Number.isInteger(image.width) ||
         !Number.isInteger(image.height) ||
         image.width < 1 ||
-        image.width > 384 ||
+        image.width > 12000 ||
         image.height < 1 ||
-        image.height > 384
+        image.height > 12000
       )
         throw Error("Invalid tracing reference image.");
+      traceBytes += image.data.length;
+      if (image.width * image.height > 50000000 || traceBytes > 64000000)
+        throw Error(
+          "Tracing sources exceed image/project storage limits. Choose optimized source storage.",
+        );
     }
-    if (n.traceSettings !== undefined) {
-      const t = n.traceSettings;
+    for (const t of [n.traceSettings, n.paletteSettings].filter(
+      (t) => t !== undefined,
+    )) {
       if (
         !n.imageSource ||
         !t ||
         !Number.isInteger(t.colors) ||
-        t.colors < 2 ||
-        t.colors > 10 ||
+        t.colors < 1 ||
+        t.colors > 128 ||
         !Number.isFinite(t.width) ||
         t.width < 5 ||
         t.width > 200 ||
@@ -284,7 +296,66 @@ export function validateProject(p) {
         typeof t.removeBackground !== "boolean"
       )
         throw Error("Invalid tracing settings.");
+      if (
+        t.resolution !== undefined &&
+        ![192, 384, 640, 1024].includes(t.resolution)
+      )
+        throw Error("Invalid trace resolution.");
+      if (
+        t.background !== undefined &&
+        (!Number.isInteger(t.background) ||
+          t.background < -1 ||
+          t.background >= t.colors)
+      )
+        throw Error("Invalid trace background.");
+      if (
+        t.palette !== undefined &&
+        (!Array.isArray(t.palette) ||
+          t.palette.length > 128 ||
+          t.palette.some((c) => !/^#[0-9a-f]{6}$/i.test(c)))
+      )
+        throw Error("Invalid tracing palette.");
+      if (t.choices !== undefined) {
+        if (
+          !t.choices ||
+          typeof t.choices !== "object" ||
+          Array.isArray(t.choices) ||
+          Object.keys(t.choices).length > 128
+        )
+          throw Error("Invalid trace color choices.");
+        for (const [color, c] of Object.entries(t.choices))
+          if (
+            !/^#[0-9a-f]{6}$/i.test(color) ||
+            !c ||
+            typeof c !== "object" ||
+            Array.isArray(c) ||
+            ["keep", "transparent"].some(
+              (k) => c[k] !== undefined && typeof c[k] !== "boolean",
+            ) ||
+            (c.target !== undefined &&
+              c.target !== "" &&
+              !/^#[0-9a-f]{6}$/i.test(c.target))
+          )
+            throw Error("Invalid trace merge mapping.");
+      }
     }
+    for (const t of [n.traceSettings, n.paletteSettings].filter(
+      (t) => t !== undefined,
+    )) {
+      if (t.mode !== undefined && !["detailed", "reduced"].includes(t.mode))
+        throw Error("Invalid tracing color mode.");
+      if (
+        t.palette?.length &&
+        !t.palette.some(
+          (color) =>
+            t.choices?.[color]?.keep !== false &&
+            !t.choices?.[color]?.transparent,
+        )
+      )
+        throw Error("Tracing palette must retain at least one color.");
+    }
+    if (n.paletteSettings !== undefined && !n.traceSettings)
+      throw Error("Palette revisions require a tracing source.");
     if (n.kind && !["svg", "group"].includes(n.kind))
       throw Error("Invalid group type.");
     let at = n.parentId,

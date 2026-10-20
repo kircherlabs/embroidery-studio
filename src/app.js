@@ -1,3 +1,10 @@
+import {
+  preferredExport,
+  exportGuidance,
+  EXPORT_PREFERENCE_KEY,
+} from "./export-preferences.js";
+import { applyTracePalette } from "./image-tracing.js";
+import { selectionBox } from "./transform-box.js";
 import { TRANSFORM_PREFERENCE } from "./transform-ui.js";
 import { sculptIntersections } from "./sculpt-contour.js";
 import { focusClass } from "./focus-ui.js";
@@ -280,6 +287,9 @@ function scheduleGenerate() {
     const project = {
       ...state.project,
       objects: state.project.objects.filter((o) => o.type !== "reference"),
+      groups: (state.project.groups || []).map(
+        ({ imageSource, traceSettings, paletteSettings, ...group }) => group,
+      ),
     };
     delete project.referenceAssets;
     worker.postMessage({ id, project });
@@ -346,6 +356,8 @@ function setMode(mode) {
   stage.railDraftA = null;
   pause();
   stage.draft = [];
+  stage.draftRedo = [];
+  stage.draftEditing = false;
   updateDraft();
   $("design-tab").setAttribute("aria-selected", mode === "design");
   $("preview-tab").setAttribute("aria-selected", mode === "preview");
@@ -360,6 +372,8 @@ function setMode(mode) {
 function setTool(tool) {
   if (state.mode !== "design") setMode("design");
   stage.draft = [];
+  stage.draftRedo = [];
+  stage.draftEditing = false;
   stage.node = null;
   state.tool = tool;
   if (tool !== "select") state.satinGuideEdit = null;
@@ -415,9 +429,22 @@ function setTool(tool) {
   $("stage-hint").textContent = hints[tool];
   stage.render();
 }
+function renderHistoryButtons() {
+  const drawing =
+    state.mode === "design" &&
+    stage.draftEditing &&
+    ["polygon", "run", "satin", "manual", "pen"].includes(state.tool);
+  $("undo").disabled = drawing ? !stage.draft.length : !history.length;
+  $("redo").disabled = drawing ? !stage.draftRedo?.length : !future.length;
+}
 function updateDraft() {
+  renderHistoryButtons();
   $("rails-closed").disabled = !!stage.railDraftA;
-  $("draw-actions").hidden = stage.draft.length === 0 && !stage.railDraftA;
+  $("draw-actions").hidden =
+    stage.draft.length === 0 && !stage.railDraftA && !stage.draftEditing;
+  $("undo-draw-point").disabled =
+    !stage.draft.length ||
+    !["polygon", "run", "satin", "manual", "pen"].includes(state.tool);
   $("pen-closed").closest("label").hidden = !["pen", "pencil"].includes(
     state.tool,
   );
@@ -769,6 +796,8 @@ function finishPath(options = {}) {
       if (!stage.railDraftA) {
         stage.railDraftA = curve;
         stage.draft = [];
+        stage.draftRedo = [];
+        stage.draftEditing = false;
         updateDraft();
         updateVectorOptions();
         stage.render();
@@ -780,6 +809,8 @@ function finishPath(options = {}) {
       if (!addObjects([made])) return false;
       stage.railDraftA = null;
       stage.draft = [];
+      stage.draftRedo = [];
+      stage.draftEditing = false;
       state.railSide = "a";
       setTool("node");
       return true;
@@ -802,6 +833,8 @@ function finishPath(options = {}) {
       if (closed) applyDrawingStyle(made);
       if (!addObjects([made])) return false;
       stage.draft = [];
+      stage.draftRedo = [];
+      stage.draftEditing = false;
       stage.pencilPreview = null;
       updateDraft();
       if (!options.keepTool) setTool("select");
@@ -823,6 +856,8 @@ function finishPath(options = {}) {
     if (closed) applyDrawingStyle(made);
     addObjects([made]);
     stage.draft = [];
+    stage.draftRedo = [];
+    stage.draftEditing = false;
     updateDraft();
     setTool("select");
     return;
@@ -850,6 +885,8 @@ function finishPath(options = {}) {
   if (type === "polygon") applyDrawingStyle(o);
   addObjects([o]);
   stage.draft = [];
+  stage.draftRedo = [];
+  stage.draftEditing = false;
   updateDraft();
   setTool("select");
 }
@@ -997,8 +1034,7 @@ function renderPanels() {
       "Focus Mode is active. Dimmed artwork is temporarily outside the focused scope; eye controls still show manual visibility.",
     );
   else $("object-list").removeAttribute("aria-description");
-  $("undo").disabled = !history.length;
-  $("redo").disabled = !future.length;
+  renderHistoryButtons();
   for (const id of ["move-up", "move-down", "duplicate", "delete"])
     $(id).disabled = !selectedLeaves(state, { editable: true }).length;
   renderProperties();
@@ -1077,32 +1113,92 @@ function renderProperties() {
           file = await response.blob();
         const result = await traceDialog(file, ask, {
           ...group.imageSource,
-          settings: group.traceSettings,
+          settings: group.paletteSettings || group.traceSettings,
+          artwork: leaves(state.project, [group.id]).map((o) => ({
+            ...o,
+            paletteLocked: isLocked(state.project, o),
+          })),
         });
-        if (result)
+        if (!result) return;
+        const old = leaves(state.project, [group.id]);
+        if (result.applyMode === "palette") {
+          let changed = 0;
           mutate(() => {
-            const old = leaves(state.project, [group.id]),
-              b = selectionBounds(old),
-              q = selectionBounds(result);
-            transformSelection(result, {
-              sx: b.width / (q.width || 1),
-              sy: b.height / (q.height || 1),
-              dx: (b.minX + b.maxX) / 2,
-              dy: (b.minY + b.maxY) / 2,
-            });
-            const parent = group.parentId,
-              name = group.name,
-              id = group.id;
-            deleteSelection(state.project, [id]);
-            result.groups[0].id = id;
-            result.groups[0].name = name;
-            result.groups[0].parentId = parent;
-            result.forEach((o) => (o.parentId = id));
+            changed = applyTracePalette(
+              old.filter((o) => !isLocked(state.project, o)),
+              result.palette,
+              result.choices,
+              group.paletteSettings?.palette || group.traceSettings?.palette,
+            );
+            group.paletteSettings = {
+              ...result.groups[0].traceSettings,
+              background: -1,
+              removeBackground: false,
+            };
+          });
+          toast(
+            `${changed} artwork objects recolored. Geometry, unrelated action colors and sewing order retained. Locked objects were kept.`,
+          );
+          return;
+        }
+        if (
+          result.applyMode === "replace" &&
+          old.some((o) => isLocked(state.project, o))
+        ) {
+          toast(
+            "Unlock this trace's artwork before replacing it, or create a revised trace.",
+          );
+          return;
+        }
+        if (
+          result.applyMode === "replace" &&
+          !(await ask(
+            "Replace edited trace?",
+            "<p>This replaces the group's vector edits and sewing actions with a new trace. The original image is retained. Undo restores everything. Choose Create a revised trace to keep both versions.</p>",
+            "Replace trace",
+          ))
+        )
+          return;
+        mutate(() => {
+          const b = selectionBox(old),
+            q = selectionBox(result);
+          const fit = Math.min(
+            b.width / (q.width || 1),
+            b.height / (q.height || 1),
+          );
+          transformSelection(result, {
+            sx: fit,
+            sy: fit,
+            angle: b.angle,
+            pivot: q.center,
+            dx: b.center.x - q.center.x,
+            dy: b.center.y - q.center.y,
+          });
+          if (result.applyMode === "new") {
+            result.groups[0].parentId = group.parentId || null;
+            result.groups[0].name = (group.name + " · revised trace").slice(
+              0,
+              200,
+            );
             state.project.objects.push(...result);
             (state.project.groups ||= []).push(...result.groups);
-            state.selection = id;
-            state.selectionIds = [id];
-          });
+            state.selection = result.groups[0].id;
+            state.selectionIds = [state.selection];
+            return;
+          }
+          const parent = group.parentId,
+            name = group.name,
+            id = group.id;
+          deleteSelection(state.project, [id]);
+          result.groups[0].id = id;
+          result.groups[0].name = name;
+          result.groups[0].parentId = parent;
+          result.forEach((o) => (o.parentId = id));
+          state.project.objects.push(...result);
+          (state.project.groups ||= []).push(...result.groups);
+          state.selection = id;
+          state.selectionIds = [id];
+        });
       },
     })
   )
@@ -1581,12 +1677,29 @@ async function exportDialog() {
     );
     return;
   }
-  const ok = await ask(
+  let preferences = {};
+  try {
+    preferences = JSON.parse(localStorage.getItem(EXPORT_PREFERENCE_KEY)) || {};
+  } catch {}
+  const selectedFormat = preferredExport(state.project.machine, preferences);
+  const pending = ask(
     "Ready for the machine",
     `<p><strong>${esc(state.project.name)}</strong><br>${fmt(plan.stats.stitches)} stitches · ${num(plan.stats.bounds.width)} × ${num(plan.stats.bounds.height)} mm · ${esc(MACHINES[state.project.machine].name)}</p><label>Machine format<select id="export-format"><option value="pes">PES v6 · Brother / Baby Lock</option><option value="pec">PEC · Brother</option><option value="dst">DST · Tajima (palette not stored)</option><option value="exp">EXP · Melco (palette not stored)</option><option value="jef">JEF · Janome</option><option value="vp3">VP3 · Husqvarna / Pfaff</option></select></label><p>The local conversion engine downloads on first use. Your design stays in your browser. After export, the simulator displays the stitch sequence decoded from the actual machine file.</p><p>Trims and color handling depend on the file format and machine. Inspect the preview and test on scrap fabric before your final sew-out.</p>`,
     "Export machine file",
   );
-  if (!ok) return;
+  $("export-format").value = selectedFormat;
+  $("export-format").insertAdjacentHTML(
+    "afterend",
+    '<p class="property-note" id="export-format-guidance"></p>',
+  );
+  const updateFormat = () =>
+    ($("export-format-guidance").textContent = exportGuidance(
+      state.project.machine,
+      $("export-format").value,
+    ));
+  $("export-format").onchange = updateFormat;
+  updateFormat();
+  if (!(await pending)) return;
   busy = true;
   $("export").disabled = true;
   const ext = $("export-format").value;
@@ -1603,6 +1716,10 @@ async function exportDialog() {
         "Format conversion moved a command outside the selected hoop. Move the design slightly inward.",
       );
     download(result.bytes, filename() + "." + ext);
+    try {
+      preferences[state.project.machine] = ext;
+      localStorage.setItem(EXPORT_PREFERENCE_KEY, JSON.stringify(preferences));
+    } catch {}
     state.plan = { events: result.events, stats, warnings: [] };
     state.cursor = result.events.length;
     machinePlan = true;
@@ -1643,6 +1760,8 @@ async function importFile(file) {
       if (await confirmReplace("Open this project?")) {
         stage.railDraftA = null;
         stage.draft = [];
+        stage.draftRedo = [];
+        stage.draftEditing = false;
         updateDraft();
         mutate(() => {
           state.project = p;
@@ -1771,6 +1890,8 @@ function undo() {
   state.selectionIds = [];
   state.activeOperationId = null;
   stage.draft = [];
+  stage.draftRedo = [];
+  stage.draftEditing = false;
   updateDraft();
   changed();
 }
@@ -1972,8 +2093,12 @@ document
   .querySelectorAll("[data-tool]")
   .forEach((b) => (b.onclick = () => setTool(b.dataset.tool)));
 $("text-tool").onclick = textDialog;
-$("undo").onclick = undo;
-$("redo").onclick = redo;
+$("undo").onclick = () => {
+  if (!stage.undoDraft()) undo();
+};
+$("redo").onclick = () => {
+  if (!stage.undoDraft(true)) redo();
+};
 $("delete").onclick = removeSelected;
 $("duplicate").onclick = () => {
   const copy = copySelection(state.project, selectionIds(state));
@@ -2396,10 +2521,13 @@ $("rail-set-seam").onclick = () => {
     regenerateRails(o);
   });
 };
+$("undo-draw-point").onclick = () => stage.undoDraft();
 $("finish-draw").onclick = finishPath;
 $("cancel-draw").onclick = () => {
   stage.railDraftA = null;
   stage.draft = [];
+  stage.draftRedo = [];
+  stage.draftEditing = false;
   updateVectorOptions();
   updateDraft();
   stage.render();
@@ -2531,7 +2659,11 @@ document.addEventListener("keydown", (e) => {
     return;
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
     e.preventDefault();
-    e.shiftKey ? redo() : undo();
+    if (!stage.undoDraft(e.shiftKey)) e.shiftKey ? redo() : undo();
+    return;
+  }
+  if (e.key === "Backspace" && stage.undoDraft()) {
+    e.preventDefault();
     return;
   }
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
@@ -2597,6 +2729,8 @@ document.addEventListener("keydown", (e) => {
     }
     stage.cancelDrag();
     stage.draft = [];
+    stage.draftRedo = [];
+    stage.draftEditing = false;
     stage.railDraftA = null;
     updateDraft();
     select(null);
@@ -2655,6 +2789,12 @@ window.studio = {
   getWorkspace: () => workspaceLayout.getState(),
   getProject: () => structuredClone(state.project),
   getPlan: () => structuredClone(state.plan),
+  getDrawing: () => ({
+    tool: state.tool,
+    active: !!stage.draftEditing,
+    points: structuredClone(stage.draft),
+    redo: structuredClone(stage.draftRedo || []),
+  }),
   getMode: () => state.mode,
   getSelection: () => ({
     ids: [...selectionIds(state)],

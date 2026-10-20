@@ -1,6 +1,6 @@
 # Professional workspace roadmap and implementation audit
 
-## Current status — 0.12.7
+## Current status — 0.12.8
 
 | Milestone                    | Status   | Delivered / remaining                                                                                                           |
 | ---------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------- |
@@ -105,3 +105,12 @@ source pipeline. Object/Canvas preference, fixed anchors, center resizing,
 rotation reset, SVG orientation metadata, source/rail preservation and located
 hoop issues are covered by new math, pixel, touch and PES regression checks.
 See [scope, controls and limitations](OBJECT_TRANSFORMS.md).
+
+## v0.12.8 — Smart image import and drawing corrections
+
+Interactive perceptual palettes up to 128 colors, retained backgrounds, confirmed
+border-connected removal, deliberate transparency, protected shared contours,
+worker previews, original-source storage, safe palette-only revisions and explicit
+new/replacement tracing. Per-model export preferences and draft-point Undo/Redo
+are integrated without changing stitch algorithms or the PES writer.
+See [workflow, limitations and validation](SMART_IMAGE_IMPORT.md).

@@ -481,3 +481,175 @@ dialog:has(.patch-layout) {
 #properties #action-method-fields .section-label:first-child {
   margin-top: 14px;
 }
+
+/* Image tracing stays inside the existing responsive dialog. */
+.trace-palette {
+  max-height: 300px;
+  overflow: auto;
+  border: 1px solid var(--line, #61705c);
+  border-radius: 7px;
+  padding: 4px;
+  overscroll-behavior: contain;
+}
+.trace-color {
+  display: grid;
+  grid-template-columns: minmax(135px, 1fr) minmax(135px, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 7px;
+  border-bottom: 1px solid var(--line, #61705c);
+}
+.trace-color:last-child {
+  border-bottom: 0;
+}
+.trace-color label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 13px;
+}
+.trace-color small {
+  display: block;
+  font-size: 11px;
+  opacity: 0.8;
+}
+.trace-color input {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+}
+.trace-swatch {
+  display: inline-block;
+  width: 24px;
+  height: 32px;
+  border: 1px solid #7d8779;
+  border-radius: 4px;
+  flex: 0 0 auto;
+}
+.trace-color select {
+  margin: 4px 0 0;
+  padding: 5px;
+  max-width: 100%;
+  font-size: 12px;
+}
+.trace-color button {
+  font-size: 11px;
+  min-height: 36px;
+  padding: 5px 7px;
+}
+.trace-color.is-transparent .trace-swatch {
+  background-image: repeating-linear-gradient(
+    45deg,
+    transparent 0 4px,
+    #fff8 4px 7px
+  ) !important;
+}
+.trace-palette-heading {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin: 12px 0 6px;
+}
+.trace-palette-heading strong {
+  flex: 1;
+  font-size: 13px;
+}
+.trace-palette-heading button {
+  font-size: 12px;
+  padding: 5px 8px;
+}
+#trace-background-review {
+  border-left: 3px solid #e8b67b;
+  padding: 0 10px;
+  margin: 8px 0;
+}
+#trace-background-review button {
+  margin: 3px;
+}
+#trace-palette select:focus-visible,
+#trace-palette button:focus-visible,
+#trace-palette input:focus-visible {
+  outline: 2px solid #e8b67b;
+  outline-offset: 2px;
+}
+@media (max-width: 600px) {
+  .trace-color {
+    grid-template-columns: 1fr 1fr;
+    gap: 5px;
+  }
+  .trace-color button {
+    grid-column: 2;
+  }
+  .trace-compare {
+    gap: 6px;
+  }
+  .trace-settings {
+    gap: 0 8px;
+  }
+  .trace-palette {
+    max-height: 240px;
+  }
+  .trace-color label {
+    font-size: 12px;
+  }
+  .trace-compare img,
+  .trace-compare canvas {
+    height: 155px;
+  }
+}
+
+#dialog.trace-dialog {
+  max-width: 1040px;
+  width: min(1040px, calc(100vw - 24px));
+}
+.trace-workflow {
+  display: grid;
+  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+  gap: 18px;
+  align-items: start;
+}
+.trace-workflow .trace-compare {
+  position: sticky;
+  top: 8px;
+  align-self: start;
+}
+.trace-options {
+  min-width: 0;
+}
+#dialog .trace-color > label {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 7px;
+  margin: 0;
+  font-size: 12px;
+}
+#dialog .trace-color input[type="checkbox"] {
+  width: 20px;
+  min-width: 20px;
+  height: 20px;
+  margin: 0;
+}
+#dialog .trace-color small {
+  font-size: 10px;
+}
+@media (max-width: 850px) {
+  .trace-workflow {
+    display: block;
+  }
+  .trace-workflow .trace-compare {
+    position: static;
+    margin-bottom: 14px;
+  }
+}
+
+#dialog .trace-color > label {
+  min-height: 44px;
+}
+@media (max-width: 600px) {
+  #dialog .trace-color button {
+    min-height: 44px;
+  }
+}

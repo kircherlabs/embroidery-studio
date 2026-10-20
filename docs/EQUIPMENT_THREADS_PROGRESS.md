@@ -45,7 +45,7 @@ physical outer dimensions, machine movement limits and reposition support are no
 invented. Oval checks use the documented envelope with explicit template guidance.
 Personal settings transfer UI is deferred to Stage E (project snapshots already travel).
 
-## Stage B — complete and verified (commit containing this entry)
+## Stage B — complete and verified (`fd985c1`)
 
 Files: `src/export-safety.js`, `src/app.js`, `src/codec.py`, `src/format-worker.js`,
 `src/vp3_compat.py`, `src/equipment.js`, `workspace.css`, `THIRD_PARTY_NOTICES.md`,
@@ -95,10 +95,45 @@ SE700 PEC origin correction. Keep writer tests, documented compatibility and har
 stitch-out status distinct. Check field origins, movement splitting, stops, color limits,
 thread metadata and trim loss for each format. Add UI warnings for real restrictions.
 
-## Stages C–F — not implemented
+## Stage C — local catalog infrastructure complete and verified (commit containing this entry)
 
-- C: separate thread schema, local CSV/JSON/GPL import, validated mapping and compact
-  brand/line/color picker; retain simple HEX controls and leading-zero/alphanumeric codes.
+Added `src/thread-records.js`, `src/thread-catalogs.js`, `src/thread-store.js`,
+`src/thread-assignment.js`, `src/thread-ui.js`. Local IndexedDB storage, CSV/JSON/GPL
+mapping/preview, distinct brand+line+text-number identity, optional HEX, provenance,
+paged picker, default brand/line and snapshot assignment/restore are implemented.
+Changes integrate with `src/app.js`, `src/inspector.js`, `src/model.js`, `src/styles.js`,
+`index.html`, `workspace.css`. Nine new thread tests and one public-asset policy test pass.
+No manufacturer RGB datasets or Claude research rows are bundled. Brand names are
+identifiers only; importing data cannot elevate it to manufacturer-verified status.
+
+Validation: all 285 automated tests pass (`test-results/threads-final-units.log`).
+Thread browser suite covers CSV/JSON/GPL, leading-zero / distinct-brand records,
+per-action assignment, generated colors, Undo/Redo, save/reload, missing catalog
+snapshots, restore design color, manual unknown HEX, defaults, actual assigned-thread
+PES dimensions and every decoded needle, keyboard modal isolation and mobile.
+5,000-entry preview + save measured 108 ms locally; only 50 rows render per page
+(`test-results/thread-catalog-performance.json`; not a universal timing guarantee).
+Workspace, toolbar, sewing-action, reference/manual-artwork and six-format export
+browser regressions also pass (`test-results/threads-*.log`). Build passed.
+
+`docs/THREAD_LIBRARY.md` explains controls, schema, storage and licensing. CI runs
+threads-browser. `scripts/thread-asset-policy.mjs`, `scripts/build.mjs`, and
+`tests/thread-assets.test.mjs` reject known research files, GPL palettes and physical
+catalog CSV/JSON in public runtime assets. `THIRD_PARTY_NOTICES.md` distinguishes
+personal product data from the MIT PEC machine palette. Catalogs use IndexedDB;
+project snapshots do not depend on installed catalogs. Nothing from ThreadResearch.zip
+was extracted or bundled. Public manufacturer color packs remain unapproved, NOT done.
+
+Remaining C limitations: no licensed preloaded brand palettes, user-imported values
+remain approximate/unverified; full personal settings backup follows E. Inventory
+and conversions are reserved empty arrays until D/E implement their workflows.
+Next exact step: implement and test D's CIELAB matching, explicit preview/alternatives,
+original-palette preservation, substitution labels and smart-import handoff. Audit
+all color-edit paths (image palette revisions/style transfer) for stale assignments.
+Commit D only after it passes. No intermediate deployment has been made.
+
+## Remaining Stages D–F
+
 - D: perceptual matching, explicit substitutions and source design colors preserved;
   integrate with smart import without pretending to offer official conversions.
 - E: inventory, owned-only matching, project requirements, shopping list, personal
@@ -119,6 +154,6 @@ unlicensed chart images, raw catalogs, PANTONE references or conversion tables.
 
 ## Resume rules
 
-Read this file and inspect current branch/commit/status first. Stages A and B are validated; start C from the latest stage commit. Record each stage's actual checks and commit in this
+Read this file and inspect current branch/commit/status first. Stages A, B and C infrastructure are validated; start D from the latest stage commit. Record each stage's actual checks and commit in this
 file. Never label later stages complete until implemented and tested. Keep source research
 outside `src`, `vendor`, `assets` (the directories copied into public builds).

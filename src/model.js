@@ -1,3 +1,4 @@
+import { validateAssignment } from "./thread-records.js";
 import { validateEquipment } from "./equipment.js";
 import { validateReferences } from "./references.js";
 import { sourceTransform } from "./smart-geometry.js";
@@ -388,6 +389,7 @@ export function validateProject(p) {
         ))
     )
       throw Error("Invalid construction artwork links.");
+    if (n.physicalThread !== undefined) validateAssignment(n.physicalThread);
     if (n.operations !== undefined) {
       if (
         n.kind ||
@@ -399,6 +401,8 @@ export function validateProject(p) {
       if (new Set(n.operations.map((op) => op.id)).size !== n.operations.length)
         throw Error("Duplicate operation identifiers.");
       for (const op of n.operations) {
+        if (op.physicalThread !== undefined)
+          validateAssignment(op.physicalThread);
         if (
           !op ||
           (op.constructionStage !== undefined &&

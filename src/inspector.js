@@ -660,6 +660,7 @@ export function renderInspector(api) {
       });
     };
   }
+  api.threads?.inspector(objects, !!leaf, state);
   creativeInspector(api, leaf, objects, targets);
   document
     .querySelectorAll("#properties details[data-section]")

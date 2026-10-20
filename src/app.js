@@ -1,3 +1,5 @@
+import { installThreads } from "./thread-ui.js";
+import { threadTargets } from "./thread-assignment.js";
 import { exportPreflight, checkRoundTrip } from "./export-safety.js";
 import { installEquipment } from "./equipment-ui.js";
 import { getMachine, hoopOf } from "./equipment.js";
@@ -168,7 +170,7 @@ let history = [],
 const pendingFormats = new Map();
 let clipboard = null;
 let sewingStyleClipboard = null;
-let workspaceLayout, arrangeMenu, equipmentUI;
+let workspaceLayout, arrangeMenu, equipmentUI, threadUI;
 const worker = new Worker(new URL("./digitize-worker.js", import.meta.url), {
   type: "module",
 });
@@ -1097,6 +1099,7 @@ function renderProperties() {
       mutate,
       toast,
       ask,
+      threads: threadUI,
       refresh: renderProperties,
       palette: PALETTE,
       manualEditor,
@@ -2698,7 +2701,10 @@ $("help").onclick = () =>
     "Got it",
   );
 document.addEventListener("keydown", (e) => {
-  if ($("dialog").open || /INPUT|SELECT|TEXTAREA/.test(e.target.tagName))
+  if (
+    document.querySelector("dialog[open]") ||
+    /INPUT|SELECT|TEXTAREA/.test(e.target.tagName)
+  )
     return;
   if (
     (e.code === "Space" || e.key === "Enter") &&
@@ -2818,6 +2824,18 @@ document.addEventListener("drop", async (e) => {
   e.preventDefault();
   for (const file of e.dataTransfer.files) await importFile(file);
 });
+threadUI = installThreads({ state, mutate, toast });
+$("thread-library").onclick = () => {
+  const ids = selectionIds(state),
+    one = ids.length === 1 ? nodeById(state.project, ids[0]) : null;
+  threadUI.open(
+    threadTargets(
+      selectedLeaves(state, { editable: true }),
+      state,
+      !!one && !one.kind,
+    ),
+  );
+};
 const drawingStyleUI = installDrawingStyle({ state, ask, mutate, toast });
 renderPanels();
 renderStats();

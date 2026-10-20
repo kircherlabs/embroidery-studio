@@ -1,4 +1,17 @@
-import { mkdir, copyFile, cp, rm } from "node:fs/promises";
+import { mkdir, copyFile, cp, rm, readdir, readFile } from "node:fs/promises";
+import { checkThreadAsset } from "./thread-asset-policy.mjs";
+async function reviewAssets(dir) {
+  for (const item of await readdir(dir, { withFileTypes: true })) {
+    const path = dir + "/" + item.name;
+    if (item.isDirectory()) await reviewAssets(path);
+    else
+      checkThreadAsset(
+        path,
+        /\.(json|csv)$/i.test(item.name) ? await readFile(path, "utf8") : "",
+      );
+  }
+}
+for (const dir of ["src", "vendor", "assets"]) await reviewAssets(dir);
 // Only these runtime assets are deployed; tests and source tooling stay in the repo.
 await rm("dist", { recursive: true, force: true });
 await mkdir("dist");

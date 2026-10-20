@@ -62,3 +62,12 @@ The stroke-satin topology, branch partition, rails and travel algorithms are
 original implementations. Ink/Stitch documentation, topology-thinning descriptions
 and the MIT MAT/SAT project were reviewed conceptually; no source from those
 projects is bundled. See `docs/SATIN.md` for references and limits.
+
+## Personal physical thread catalogs
+
+No third-party physical thread RGB catalog or official conversion dataset is bundled.
+Manufacturer names identify user-provided products and do not imply endorsement or
+identical colors between brands. The existing MIT PEC palette is machine-format data,
+not a physical Brother/New brothread/Simthread product catalog. Local user import does
+not grant redistribution rights. Build policy blocks known research files and physical
+catalog assets until an explicit redistribution review is completed.

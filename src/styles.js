@@ -125,7 +125,10 @@ export function editOperations(objects, state, single, key, value) {
           op.underlay = false;
         op.closed = closedArtwork(o);
         if (single) state.activeOperationId = op.id;
-      } else op[key] = value;
+      } else {
+        if (key === "color") delete op.physicalThread;
+        op[key] = value;
+      }
       changed++;
     }
   }

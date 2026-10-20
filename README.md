@@ -65,6 +65,12 @@ local defaults are separate. Documented specifications and software/hardware exp
 validation remain distinct. See [controls and evidence](docs/MACHINE_PROFILES.md)
 and [stage-by-stage progress](docs/EQUIPMENT_THREADS_PROGRESS.md).
 
+**Threads** opens the optional personal thread library. Import CSV/JSON/GPL locally,
+search and filter brand/product line/spool numbers, or add your own labeled spool.
+Assign a physical product to a sewing action while retaining the original design
+color; saved projects keep that identity even if the catalog is missing. No unlicensed
+manufacturer color chart is bundled. See [thread library and storage](docs/THREAD_LIBRARY.md).
+
 ## Design tools and workspace
 
 The compact SVG toolbar above the canvas groups selection/editing, geometry,

@@ -177,7 +177,7 @@ const descriptions = {
   "edit-command":
     "Selection, alignment and construction tools act on the selected artwork or its descendants. Focus changes only the view.",
   "exit-isolation":
-    "Show all artwork again. Focus mode does not remove anything from the exported design.",
+    "Focus Mode temporarily isolates an object or group for editing. With Select, double-click artwork to focus it or its outer group; double-click inside a focused group to go one level deeper. Exit Focus Mode returns directly to the full workspace. Esc normally also exits fully; while editing satin direction guides, Esc first leaves that guide tool. Manual Show/Hide settings and exports are unchanged.",
   "optimize-colors":
     "In automatic mode, batch compatible colors and reduce travel while preserving overlaps, sequence pins and complete operation stacks. Manual mode always respects your chosen order.",
   "order-mode":
@@ -334,7 +334,7 @@ function description(el) {
   if (el.matches("[data-check]"))
     return "Toggle this artwork's selection without clearing other selected objects. Selecting a parent includes its descendants.";
   if (el.matches("[data-select]"))
-    return "Select this artwork and edit its properties. Shift/Ctrl-click adds or removes it from the selection. A parent selects all its regions.";
+    return `${el.closest(".focus-outside") ? "Temporarily outside Focus Mode. Selecting this artwork leaves the current focused view; its eye setting has not changed. " : ""}Select this artwork and edit its properties. Shift/Ctrl-click adds or removes it from the selection. A parent selects all its regions.`;
   if (el.matches("[data-visibility]"))
     return el.closest(".object-row.hidden") &&
       el.getAttribute("aria-label")?.startsWith("Hide")

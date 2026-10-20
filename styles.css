@@ -10,6 +10,7 @@
   --green: #c0d1a1;
   --panel: #212c28;
   --dark: #17201f;
+  --focus-edge: #93b6a0;
 }
 * {
   box-sizing: border-box;
@@ -2062,5 +2063,93 @@ label {
   }
   .order-controls label {
     display: none;
+  }
+}
+/* Focus is a temporary view context, independent of manual visibility. */
+#exit-isolation {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 6px 9px;
+  flex-shrink: 0;
+  border: 1px solid var(--focus-edge);
+  background: #c0d1a1;
+  color: #172523;
+  font-size: 11px;
+  font-weight: 650;
+  line-height: 1.25;
+}
+#exit-isolation[hidden] {
+  display: none;
+}
+#exit-isolation svg {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex-shrink: 0;
+}
+#exit-isolation:hover {
+  background: #d6e4bf;
+  border-color: #e1ebd3;
+}
+#exit-isolation:active {
+  background: #a7c091;
+  box-shadow: inset 0 1px 3px #17252344;
+}
+#exit-isolation:focus-visible {
+  outline: 2px solid #f7f8ed;
+  outline-offset: 3px;
+}
+.focus-active .selection-status {
+  gap: 6px;
+  align-items: center;
+}
+.focus-active #selection-count {
+  min-width: 0;
+  flex: 1;
+  line-height: 1.4;
+  color: #c0d1a1;
+}
+.object-row.focus-target {
+  border-color: var(--focus-edge);
+  box-shadow: inset 3px 0 var(--focus-edge);
+}
+.object-row.focus-target .group-icon {
+  color: #d6e4bf;
+}
+.object-row.focus-ancestor {
+  border-left: 2px dotted var(--focus-edge);
+}
+.object-row.focus-outside .object-text {
+  color: var(--muted);
+}
+.object-row.focus-outside:is(:hover, :focus-within) .object-text {
+  color: inherit;
+}
+.object-row.focus-outside .swatch {
+  opacity: 0.35;
+}
+.object-row.focus-outside:not(:hover):not(:focus-within) {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+.focus-active .canvas-surface::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 2px solid var(--focus-edge);
+  box-shadow: inset 0 0 0 1px #17252399;
+  pointer-events: none;
+}
+@media (pointer: coarse) {
+  #exit-isolation {
+    min-height: 44px;
   }
 }

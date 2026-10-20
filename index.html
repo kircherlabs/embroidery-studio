@@ -142,7 +142,13 @@
         >
         <div class="selection-status">
           <span id="selection-count">Select artwork</span
-          ><button id="exit-isolation" hidden>Exit focus</button>
+          ><button id="exit-isolation" hidden>
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path
+                d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5M9 12h8m-5-3-3 3 3 3"
+              /></svg
+            >Exit Focus Mode
+          </button>
         </div>
         <details class="planning-controls">
           <summary>Digitizing & sequence</summary>
@@ -565,7 +571,7 @@
     <footer class="status-bar">
       <span id="status">Ready</span
       ><span
-        >40 wt thread presets <i>·</i> v0.12.5 <i>·</i>
+        >40 wt thread presets <i>·</i> v0.12.6 <i>·</i>
         <a
           href="https://github.com/kircherlabs/embroidery-studio"
           target="_blank"

@@ -1,4 +1,5 @@
 import { sculptIntersections } from "./sculpt-contour.js";
+import { focusClass } from "./focus-ui.js";
 import { railArtwork, railCandidates } from "./rail-ui.js";
 import { installDesignToolbar } from "./tool-icons.js";
 import { captureStyle } from "./style-transfer.js";
@@ -954,7 +955,7 @@ function renderPanels() {
   const row = (
     o,
     depth,
-  ) => `<div data-reorder-id="${esc(o.id)}" role="treeitem" aria-level="${depth + 2}" aria-selected="${selectedIds.has(o.id)}" ${o.kind ? `aria-expanded="${!state.collapsed.has(o.id)}"` : ""} class="object-row ${o.kind ? "group-row" : ""} ${selectedIds.has(o.id) ? "selected" : affected.has(o.id) ? "affected" : ""} ${!isVisible(state.project, o) ? "hidden" : ""} ${isLocked(state.project, o) ? "locked" : ""}" style="--depth:${Math.min(depth, 5)}">
+  ) => `<div data-reorder-id="${esc(o.id)}" role="treeitem" aria-level="${depth + 2}" aria-selected="${selectedIds.has(o.id)}" ${o.kind ? `aria-expanded="${!state.collapsed.has(o.id)}"` : ""} class="object-row ${o.kind ? "group-row" : ""} ${selectedIds.has(o.id) ? "selected" : affected.has(o.id) ? "affected" : ""} ${!isVisible(state.project, o) ? "hidden" : ""} ${isLocked(state.project, o) ? "locked" : ""} ${focusClass(state.project, o, state.isolation)}" style="--depth:${Math.min(depth, 5)}">
     <button class="drag-grip" data-tree-grip aria-label="Reorder ${esc(o.name)}">${icon("grip")}</button>
     <button class="selection-check" data-check="${esc(o.id)}" aria-label="Select ${esc(o.name)}" aria-pressed="${selectedIds.has(o.id) ? "true" : affected.has(o.id) ? "mixed" : "false"}"><span>${selectedIds.has(o.id) ? "✓" : affected.has(o.id) ? "−" : ""}</span></button>
     ${o.kind ? `<button class="tree-toggle" data-expand="${esc(o.id)}" aria-label="${state.collapsed.has(o.id) ? "Expand" : "Collapse"} ${esc(o.name)}">${state.collapsed.has(o.id) ? "▸" : "▾"}</button>` : '<span class="tree-toggle"></span>'}
@@ -971,9 +972,24 @@ function renderPanels() {
       ? ""
       : '<p class="empty-list">Draw, add lettering or import artwork.</p>');
   $("selection-count").textContent = affected.size
-    ? `${affected.size} selected${state.isolation ? " · focus mode" : ""}`
+    ? `${affected.size} selected${state.isolation ? " · Focus Mode" : ""}`
     : "Select artwork";
   $("exit-isolation").hidden = !state.isolation;
+  document.body.classList.toggle("focus-active", !!state.isolation);
+  document
+    .querySelector(".stage-shell")
+    .setAttribute(
+      "aria-label",
+      state.isolation
+        ? `Design workspace · Focus Mode: ${nodeById(state.project, state.isolation)?.name || state.project.name}`
+        : "Design workspace",
+    );
+  if (state.isolation)
+    $("object-list").setAttribute(
+      "aria-description",
+      "Focus Mode is active. Dimmed artwork is temporarily outside the focused scope; eye controls still show manual visibility.",
+    );
+  else $("object-list").removeAttribute("aria-description");
   $("undo").disabled = !history.length;
   $("redo").disabled = !future.length;
   for (const id of ["move-up", "move-down", "duplicate", "delete"])

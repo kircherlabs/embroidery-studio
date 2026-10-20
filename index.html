@@ -49,6 +49,13 @@
         <button id="toggle-sequence" aria-label="Toggle stitch sequence panel">
           Sequence
         </button>
+        <button
+          id="toggle-tools"
+          aria-controls="design-tools"
+          aria-expanded="true"
+        >
+          Tools
+        </button>
         <button id="maximize-canvas" aria-pressed="false">⛶ Canvas</button>
         <button id="reset-layout" aria-label="Reset workspace layout">↺</button>
       </div>
@@ -209,19 +216,13 @@
             ><span>Changing the hoop does not resize artwork.</span>
           </div>
         </details>
-        <div class="tool-context" aria-label="Active drawing tool">
-          <div class="stage-top">
-            <div>
-              <span class="eyebrow" id="stage-kicker">DESIGN WORKSPACE</span>
-              <span id="stage-hint"
-                >Select an object to refine its stitches</span
-              >
-            </div>
-            <span class="unit-label">mm</span>
-            <span id="navigation-hint"
-              >Wheel to zoom · H to pan · View to fit</span
-            >
-          </div>
+        <div class="workspace-description">
+          <span id="stage-hint">Select and move artwork</span>
+          <span id="navigation-hint"
+            >Wheel to zoom · H to pan · View to fit</span
+          >
+        </div>
+        <div class="tool-context" aria-label="Active drawing tool" hidden>
           <div
             id="draw-actions"
             role="toolbar"
@@ -326,7 +327,7 @@
           </div>
         </div>
         <div class="canvas-area">
-          <div class="tool-rail">
+          <div class="tool-rail" id="design-tools">
             <button id="tools-prev" aria-label="Previous drawing tools">
               ‹
             </button>
@@ -369,6 +370,7 @@
           <div class="canvas-surface">
             <canvas
               id="stage"
+              aria-describedby="stage-hint navigation-hint"
               tabindex="0"
               aria-label="Embroidery design canvas. Use drawing tools, click to place nodes, Enter to finish, Escape to cancel."
             ></canvas>
@@ -563,7 +565,7 @@
     <footer class="status-bar">
       <span id="status">Ready</span
       ><span
-        >40 wt thread presets <i>·</i> v0.12.1 <i>·</i>
+        >40 wt thread presets <i>·</i> v0.12.2 <i>·</i>
         <a
           href="https://github.com/kircherlabs/embroidery-studio"
           target="_blank"

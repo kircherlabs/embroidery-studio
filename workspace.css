@@ -352,10 +352,16 @@
     outline-color: var(--accent);
   }
 }
-.stage-top {
-  gap: 4px;
-  display: grid;
-  grid-template-columns: 1fr auto;
+.workspace-description {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  pointer-events: none;
 }
 .tool-context {
   display: flex;
@@ -368,30 +374,6 @@
   background: #e3e6d9;
   color: #34503a;
   border-bottom: 1px solid #bac4b2;
-}
-.tool-context .stage-top {
-  position: static;
-  flex: 1;
-  min-width: 0;
-  z-index: auto;
-  pointer-events: auto;
-  grid-template-columns: minmax(0, 1fr) auto;
-}
-.tool-context .stage-top > div {
-  min-width: 0;
-}
-.tool-context .stage-top #stage-hint,
-.tool-context #navigation-hint {
-  display: block;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.tool-context .stage-top #stage-hint {
-  font-size: 10px;
-}
-.tool-context .stage-top .eyebrow {
-  margin-bottom: 2px;
 }
 .tool-context #draw-actions {
   position: static;
@@ -426,9 +408,6 @@
   display: block;
 }
 @container drawing-workspace (max-width: 640px) {
-  .tool-context:has(#draw-actions:not([hidden])) .stage-top {
-    display: none;
-  }
   .tool-context #draw-actions {
     width: 100%;
     display: grid;
@@ -458,10 +437,6 @@
     min-height: 36px;
     padding: 2px 8px;
   }
-  .tool-context .eyebrow,
-  .tool-context #navigation-hint {
-    display: none;
-  }
   .tool-context #draw-actions button {
     min-height: 30px;
     padding: 5px 8px;
@@ -469,11 +444,6 @@
   .tool-context #draw-actions {
     gap: 2px 6px;
   }
-}
-#navigation-hint {
-  grid-column: 1/-1;
-  font-size: 9px;
-  color: #5c6f55;
 }
 .canvas-controls {
   position: relative;
@@ -780,6 +750,13 @@
   display: inline-flex;
 }
 @media (max-width: 360px) {
+  .workspace-bar .panel-toggles {
+    gap: 2px;
+  }
+  .workspace-bar .panel-toggles button {
+    padding: 5px 6px;
+    font-size: 10px;
+  }
   .app-header .project-name {
     width: 100px;
     max-width: 100px;
@@ -858,8 +835,8 @@
   overflow-y: auto;
 }
 /* Pencil capture must not move the camera when Finish/Closed controls appear. */
-.tool-context:has([data-vector-option="pencil"]:not([hidden])),
-.tool-context:has([data-vector-option="rails"]:not([hidden])) {
+.tool-context:has(#vector-controls [data-vector-option="pencil"]:not([hidden])),
+.tool-context:has(#vector-controls [data-vector-option="rails"]:not([hidden])) {
   height: 126px;
 }
 #rail-node-controls {

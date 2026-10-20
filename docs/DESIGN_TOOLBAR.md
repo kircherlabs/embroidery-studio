@@ -1,4 +1,4 @@
-# Design toolbar — 0.12.1
+# Design toolbar — 0.12.2
 
 The design tools use native 24 × 24 SVG icons in four compact groups above the
 canvas. Dividers separate groups without permanent headings or descriptions.
@@ -6,6 +6,19 @@ Light and dark system preferences use the existing workspace colors, with an
 accented active tool. Coarse pointers get 44 px tool targets; fine pointers get
 40 px targets. On narrow windows, swipe/scroll horizontally or use the arrow
 buttons. Shapes expands inline, preserving every existing shape tool.
+
+The **Tools** button beside Objects, Properties and Sequence hides or restores
+the icon row. Hidden tools reclaim their full height for the canvas. The choice
+is stored in the existing device workspace preferences, independently of project
+files, and survives reloads and tab changes. From Stitch preview, Tools opens
+Design with the toolbar shown. Canvas maximization temporarily hides the icon
+row; Restore returns its previous visibility. Reset workspace restores it.
+
+The redundant workspace title, description and millimeter badge are removed.
+Navigation guidance remains in Help, tooltips and the canvas's accessible
+description. Select, Pan and shape dragging use no instruction banner. Necessary
+Finish/Cancel and vector-editing controls remain docked outside the artwork,
+even when tool icons are hidden; unfinished paths and active tools are retained.
 
 | Group               | Visible tool name | Existing action / shortcut                                       |
 | ------------------- | ----------------- | ---------------------------------------------------------------- |

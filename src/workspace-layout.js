@@ -3,12 +3,14 @@ export const defaultLayout = () => ({
   left: 300,
   right: 280,
   bottom: 240,
+  tools: true,
   open: { left: true, right: true, bottom: true },
   compactOpen: { left: false, right: false, bottom: false },
 });
 export function readLayout(value) {
   const result = defaultLayout();
   if (!value || typeof value !== "object") return result;
+  if (typeof value.tools === "boolean") result.tools = value.tools;
   for (const key of ["left", "right", "bottom"]) {
     if (Number.isFinite(value[key]))
       result[key] = Math.max(
@@ -31,7 +33,7 @@ export function panelLimits(side, width, height, other = 0, compact = false) {
         );
   return { min: Math.min(side === "bottom" ? 150 : 240, max), max };
 }
-export function installWorkspace({ fit, openPreview }) {
+export function installWorkspace({ fit, openPreview, openDesign }) {
   const $ = (id) => document.getElementById(id),
     root = document.querySelector(".workspace"),
     shell = document.querySelector(".stage-shell"),
@@ -195,6 +197,9 @@ export function installWorkspace({ fit, openPreview }) {
   function apply() {
     root.classList.toggle("compact-workspace", compactMedia.matches);
     root.classList.toggle("is-maximized", maximized);
+    const toolsVisible = !maximized && viewMode === "design" && state.tools;
+    $("design-tools").hidden = !toolsVisible;
+    $("toggle-tools").setAttribute("aria-expanded", String(toolsVisible));
     for (const key of Object.keys(panels)) {
       const open = visible(key),
         b = bounds(key),
@@ -222,6 +227,14 @@ export function installWorkspace({ fit, openPreview }) {
     $("maximize-canvas").setAttribute("aria-pressed", String(maximized));
     $("maximize-canvas").textContent = maximized ? "↙ Restore" : "⛶ Canvas";
   }
+  $("toggle-tools").onclick = () => {
+    const opening = maximized || viewMode !== "design" || !state.tools;
+    maximized = false;
+    if (viewMode !== "design") openDesign?.();
+    state.tools = opening;
+    apply();
+    save();
+  };
   $("maximize-canvas").onclick = () => {
     maximized = !maximized;
     apply();

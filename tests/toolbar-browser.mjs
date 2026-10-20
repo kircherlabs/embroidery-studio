@@ -34,6 +34,11 @@ try {
   assert(await page.locator("#simulator").isHidden());
   assert(await page.locator("#resize-bottom").isHidden());
   const design = await page.locator("#stage").boundingBox();
+  assert.equal(await page.locator("#stage-kicker, .stage-top").count(), 0);
+  assert(await page.locator(".tool-context").isHidden());
+  const machine = await page.locator(".workspace-machine").boundingBox();
+  const toolbar = await page.locator(".tool-rail").boundingBox();
+  assert(Math.abs(toolbar.y - machine.y - machine.height) < 1);
   assert.equal(await page.locator(".tool-group").count(), 4);
   for (const [i, [name, keys]] of TOOL_GROUPS.entries()) {
     assert.equal(
@@ -167,6 +172,82 @@ try {
   await page.reload();
   await page.waitForFunction(() => window.studio?.getPlan());
   assert(await page.locator("#simulator").isHidden());
+  // Toolbar visibility is a device layout preference, never an artwork edit.
+  const layoutBaseline = await page.evaluate(() => ({
+    project: window.studio.getProject(),
+    events: window.studio.getPlan().events,
+  }));
+  const toolsToggle = page.locator("#toggle-tools");
+  const shown = await page.locator("#stage").boundingBox();
+  await toolsToggle.click();
+  assert(await page.locator(".tool-rail").isHidden());
+  assert.equal(await toolsToggle.getAttribute("aria-expanded"), "false");
+  const hidden = await page.locator("#stage").boundingBox();
+  assert(hidden.height >= shown.height + 50);
+  await page.reload();
+  await page.waitForFunction(() => window.studio?.getPlan());
+  assert(await page.locator(".tool-rail").isHidden());
+  // The untouched example gets fresh IDs on startup; compare layout actions
+  // within the restored session without confusing example IDs with edits.
+  const restoredBaseline = await page.evaluate(() => ({
+    project: window.studio.getProject(),
+    events: window.studio.getPlan().events,
+  }));
+  assert.deepEqual(
+    restoredBaseline.project.objects.map(({ id, ...o }) => o),
+    layoutBaseline.project.objects.map(({ id, ...o }) => o),
+  );
+  await page.locator("#preview-tab").click();
+  await page.locator("#design-tab").click();
+  assert(await page.locator(".tool-rail").isHidden());
+  await page.locator("#preview-tab").click();
+  await toolsToggle.click();
+  assert.equal(await page.evaluate(() => window.studio.getMode()), "design");
+  assert(await page.locator(".tool-rail").isVisible());
+  await page.locator('[data-tool="run"]').click();
+  const canvas = await page.locator("#stage").boundingBox();
+  await page.mouse.click(
+    canvas.x + canvas.width / 2,
+    canvas.y + canvas.height / 2,
+  );
+  assert.equal(
+    await page.locator("#draw-message").innerText(),
+    "1 points placed",
+  );
+  await toolsToggle.click();
+  assert(await page.locator("#draw-actions").isVisible());
+  assert.equal(
+    await page.locator("#draw-message").innerText(),
+    "1 points placed",
+  );
+  await toolsToggle.click();
+  assert.equal(
+    await page.locator('[data-tool="run"]').getAttribute("aria-pressed"),
+    "true",
+  );
+  await page.locator("#cancel-draw").click();
+  await page.locator('[data-tool="select"]').click();
+  await page.locator("#maximize-canvas").click();
+  assert(await page.locator(".tool-rail").isHidden());
+  await page.locator("#maximize-canvas").click();
+  assert(await page.locator(".tool-rail").isVisible());
+  await toolsToggle.click();
+  await page.locator("#reset-layout").click();
+  assert(await page.locator(".tool-rail").isVisible());
+  assert.deepEqual(
+    await page.evaluate(() => window.studio.getProject()),
+    restoredBaseline.project,
+  );
+  assert.deepEqual(
+    await page.evaluate(() => window.studio.getPlan().events),
+    restoredBaseline.events,
+  );
+  await page.screenshot({ path: "test-results/workspace-clean-desktop.png" });
+  await toolsToggle.click();
+  await page.screenshot({
+    path: "test-results/workspace-tools-hidden-desktop.png",
+  });
+  await toolsToggle.click();
   for (const [width, height] of [
     [1280, 800],
     [768, 1024],
@@ -183,6 +264,18 @@ try {
     await mobile.goto(base);
     await mobile.waitForFunction(() => window.studio?.getPlan());
     assert(await mobile.locator("#simulator").isHidden());
+    const toggle = mobile.locator("#toggle-tools");
+    const toggleBox = await toggle.boundingBox();
+    assert(toggleBox.x >= 0 && toggleBox.x + toggleBox.width <= width);
+    await toggle.tap();
+    assert(await mobile.locator(".tool-rail").isHidden());
+    assert(await mobile.locator(".tool-context").isHidden());
+    if (width === 390)
+      await mobile.screenshot({
+        path: "test-results/workspace-tools-hidden-mobile.png",
+      });
+    await toggle.tap();
+    assert(await mobile.locator(".tool-rail").isVisible());
     const names = mobile.locator(".drawing-tools [data-tool-name]");
     for (const key of TOOL_GROUPS.flatMap((g) => g[1])) {
       const el =
@@ -244,7 +337,7 @@ try {
   }
   assert.deepEqual(errors, []);
   console.log(
-    "Four SVG tool groups, all 14 mappings, distinct stitch icons, Hints On/Off names, keyboard/touch tips, theme/viewport layouts and preview-only sequence passed without changing project data or needles.",
+    "Four SVG tool groups, all 14 mappings, Hints On/Off, keyboard/touch tips, banner-free workspace, saved toolbar visibility, draft preservation, maximize/reset, mobile layouts and preview-only sequence passed without changing project data or needles.",
   );
 } finally {
   await browser.close();

@@ -1,6 +1,6 @@
 # Professional workspace roadmap and implementation audit
 
-## Current status — 0.12.1
+## Current status — 0.12.2
 
 | Milestone                    | Status   | Delivered / remaining                                                                                                           |
 | ---------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------- |

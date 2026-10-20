@@ -123,6 +123,8 @@ const descriptions = {
     "Ignore pixels at or below this opacity threshold, from 0 transparent to 254 nearly opaque. Use the preview to inspect antialiased edges.",
   "toggle-sequence":
     "Open Stitch preview to inspect sequence, timeline and playback. In preview, toggle its panel. Design mode automatically hides it without changing generated commands.",
+  "toggle-tools":
+    "Show or hide the design-tool icon bar to give the canvas more room. Your active tool and unfinished path stay intact. From Stitch preview, opens Design. This workspace preference is saved on this device.",
   "maximize-canvas":
     "Temporarily hide all three panels to expand the canvas. Restore or Escape brings back your previous panel sizes and visibility.",
   "reset-layout":

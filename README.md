@@ -36,6 +36,9 @@ embroidery and lettering tools. Hover always identifies a tool; **Hints: On** ad
 its description. Swipe/scroll or use the arrows when the tools exceed the available
 width. The sequence pane belongs to **Stitch preview** and automatically hides in
 **Design**. The **Sequence** button opens preview without changing artwork.
+**Tools** hides or restores the design-tool bar and remembers your preference.
+The canvas has no permanent workspace-description banner; necessary drawing and
+editing controls stay outside the artwork, including when the icon bar is hidden.
 See [tool names, shortcuts and workspace behavior](docs/DESIGN_TOOLBAR.md).
 
 ## Effects, sewing styles and repeats

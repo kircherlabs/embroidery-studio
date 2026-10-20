@@ -26,12 +26,15 @@ test("layout restoration validates stored sizes and retains independent compact 
     bottom: 99999,
     open: { left: false, right: "bad" },
     compactOpen: { bottom: true },
+    tools: false,
   });
   assert.equal(s.left, 240);
   assert.equal(s.right, 280);
   assert.equal(s.bottom, 600);
   assert.deepEqual(s.open, { left: false, right: true, bottom: true });
   assert.equal(s.compactOpen.bottom, true);
+  assert.equal(s.tools, false);
+  assert.equal(readLayout({ tools: "invalid" }).tools, true);
   assert.deepEqual(readLayout(null), defaultLayout());
   assert.deepEqual(panelLimits("left", 1200, 700, 280), { min: 240, max: 600 });
   assert(panelLimits("right", 1100, 650, 550).max <= 230);

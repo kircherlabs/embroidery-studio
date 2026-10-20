@@ -1,3 +1,8 @@
+import { installThreads } from "./thread-ui.js";
+import { threadTargets } from "./thread-assignment.js";
+import { exportPreflight, checkRoundTrip } from "./export-safety.js";
+import { installEquipment } from "./equipment-ui.js";
+import { getMachine, hoopOf } from "./equipment.js";
 import {
   preferredExport,
   exportGuidance,
@@ -53,7 +58,6 @@ import {
   uid,
   ellipse,
   PALETTE,
-  MACHINES,
   validateProject,
 } from "./model.js";
 import { analyze } from "./engine.js";
@@ -166,7 +170,7 @@ let history = [],
 const pendingFormats = new Map();
 let clipboard = null;
 let sewingStyleClipboard = null;
-let workspaceLayout, arrangeMenu;
+let workspaceLayout, arrangeMenu, equipmentUI, threadUI;
 const worker = new Worker(new URL("./digitize-worker.js", import.meta.url), {
   type: "module",
 });
@@ -972,10 +976,7 @@ function renderPanels() {
   $("small-detail").value = planning.smallDetail;
   if (document.activeElement !== $("project-name"))
     $("project-name").value = state.project.name;
-  $("machine").value = state.project.machine;
-  const m = MACHINES[state.project.machine];
-  $("machine-summary").textContent = m.name;
-  $("hoop-size").textContent = `${m.width} × ${m.height} mm`;
+  equipmentUI?.render();
   $("object-count").textContent = state.project.objects.length;
   const selectedIds = new Set(selectionIds(state)),
     affected = new Set(selectedLeaves(state).map((o) => o.id));
@@ -1098,6 +1099,7 @@ function renderProperties() {
       mutate,
       toast,
       ask,
+      threads: threadUI,
       refresh: renderProperties,
       palette: PALETTE,
       manualEditor,
@@ -1139,6 +1141,8 @@ function renderProperties() {
           toast(
             `${changed} artwork objects recolored. Geometry, unrelated action colors and sewing order retained. Locked objects were kept.`,
           );
+          if (result.matchThreads)
+            threadUI.match(old.filter((o) => !isLocked(state.project, o)));
           return;
         }
         if (
@@ -1199,6 +1203,7 @@ function renderProperties() {
           state.selection = id;
           state.selectionIds = [id];
         });
+        if (result.matchThreads) threadUI.match(result);
       },
     })
   )
@@ -1280,6 +1285,7 @@ function highlightManual() {
   }
 }
 function renderStats() {
+  equipmentUI?.render();
   const stats = state.plan?.stats;
   $("stats").innerHTML = stats
     ? `<div><strong>${fmt(stats.stitches)}</strong><span>Sewing stitches</span></div><div><strong>${stats.colors}</strong><span>Color blocks · ${stats.uniqueColors} threads</span></div><div><strong>${stats.manualChanges}</strong><span>Manual thread changes</span></div><div><strong>${fmt(stats.jumps)}</strong><span>Jumps · ${fmt(stats.trims)} trims</span></div><div><strong>${num(stats.minutes, 0)} <small>min</small></strong><span>Estimated machine time</span></div><div><strong>${num(stats.thread)} <small>m</small></strong><span>Top thread path</span></div>`
@@ -1302,7 +1308,9 @@ function renderStats() {
   }
   $("fit-status").textContent = stats
     ? stats.fits
-      ? "✓ Design fits selected hoop"
+      ? hoopOf(state.project).fieldShape === "oval-envelope"
+        ? "Within field bounds · check oval template"
+        : "✓ Design fits selected hoop"
       : "! Design exceeds hoop"
     : "Generate a design to check fit";
   $("fit-status").classList.toggle("bad", !!stats && !stats.fits);
@@ -1681,10 +1689,10 @@ async function exportDialog() {
   try {
     preferences = JSON.parse(localStorage.getItem(EXPORT_PREFERENCE_KEY)) || {};
   } catch {}
-  const selectedFormat = preferredExport(state.project.machine, preferences);
+  const selectedFormat = preferredExport(state.project, preferences);
   const pending = ask(
     "Ready for the machine",
-    `<p><strong>${esc(state.project.name)}</strong><br>${fmt(plan.stats.stitches)} stitches · ${num(plan.stats.bounds.width)} × ${num(plan.stats.bounds.height)} mm · ${esc(MACHINES[state.project.machine].name)}</p><label>Machine format<select id="export-format"><option value="pes">PES v6 · Brother / Baby Lock</option><option value="pec">PEC · Brother</option><option value="dst">DST · Tajima (palette not stored)</option><option value="exp">EXP · Melco (palette not stored)</option><option value="jef">JEF · Janome</option><option value="vp3">VP3 · Husqvarna / Pfaff</option></select></label><p>The local conversion engine downloads on first use. Your design stays in your browser. After export, the simulator displays the stitch sequence decoded from the actual machine file.</p><p>Trims and color handling depend on the file format and machine. Inspect the preview and test on scrap fabric before your final sew-out.</p>`,
+    `<p><strong>${esc(state.project.name)}</strong><br>${fmt(plan.stats.stitches)} stitches · ${num(plan.stats.bounds.width)} × ${num(plan.stats.bounds.height)} mm · ${esc(getMachine(state.project).name)}</p><label>Machine format<select id="export-format"><option value="pes">PES v6 · Brother / Baby Lock</option><option value="pec">PEC · Brother</option><option value="dst">DST · Tajima (palette not stored)</option><option value="exp">EXP · Melco (palette not stored)</option><option value="jef">JEF · Janome</option><option value="vp3">VP3 · Husqvarna / Pfaff</option></select></label><p>The local conversion engine downloads on first use. Your design stays in your browser. After export, the simulator displays the stitch sequence decoded from the actual machine file.</p><p>Trims and color handling depend on the file format and machine. Inspect the preview and test on scrap fabric before your final sew-out.</p>`,
     "Export machine file",
   );
   $("export-format").value = selectedFormat;
@@ -1692,11 +1700,26 @@ async function exportDialog() {
     "afterend",
     '<p class="property-note" id="export-format-guidance"></p>',
   );
-  const updateFormat = () =>
-    ($("export-format-guidance").textContent = exportGuidance(
-      state.project.machine,
-      $("export-format").value,
-    ));
+  $("export-format-guidance").insertAdjacentHTML(
+    "afterend",
+    '<div id="export-safety" role="status"></div>',
+  );
+  const updateFormat = () => {
+    const format = $("export-format").value,
+      check = exportPreflight(state.project, plan.events, format);
+    $("export-format-guidance").textContent = exportGuidance(
+      state.project,
+      format,
+    );
+    $("export-safety").innerHTML =
+      check.errors
+        .map((e) => `<p class="export-error">${esc(e)}</p>`)
+        .join("") +
+      check.warnings
+        .map((w) => `<p class="property-note">${esc(w)}</p>`)
+        .join("");
+    $("dialog-submit").disabled = !!check.errors.length;
+  };
   $("export-format").onchange = updateFormat;
   updateFormat();
   if (!(await pending)) return;
@@ -1710,7 +1733,9 @@ async function exportDialog() {
       events: plan.events,
       name: state.project.name,
     });
-    const stats = analyze(result.events, MACHINES[state.project.machine]);
+    const integrity = checkRoundTrip(plan.events, result.events, ext);
+    if (integrity.errors.length) throw Error(integrity.errors.join(" "));
+    const stats = analyze(result.events, getMachine(state.project));
     if (!stats.fits)
       throw Error(
         "Format conversion moved a command outside the selected hoop. Move the design slightly inward.",
@@ -1720,7 +1745,28 @@ async function exportDialog() {
       preferences[state.project.machine] = ext;
       localStorage.setItem(EXPORT_PREFERENCE_KEY, JSON.stringify(preferences));
     } catch {}
-    state.plan = { events: result.events, stats, warnings: [] };
+    const conversionIssues = exportPreflight(
+      state.project,
+      plan.events,
+      ext,
+    ).warnings.map((message) => ({
+      severity: "info",
+      message,
+      action:
+        "Review the decoded preview and exact machine manual before stitching.",
+    }));
+    if (integrity.addedNeedles)
+      conversionIssues.push({
+        severity: "warning",
+        message: `${integrity.addedNeedles} extra needle positions were required by file-format movement limits.`,
+        action: "Inspect the actual decoded needle sequence before sewing.",
+      });
+    state.plan = {
+      events: result.events,
+      stats,
+      warnings: [],
+      issues: conversionIssues,
+    };
     state.cursor = result.events.length;
     machinePlan = true;
     state.previewSelection = false;
@@ -1735,7 +1781,11 @@ async function exportDialog() {
     stage.render();
     $("status").textContent =
       `Exported ${ext.toUpperCase()} · simulator now shows the decoded machine file`;
-    toast("Machine file downloaded. Preview updated from exported bytes.");
+    toast(
+      integrity.addedNeedles
+        ? `Machine file downloaded with ${integrity.addedNeedles} additional needle positions. Review the decoded preview and Design issues.`
+        : "Machine file downloaded. Preview updated from exported bytes.",
+    );
   } catch (e) {
     toast("Export failed: " + e.message);
     $("status").textContent = "Export failed · " + e.message;
@@ -1782,7 +1832,10 @@ async function importFile(file) {
         { state, ask, mutate, toast, selectTool: () => setTool("select") },
         traceDialog,
       );
-      if (objects) addObjects(objects);
+      if (objects) {
+        addObjects(objects);
+        if (objects.matchThreads) threadUI.match(objects);
+      }
     } else if (
       ["pes", "pec", "dst", "exp", "jef", "vp3", "xxx"].includes(ext)
     ) {
@@ -1905,17 +1958,20 @@ function redo() {
   state.activeOperationId = null;
   changed();
 }
-$("machine").innerHTML = Object.entries(MACHINES)
-  .map(([k, v]) => `<option value="${k}">${v.name}</option>`)
-  .join("");
+equipmentUI = installEquipment({
+  state,
+  mutate,
+  ask,
+  toast,
+  fit: () => stage.fit(),
+  fitDesign: () => stage.fitDesign(),
+  command: editCommand,
+});
+if (!restored) equipmentUI.applyDefault(state.project);
 $("project-name").onchange = (e) =>
   mutate(
     () => (state.project.name = e.target.value.trim() || "Untitled design"),
   );
-$("machine").onchange = (e) => {
-  mutate(() => (state.project.machine = e.target.value));
-  stage.fit();
-};
 $("object-list").onclick = (e) => {
   const check = e.target.closest("[data-check]"),
     row = e.target.closest(".object-row"),
@@ -2051,9 +2107,10 @@ $("new-project").onclick = async () => {
       state.project = {
         version: 1,
         name: "Untitled design",
-        machine: state.project.machine,
+        machine: "se700",
         objects: [],
       };
+      equipmentUI.applyDefault(state.project);
       state.selection = null;
       state.selectionIds = [];
       state.activeOperationId = null;
@@ -2650,7 +2707,10 @@ $("help").onclick = () =>
     "Got it",
   );
 document.addEventListener("keydown", (e) => {
-  if ($("dialog").open || /INPUT|SELECT|TEXTAREA/.test(e.target.tagName))
+  if (
+    document.querySelector("dialog[open]") ||
+    /INPUT|SELECT|TEXTAREA/.test(e.target.tagName)
+  )
     return;
   if (
     (e.code === "Space" || e.key === "Enter") &&
@@ -2770,6 +2830,23 @@ document.addEventListener("drop", async (e) => {
   e.preventDefault();
   for (const file of e.dataTransfer.files) await importFile(file);
 });
+threadUI = installThreads({
+  state,
+  mutate,
+  toast,
+  settingsChanged: () => equipmentUI.reload(),
+});
+$("thread-library").onclick = () => {
+  const ids = selectionIds(state),
+    one = ids.length === 1 ? nodeById(state.project, ids[0]) : null;
+  threadUI.open(
+    threadTargets(
+      selectedLeaves(state, { editable: true }),
+      state,
+      !!one && !one.kind,
+    ),
+  );
+};
 const drawingStyleUI = installDrawingStyle({ state, ask, mutate, toast });
 renderPanels();
 renderStats();

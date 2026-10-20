@@ -1,4 +1,5 @@
-import { object, uid, objectBounds, MACHINES } from "./model.js";
+import { getMachine } from "./equipment.js";
+import { object, uid, objectBounds } from "./model.js";
 import { clipping, fillPolygons } from "./geometry.js";
 import { shapeRings, detachSource, roundArtwork } from "./smart-geometry.js";
 import { makeOperation, applique, offsetRings } from "./operations.js";
@@ -183,7 +184,7 @@ export function alignReference(p, ids, reference, action) {
         : selectionBounds(leaves(p, [reference]));
   if (reference === "hoop") {
     // Machine dimensions are supplied by callers through p's profile below.
-    const { width: w, height: h } = MACHINES[p.machine];
+    const { width: w, height: h } = getMachine(p);
     Object.assign(ref, {
       minX: -w / 2,
       maxX: w / 2,

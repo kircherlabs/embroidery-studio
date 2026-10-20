@@ -1,3 +1,4 @@
+import { getMachine } from "./equipment.js";
 import {
   selectionBox,
   boxPoint,
@@ -23,7 +24,7 @@ import {
   regenerateRails,
   railWalk,
 } from "./smart-geometry.js";
-import { objectBounds, pointsOf, bounds, MACHINES } from "./model.js";
+import { objectBounds, pointsOf, bounds } from "./model.js";
 import { inside, distance } from "./engine.js";
 import { movementSegments } from "./preview.js";
 import { closedOutlinePreview, drawClosedOutline } from "./outline-preview.js";
@@ -189,7 +190,7 @@ export class Stage {
     this.render();
   }
   get scale() {
-    const m = MACHINES[this.state.project.machine];
+    const m = getMachine(this.state.project);
     return (
       Math.min(
         Math.max(20, this.w - 40) / (m.width + 12),
@@ -338,7 +339,7 @@ export class Stage {
       s = this.state,
       scale = this.scale,
       c = this.center,
-      m = MACHINES[s.project.machine];
+      m = getMachine(s.project);
     this.transformCage = null;
     const selection = selectedLeaves(s, { editable: true, visible: true }),
       selected = selection.length === 1 ? selection[0] : null,

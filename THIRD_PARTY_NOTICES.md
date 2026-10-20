@@ -9,6 +9,11 @@ License: MIT. Copyright (c) 2018. The full license is included in the archive an
 in `vendor/pyembroidery-LICENSE.txt`. Only `.py` source modules and the license
 are packaged. No third-party executable is bundled.
 
+`src/vp3_compat.py` adapts the VP3 reader from the same MIT-licensed pinned
+source. It corrects absolute color-block start handling when X or Y is zero.
+The archive remains unchanged; the compatibility reader retains upstream license
+and copyright attribution. No writer bytes are altered by this reader correction.
+
 ## Pyodide
 
 Machine import/export lazily loads Pyodide **0.27.7** from
@@ -57,3 +62,12 @@ The stroke-satin topology, branch partition, rails and travel algorithms are
 original implementations. Ink/Stitch documentation, topology-thinning descriptions
 and the MIT MAT/SAT project were reviewed conceptually; no source from those
 projects is bundled. See `docs/SATIN.md` for references and limits.
+
+## Personal physical thread catalogs
+
+No third-party physical thread RGB catalog or official conversion dataset is bundled.
+Manufacturer names identify user-provided products and do not imply endorsement or
+identical colors between brands. The existing MIT PEC palette is machine-format data,
+not a physical Brother/New brothread/Simthread product catalog. Local user import does
+not grant redistribution rights. Build policy blocks known research files and physical
+catalog assets until an explicit redistribution review is completed.

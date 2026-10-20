@@ -1,3 +1,4 @@
+import { sewingThreadKey } from "./thread-records.js";
 import { bounds, objectBounds } from "./model.js";
 import { resolvedLinkedProject } from "./linked-artwork.js";
 import { isVisible, ancestors } from "./hierarchy.js";
@@ -20,7 +21,9 @@ export const PLANNING_DEFAULTS = {
 export const planningOptions = (p) => ({ ...PLANNING_DEFAULTS, ...p.planning });
 const blocks = (units) =>
   units.reduce(
-    (n, u, i) => n + (i === 0 || u.color !== units[i - 1].color ? 1 : 0),
+    (n, u, i) =>
+      n +
+      (i === 0 || sewingThreadKey(u) !== sewingThreadKey(units[i - 1]) ? 1 : 0),
     0,
   );
 const equalRing = (a, b) =>
@@ -41,7 +44,7 @@ function matchingOutline(o, objects) {
     !fill ||
     fill.visible === false ||
     fill.type !== "fill" ||
-    fill.color.toLowerCase() !== o.color.toLowerCase()
+    sewingThreadKey(fill) !== sewingThreadKey(o)
   )
     return new Set();
   if (o.svgStrokeWidth !== undefined && o.svgStrokeWidth > 0.15)
@@ -225,13 +228,17 @@ function prepareArtwork(project) {
   let color = null,
     last = { x: 0, y: 0 };
   while (ready.size) {
-    let candidates = [...ready].filter((i) => groups[i].color === color);
+    let candidates = [...ready].filter(
+      (i) => sewingThreadKey(groups[i]) === color,
+    );
     if (!candidates.length) {
       const first = [...ready].sort(
         (a, b) => groups[a].index - groups[b].index,
       )[0];
-      color = groups[first].color;
-      candidates = [...ready].filter((i) => groups[i].color === color);
+      color = sewingThreadKey(groups[first]);
+      candidates = [...ready].filter(
+        (i) => sewingThreadKey(groups[i]) === color,
+      );
     }
     const entry = (u) => {
       const b = u.bounds;
@@ -314,6 +321,9 @@ function prepareBasicPlan(project) {
               : "command",
             closed: false,
             underlay: false,
+            physicalThread: operationsOf(o).find(
+              (op) => op.enabled !== false && isSewing(op),
+            )?.physicalThread,
             color:
               operationsOf(o).find((op) => op.enabled !== false && isSewing(op))
                 ?.color || o.color,
@@ -325,7 +335,12 @@ function prepareBasicPlan(project) {
     const fill = o.operations.find(
       (op) => op.enabled !== false && ["fill", "column"].includes(op.type),
     );
-    return { ...o, type: fill ? "fill" : "run", color: fill?.color || o.color };
+    return {
+      ...o,
+      type: fill ? "fill" : "run",
+      color: fill?.color || o.color,
+      physicalThread: fill?.physicalThread || o.physicalThread,
+    };
   });
   const prepared = prepareArtwork({
       ...project,

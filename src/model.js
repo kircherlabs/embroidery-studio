@@ -1,3 +1,5 @@
+import { validateAssignment } from "./thread-records.js";
+import { validateEquipment } from "./equipment.js";
 import { validateReferences } from "./references.js";
 import { sourceTransform } from "./smart-geometry.js";
 export const VERSION = 1;
@@ -13,6 +15,7 @@ export const PALETTE = [
   "#eee2c9",
   "#292c31",
 ];
+// Legacy adapter retained for external callers and old projects. Runtime uses getMachine(project).
 export const MACHINES = {
   se700: {
     name: "Brother SE700",
@@ -22,7 +25,7 @@ export const MACHINES = {
     maxStitch: 7,
   },
   brother130: {
-    name: "Brother · 130 × 180",
+    name: "Generic field · 130 × 180 (legacy Brother label)",
     width: 130,
     height: 180,
     speed: 600,
@@ -195,10 +198,10 @@ export function validateProject(p) {
     !p ||
     p.version !== VERSION ||
     !Array.isArray(p.objects) ||
-    p.objects.length > 1000 ||
-    !MACHINES[p.machine]
+    p.objects.length > 1000
   )
     throw Error("Unsupported or invalid studio project.");
+  validateEquipment(p);
   if (typeof p.name !== "string" || p.name.length > 200)
     throw Error("Invalid project name.");
   if (
@@ -386,6 +389,7 @@ export function validateProject(p) {
         ))
     )
       throw Error("Invalid construction artwork links.");
+    if (n.physicalThread !== undefined) validateAssignment(n.physicalThread);
     if (n.operations !== undefined) {
       if (
         n.kind ||
@@ -397,6 +401,8 @@ export function validateProject(p) {
       if (new Set(n.operations.map((op) => op.id)).size !== n.operations.length)
         throw Error("Duplicate operation identifiers.");
       for (const op of n.operations) {
+        if (op.physicalThread !== undefined)
+          validateAssignment(op.physicalThread);
         if (
           !op ||
           (op.constructionStage !== undefined &&

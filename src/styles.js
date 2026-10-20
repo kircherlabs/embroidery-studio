@@ -40,7 +40,12 @@ export function setEmbroideryStyle(o, style) {
       : style === "fill-border"
         ? ["fill", "border"]
         : [style]
-  ).map((type) => makeOperation(type, source));
+  ).map((type) => ({
+    ...makeOperation(type, source),
+    ...(source.physicalThread
+      ? { physicalThread: structuredClone(source.physicalThread) }
+      : {}),
+  }));
   if (style === "combined") o.operations[1].underlay = false;
 }
 
@@ -66,6 +71,7 @@ export function editOperations(objects, state, single, key, value) {
     if (o.type === "manual") {
       if (key === "color") {
         o.color = value;
+        delete o.physicalThread;
         changed++;
       } else skipped++;
       continue;
@@ -125,7 +131,10 @@ export function editOperations(objects, state, single, key, value) {
           op.underlay = false;
         op.closed = closedArtwork(o);
         if (single) state.activeOperationId = op.id;
-      } else op[key] = value;
+      } else {
+        if (key === "color") delete op.physicalThread;
+        op[key] = value;
+      }
       changed++;
     }
   }

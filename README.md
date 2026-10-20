@@ -1,7 +1,7 @@
 # Embroidery Studio
 
 A free, browser-based embroidery workbench for drawing, digitizing and inspecting
-machine embroidery. Designed around the **Brother SE700's 100 × 100 mm field**.
+machine embroidery. Includes documented consumer machine/hoop profiles and custom design fields, while preserving the **Brother SE700's 100 × 100 mm workflow**.
 No account, paid service, design upload or backend required.
 
 **[Open the studio](https://kircherlabs.github.io/embroidery-studio/)**
@@ -55,6 +55,21 @@ While drawing points, **Ctrl/Cmd Z** removes the last point, **Shift Ctrl/Cmd Z*
 restores it, and **Backspace** or the contextual undo icon removes one point.
 Finishing/canceling restores ordinary project history. Export remembers successful
 format choices per machine; the exact SE700 profile initially selects PES.
+
+## Equipment
+
+Open **Machine & hoop** for **Brand → Model → Hoop**, generic design fields,
+custom millimeter/inch profiles, saved hoop presets and **Use as My Machine**.
+Equipment changes never resize artwork. Custom profiles travel with saved projects;
+local defaults are separate. Documented specifications and software/hardware export
+validation remain distinct. See [controls and evidence](docs/MACHINE_PROFILES.md)
+and [stage-by-stage progress](docs/EQUIPMENT_THREADS_PROGRESS.md).
+
+**Threads** opens the optional personal thread library. Import CSV/JSON/GPL locally,
+search and filter brand/product line/spool numbers, or add your own labeled spool.
+Assign a physical product to a sewing action while retaining the original design
+color; saved projects keep that identity even if the catalog is missing. No unlicensed
+manufacturer color chart is bundled. See [thread library and storage](docs/THREAD_LIBRARY.md).
 
 ## Design tools and workspace
 
@@ -360,3 +375,12 @@ readable. See [editing architecture and limits](docs/EDITING.md).
 MIT licensed. pyembroidery is vendored under MIT with its license. Pyodide loads
 unmodified under its own license. No Ink/Stitch GPL code is copied. See
 [third-party notices](THIRD_PARTY_NOTICES.md).
+
+
+Physical threads are optional: **Threads** opens personal CSV/JSON/GPL catalogs,
+reviewed perceptual matches and spool assignment. Record owned spools in **Collection
+details**, filter to owned threads, and use **Project threads** for actual requirements
+and a missing-spool shopping list. **Backup / restore** transfers local equipment and
+thread preferences separately from projects. No unlicensed manufacturer color tables
+are bundled; screen matches are approximate. See [thread library](docs/THREAD_LIBRARY.md)
+and the [stage report](docs/EQUIPMENT_THREADS_PROGRESS.md) for verification and limits.

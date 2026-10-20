@@ -117,8 +117,14 @@ export function transferStyle(objects, style, mode, state = {}) {
         ? style.actions.map((s) => build(s))
         : existing.map((op) => {
             if (!selected.has(op.id)) return structuredClone(op);
-            if (mode === "color")
-              return { ...structuredClone(op), color: style.action.color };
+            if (mode === "color") {
+              const next = {
+                ...structuredClone(op),
+                color: style.action.color,
+              };
+              delete next.physicalThread;
+              return next;
+            }
             return build(style.action, op);
           });
     pending.push([o, ops]);

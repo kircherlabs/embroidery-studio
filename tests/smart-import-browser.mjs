@@ -108,6 +108,13 @@ try {
       { kind, count },
     );
   const begin = async (data, name) => {
+    // Closing a trace dialog is not the end of file processing: source storage
+    // and the import handler's finally block can still be pending. Do not race
+    // the next upload against that handler's busy guard/input reset.
+    await page.waitForFunction(
+      () => document.getElementById("file-input").value === "",
+    );
+    console.log("Begin image import", name);
     await page.locator("#file-input").setInputFiles({
       name,
       mimeType: name.endsWith(".jpg") ? "image/jpeg" : "image/png",
@@ -133,6 +140,9 @@ try {
       id,
     );
     await ready();
+    await page.waitForFunction(
+      () => document.getElementById("file-input").value === "",
+    );
   };
   const latest = async () => {
     const p = await project(),

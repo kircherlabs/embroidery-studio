@@ -22,6 +22,7 @@ jobs:
           python-version: "3.12"
       - run: node --test tests/*.test.mjs
       - run: python tests/test_codec.py
+      - run: python tests/test_format_safety.py
       - run: npm install --no-save --package-lock=false playwright@1.56.1
       - run: npx playwright install --with-deps chromium
       - name: Browser workflow and mobile checks
@@ -29,6 +30,11 @@ jobs:
           node scripts/serve.mjs > /tmp/studio-preview.log 2>&1 &
           STUDIO_PID=$!
           trap 'kill "$STUDIO_PID"' EXIT
+          node tests/thread-inventory-browser.mjs
+          node tests/thread-matching-browser.mjs
+          node tests/threads-browser.mjs
+          node tests/export-safety-browser.mjs
+          node tests/equipment-browser.mjs
           node tests/smart-import-browser.mjs
           node tests/draft-undo-browser.mjs
           node tests/workspace-browser.mjs

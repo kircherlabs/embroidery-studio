@@ -1,9 +1,11 @@
+import { sewingThreadKey } from "./thread-records.js";
+import { getMachine } from "./equipment.js";
 import { centerlineRails, paceRails, shortInnerTurns } from "./satin-rails.js";
 import { strokeSatin } from "./stroke-satin.js";
 import { manualSatin } from "./manual-satin.js";
 import { designIssues } from "./design-issues.js";
 import { quantizeColumnPaths } from "./column-routing.js";
-import { bounds, MACHINES } from "./model.js";
+import { bounds } from "./model.js";
 import { inside, distance, safeConnector, simplifyPath } from "./geometry.js";
 import { preparePlan } from "./planning.js";
 import { routeFill } from "./fill-routing.js";
@@ -401,9 +403,10 @@ export function generate(project) {
         });
   const events = [],
     warnings = [],
-    machine = MACHINES[project.machine];
+    machine = getMachine(project);
   let last = { x: 0, y: 0 },
     lastColor = null,
+    lastThread = null,
     activeRegion = null,
     activeOperation = null,
     activeOperationName = null,
@@ -418,6 +421,7 @@ export function generate(project) {
     regionId = activeRegion,
     operationId = activeOperation,
   ) => {
+    const source = regionId === activeRegion ? activeUnit : previousObject;
     const e = {
       cmd,
       x: Math.round(p.x * 10) / 10,
@@ -432,6 +436,7 @@ export function generate(project) {
           ? activeOperationName
           : last.operationName,
       tieOff: activeUnit?.tieOff !== false,
+      ...(source?.physicalThread ? { threadKey: sewingThreadKey(source) } : {}),
     };
     if (
       cmd === "stitch" &&
@@ -683,12 +688,13 @@ export function generate(project) {
         });
     }
     if (paths && !paths.length) continue;
-    if (lastColor !== o.color) {
+    if (lastThread !== sewingThreadKey(o)) {
       if (lastColor !== null) {
         trimAndLock(previousObject || o);
         emit("color", last, o.color, o.id);
       }
       lastColor = o.color;
+      lastThread = sewingThreadKey(o);
     }
     previousObject = o;
     if (o.type === "manual") {
@@ -934,7 +940,9 @@ export function analyze(events, machine) {
     stops,
     colors: events.length ? changes + 1 : 0,
     uniqueColors: new Set(
-      events.filter((e) => e.cmd === "stitch").map((e) => e.color),
+      events
+        .filter((e) => e.cmd === "stitch")
+        .map((e) => e.threadKey || e.color),
     ).size,
     manualChanges: changes,
     shortStitches,

@@ -1,3 +1,4 @@
+import { getMachine } from "./equipment.js";
 import {
   setArtworkEffects,
   removeArtworkEffects,
@@ -14,7 +15,7 @@ import {
   isVisible,
 } from "./hierarchy.js";
 import { operationsOf, isSewing, OPERATION_TYPES } from "./operations.js";
-import { MACHINES, validateProject } from "./model.js";
+import { validateProject } from "./model.js";
 
 const esc = (s) =>
   String(s).replace(
@@ -194,7 +195,7 @@ export async function repeatDialog(api) {
           (o) => o.type !== "reference" && isVisible(p, o),
         ),
         r = artwork.length ? selectionBounds(artwork) : null,
-        m = MACHINES[p.machine];
+        m = getMachine(p);
       $("repeat-summary").textContent =
         `${(mirror ? 2 : c.count) * source.length} objects total · ${stopCount * (mirror ? 2 : c.count)} construction stops. ${r ? `${r.width.toFixed(1)} × ${r.height.toFixed(1)} mm · ${r.minX >= -m.width / 2 && r.maxX <= m.width / 2 && r.minY >= -m.height / 2 && r.maxY <= m.height / 2 ? "Fits hoop" : "Extends outside hoop; reposition or reduce the pattern before exporting"}.` : "References only · no stitches."}`;
       $("dialog-submit").disabled = false;

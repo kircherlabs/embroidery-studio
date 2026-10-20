@@ -1,3 +1,4 @@
+import { getMachine } from "./equipment.js";
 import { operationObject, supportsMethod } from "./operations.js";
 import {
   preflightConstruction,
@@ -6,7 +7,6 @@ import {
   constructionOperations,
 } from "./construction.js";
 import { selectedLeaves, selectionIds, selectionBounds } from "./hierarchy.js";
-import { MACHINES } from "./model.js";
 import { inside } from "./geometry.js";
 import { setEmbroideryStyle, EMBROIDERY_STYLES } from "./styles.js";
 const esc = (s) =>
@@ -31,7 +31,7 @@ export async function chooseConstruction(api) {
     objects = selectedLeaves(state, { editable: true }).filter(
       (o) => o.type !== "reference",
     ),
-    check = preflightConstruction(objects, MACHINES[project.machine]);
+    check = preflightConstruction(objects, getMachine(project));
   if (!objects.length) return toast("Select editable artwork first.");
   const ok = await ask(
     "Construction presets",
@@ -115,7 +115,7 @@ export async function surroundingPatchDialog(api) {
       $("patch-radius").disabled = kind !== "rounded";
       const issues = preflightConstruction(
         [boundary],
-        MACHINES[p.machine],
+        getMachine(p),
         options.border,
         options,
       ).issues;

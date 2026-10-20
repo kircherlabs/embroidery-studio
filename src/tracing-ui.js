@@ -38,6 +38,7 @@ export async function traceDialog(file, ask, saved = null) {
     <div class="trace-options"><div class="trace-settings"><label>Color detection<select id="trace-mode"><option value="reduced">Reduced Colors</option><option value="detailed">Detailed Colors</option></select></label><label>Target palette<select id="trace-target"><option value="4">4 colors</option><option value="6">6 colors</option><option value="8" selected>8 colors</option><option value="12">12 colors</option><option value="custom">Custom / detailed</option></select></label>${number("Maximum detected colors · 1–128", "raster-colors", old.colors || 16, 1, 128)}${number("Artwork width · mm", "raster-width", old.width || 70, 5, 200)}<label>Processing resolution · longest edge<select id="trace-resolution">${[192, 384, 640, 1024].map((n) => `<option value="${n}" ${(old.resolution || 384) === n ? "selected" : ""}>${n} pixels</option>`).join("")}</select></label><label>Palette order<select id="trace-sort"><option value="area">Largest area first</option><option value="lightness">Light to dark</option><option value="hex">Hexadecimal</option></select></label></div>
     <details><summary>Geometry, transparency & source storage</summary><div class="trace-settings">${number("Minimum color-island area · mm²", "trace-area", old.minArea ?? 0.1, 0, 5, 0.05)}${number("Simplification tolerance · mm", "trace-simplify", old.simplify ?? 0.04, 0, 0.5, 0.01)}${number("Opacity threshold · 0–254", "trace-alpha", old.alpha ?? 100, 0, 254)}<label class="inline"><input id="trace-smooth" type="checkbox" ${old.smoothing ? "checked" : ""}>Smooth exposed edges</label></div><p class="property-note">Tiny color islands merge into touching colors; transparent holes stay open. Shared color edges are protected from smoothing to prevent seams. Area 0 keeps every island. Higher resolution and more colors can create many stitches.</p><label>Saved image source<select id="trace-storage"><option value="original">Preserve original bytes</option><option value="optimized">Optimize to 2048 px PNG · original bytes not stored</option></select></label><p class="property-note">${bitmap.width} × ${bitmap.height} original pixels · ${(file.size / 1048576).toFixed(2)} MB. Processing resolution changes the trace, not the stored original. Large sources may exceed browser autosave; save a project backup.</p></details>
     <details open><summary>Background · kept by default</summary><label class="inline"><input id="raster-bg" type="checkbox">Detect and remove background · review first</label><label>Manual background color · border-connected areas only<select id="trace-background-color"><option value="-1">Keep background</option></select></label><p id="trace-background-info" class="property-note"></p><div id="trace-background-review" hidden><p>Red highlights the proposed removal. Identically colored enclosed details are preserved. Detection can mistake a patch border for background.</p><button type="button" id="trace-background-confirm">Confirm background removal</button><button type="button" id="trace-background-cancel">Keep background</button></div></details>
+    <label class="inline"><input id="trace-match-threads" type="checkbox">Review physical thread matches after importing · optional personal catalogs</label>
     <div class="trace-palette-heading"><strong id="trace-palette-count">Detecting colors…</strong><button type="button" id="trace-retain-all">Retain all</button><button type="button" id="trace-undo" disabled>Undo palette edit</button></div><div id="trace-palette" class="trace-palette" aria-label="Detected color palette"></div><p id="trace-status" class="trace-status" role="status" aria-live="polite"></p></div></div>`,
     saved ? "Apply image changes" : "Create vector regions",
   );
@@ -148,7 +149,10 @@ export async function traceDialog(file, ask, saved = null) {
       display = saved.artwork
         .map((o) => ({
           ...o,
-          operations: o.operations?.map((op) => ({ ...op })),
+          ...(o.physicalThread
+            ? { physicalThread: structuredClone(o.physicalThread) }
+            : {}),
+          operations: o.operations?.map((op) => structuredClone(op)),
         }))
         .filter((o) => o.visible !== false);
       applyTracePalette(
@@ -576,6 +580,7 @@ export async function traceDialog(file, ask, saved = null) {
       traceSettings: settings,
     },
   ];
+  result.matchThreads = $("trace-match-threads").checked;
   result.applyMode = applyMode;
   result.palette = last.palette;
   result.choices = choices;

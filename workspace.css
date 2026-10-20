@@ -1173,3 +1173,22 @@
     max-height: 35dvh;
   }
 }
+
+.thread-match-results {
+  max-height: 54vh;
+  overflow: auto;
+}
+.thread-match-row {
+  padding: 12px 4px;
+  border-bottom: 1px solid var(--line);
+  display: grid;
+  gap: 6px;
+}
+.thread-match-row small {
+  display: block;
+  overflow-wrap: anywhere;
+}
+.thread-match-row select {
+  width: 100%;
+  min-width: 0;
+}

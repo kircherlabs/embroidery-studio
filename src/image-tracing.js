@@ -213,15 +213,21 @@ export function applyTracePalette(
   let changed = 0;
   for (const o of objects) {
     let touched = false;
-    const next = changes.get(o.color?.toLowerCase());
+    const next = changes.get(
+      (o.physicalThread?.designColor || o.color)?.toLowerCase(),
+    );
     if (next) {
-      o.color = next;
+      if (o.physicalThread) o.physicalThread.designColor = next;
+      o.color = o.physicalThread?.thread.hex || next;
       touched = true;
     }
     for (const op of o.operations || []) {
-      const c = changes.get(op.color?.toLowerCase());
+      const c = changes.get(
+        (op.physicalThread?.designColor || op.color)?.toLowerCase(),
+      );
       if (c) {
-        op.color = c;
+        if (op.physicalThread) op.physicalThread.designColor = c;
+        op.color = op.physicalThread?.thread.hex || c;
         touched = true;
       }
     }

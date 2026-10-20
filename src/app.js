@@ -1141,6 +1141,8 @@ function renderProperties() {
           toast(
             `${changed} artwork objects recolored. Geometry, unrelated action colors and sewing order retained. Locked objects were kept.`,
           );
+          if (result.matchThreads)
+            threadUI.match(old.filter((o) => !isLocked(state.project, o)));
           return;
         }
         if (
@@ -1201,6 +1203,7 @@ function renderProperties() {
           state.selection = id;
           state.selectionIds = [id];
         });
+        if (result.matchThreads) threadUI.match(result);
       },
     })
   )
@@ -1829,7 +1832,10 @@ async function importFile(file) {
         { state, ask, mutate, toast, selectTool: () => setTool("select") },
         traceDialog,
       );
-      if (objects) addObjects(objects);
+      if (objects) {
+        addObjects(objects);
+        if (objects.matchThreads) threadUI.match(objects);
+      }
     } else if (
       ["pes", "pec", "dst", "exp", "jef", "vp3", "xxx"].includes(ext)
     ) {

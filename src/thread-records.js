@@ -221,3 +221,7 @@ export function validateThreadLibrary(d) {
     );
   return d;
 }
+
+// Physical spool identity is separate from its approximate screen color.
+export const sewingThreadKey = (o) =>
+  o.physicalThread?.thread.id || o.color?.toLowerCase();

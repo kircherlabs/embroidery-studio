@@ -95,7 +95,7 @@ SE700 PEC origin correction. Keep writer tests, documented compatibility and har
 stitch-out status distinct. Check field origins, movement splitting, stops, color limits,
 thread metadata and trim loss for each format. Add UI warnings for real restrictions.
 
-## Stage C — local catalog infrastructure complete and verified (commit containing this entry)
+## Stage C — local catalog infrastructure complete and verified (`56e474f`)
 
 Added `src/thread-records.js`, `src/thread-catalogs.js`, `src/thread-store.js`,
 `src/thread-assignment.js`, `src/thread-ui.js`. Local IndexedDB storage, CSV/JSON/GPL
@@ -132,10 +132,44 @@ original-palette preservation, substitution labels and smart-import handoff. Aud
 all color-edit paths (image palette revisions/style transfer) for stale assignments.
 Commit D only after it passes. No intermediate deployment has been made.
 
-## Remaining Stages D–F
+## Stage D — reviewed perceptual matching complete and verified (commit containing this entry)
 
-- D: perceptual matching, explicit substitutions and source design colors preserved;
-  integrate with smart import without pretending to offer official conversions.
+Added `src/thread-matching.js`, `src/thread-matching-ui.js`,
+`tests/thread-matching.test.mjs`, `tests/thread-matching-browser.mjs`.
+Integrated matching into thread-ui, tracing-ui and app; optional tracing handoff
+works for initial imports, palette-only changes and revised traces. Review original
+colors or current spool approximations; brand/line filters, nearest-five alternatives,
+explicit keep, large-difference guidance and honest algorithmic/user labels.
+Original design colors survive repeated substitutions and catalog loss.
+
+Audited styles/style-transfer/image-tracing: custom HEX and copied style colors clear
+stale assignments, simple method presets retain applicable choices, palette revisions
+update designColor without changing an explicitly assigned spool. Preview clones
+metadata to avoid mutating projects before approval.
+
+Planning/engine retain physical spool identities independently of RGB, without
+changing needle algorithms or travel optimization. Same-RGB distinct spools produce
+required thread changes. export-safety verifies their actual PES/PEC repeated-color
+operator stops and explains them; six actual writers preserve all needle positions
+and the required pause. No machine writer or origin metadata was changed in D.
+
+Validation: 289 automated tests pass (`test-results/matching-final-units.log`).
+Matching browser tests pass: per-action scope, alternatives/substitution, original
+palette, Undo/Redo, reload, strict no-fallback owned filter, six actual same-RGB-spool
+exports with every needle/pause, smart-import handoff, mobile layout and Escape.
+Catalog, smart-import (including 64 colors and independent PES decode) and six-format
+export browser regressions pass (`matching-*-regression.log`). Build passed.
+Mobile screenshot: `test-results/thread-matching-mobile.png`. CI includes the new suite.
+Docs: `docs/THREAD_LIBRARY.md`. No catalog/conversion dataset was redistributed.
+
+Limitations: physical matches need sew-outs; no official/third-party conversion tables
+are claimed or bundled without verified provenance/rights. Inventory population and
+shopping/backup UI follow E; the matching filter already handles an empty collection
+strictly rather than silently choosing unowned threads. Next: implement E, test and
+commit it, then run F's full regression/release checks. No intermediate deployment.
+
+## Remaining Stages E–F
+
 - E: inventory, owned-only matching, project requirements, shopping list, personal
   settings backup/restore, clear storage failure feedback.
 - F: desktop/mobile integration, thousands-of-entries performance, full existing suites,
@@ -154,6 +188,6 @@ unlicensed chart images, raw catalogs, PANTONE references or conversion tables.
 
 ## Resume rules
 
-Read this file and inspect current branch/commit/status first. Stages A, B and C infrastructure are validated; start D from the latest stage commit. Record each stage's actual checks and commit in this
+Read this file and inspect current branch/commit/status first. Stages A–D are validated; start E from the latest stage commit. Record each stage's actual checks and commit in this
 file. Never label later stages complete until implemented and tested. Keep source research
 outside `src`, `vendor`, `assets` (the directories copied into public builds).

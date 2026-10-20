@@ -64,3 +64,33 @@ Validation includes leading zeros and distinct brands, CSV/JSON/GPL mapping, dup
 handling, unknown HEX, independent actions, source-color restoration, catalog loss,
 history/reload, real PES needle/origin checks, 5,000-entry paging/search and mobile layout.
 Physical color matches and sew-outs remain unverified.
+
+## Reviewed matching and substitution
+
+In **Threads → Match design colors…**, choose a personal brand/line and review
+nearest colors and up to five alternatives. Suggestions use the existing D65
+CIELAB implementation and Delta E 1976. Values are digital approximations, not
+measured physical-thread matches or official conversion tables. Unknown HEX
+entries are available for manual assignment, but excluded from algorithmic matching.
+A large difference receives inline review guidance. Nothing is applied until confirmed.
+
+Original design colors are the default matching reference. Choose **Current thread
+approximation · substitute** to compare a current spool with another catalog.
+Automatic choices are stored as `algorithmic`; explicitly selected alternatives
+are `user`. Original design colors survive repeated substitutions, Undo/Redo,
+project reload and missing catalogs. Restore design color removes the assignment.
+Custom HEX/style-color edits deliberately clear the affected spool assignment.
+Palette-only image revisions update the preserved design colors while keeping
+explicit physical spool choices; previews clone metadata and never mutate the project.
+
+Image tracing offers **Review physical thread matches after importing**. This
+opens the same optional reviewed workflow for imported/revised regions and keeps
+the source image, vector geometry and sewing actions editable.
+
+Sewing planning distinguishes spool IDs even when their HEX values coincide.
+Different spools require actual thread-change pauses. PES/PEC encodes identical
+RGB entries as repeated-color stops: change spools according to the project list
+at those pauses. Export guidance explains this; decoded needles and pause order
+are verified before download. Physical identity is retained in the project; machine
+files may carry only approximate RGB/palette entries. No official cross-brand
+conversion data is bundled or claimed.

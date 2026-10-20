@@ -93,6 +93,25 @@ export function exportPreflight(project, events, format) {
     warnings.push(
       `${stops} operator stops become color-change pauses in ${format.toUpperCase()}. Keep the same thread for those pauses; follow the project action list.`,
     );
+  if (events.some((e) => e.threadKey)) {
+    warnings.push(
+      "Physical spool brand, product line and number remain in the project thread list; the machine file may not carry that identity. Follow the project list for substitutions and thread changes.",
+    );
+    if (["pes", "pec"].includes(format)) {
+      let previous = events.find((e) => e.cmd === "stitch")?.color;
+      if (
+        events.some((e) => {
+          if (e.cmd !== "color") return false;
+          const same = e.threadKey && e.color === previous;
+          previous = e.color;
+          return same;
+        })
+      )
+        warnings.push(
+          "Different physical spools share a digital color. PES/PEC represents those thread changes as repeated-color operator pauses. Change to the next spool in the project thread list at each such pause.",
+        );
+    }
+  }
   if (["dst", "exp"].includes(format))
     warnings.push(
       "Thread colors and physical spool identities are not embedded. Keep the project thread list and assign colors at the machine.",
@@ -184,9 +203,22 @@ export function checkRoundTrip(source, decoded, format) {
   }
   const pause = (e) =>
     e.filter((x) => ["stop", "color"].includes(x.cmd)).map((x) => x.cmd);
-  const expected = pause(source).map((cmd) =>
-    ["dst", "exp"].includes(format) && cmd === "stop" ? "color" : cmd,
-  );
+  let previousColor = source.find((e) => e.cmd === "stitch")?.color;
+  const expected = source
+    .filter((e) => ["stop", "color"].includes(e.cmd))
+    .map((e) => {
+      let cmd = e.cmd;
+      if (cmd === "color") {
+        if (
+          ["pes", "pec"].includes(format) &&
+          e.threadKey &&
+          e.color === previousColor
+        )
+          cmd = "stop";
+        previousColor = e.color;
+      }
+      return ["dst", "exp"].includes(format) && cmd === "stop" ? "color" : cmd;
+    });
   if (JSON.stringify(expected) !== JSON.stringify(pause(decoded)))
     errors.push(
       "The exported file did not preserve the required stops and color-change order. Export was canceled.",

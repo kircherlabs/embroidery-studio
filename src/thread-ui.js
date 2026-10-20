@@ -1,3 +1,4 @@
+import { matchingUI } from "./thread-matching-ui.js";
 import { THREAD_BRANDS, mergeCatalog } from "./thread-records.js";
 import {
   CATALOG_FIELDS,
@@ -48,13 +49,15 @@ export function installThreads(api) {
     if (e.key !== "Enter" || e.target.matches("button,select,textarea")) return;
     e.preventDefault();
     const action =
-      $("catalog-apply") && !$("catalog-apply").disabled
-        ? $("catalog-apply")
-        : $("catalog-preview-button") ||
-          $("manual-thread-save") ||
-          ($("thread-use") && !$("thread-use").disabled
-            ? $("thread-use")
-            : null);
+      $("thread-match-apply") && !$("thread-match-apply").disabled
+        ? $("thread-match-apply")
+        : $("catalog-apply") && !$("catalog-apply").disabled
+          ? $("catalog-apply")
+          : $("catalog-preview-button") ||
+            $("manual-thread-save") ||
+            ($("thread-use") && !$("thread-use").disabled
+              ? $("thread-use")
+              : null);
     action?.click();
   });
   dialog.addEventListener("close", () =>
@@ -168,7 +171,7 @@ export function installThreads(api) {
     pageIndex = 0;
     dialog.innerHTML =
       head("Thread library") +
-      `<p class="property-note">Personal catalogs stay on this device. Import does not grant redistribution rights. PEC machine colors are separate from physical thread products.</p><div class="thread-top-actions">${button("thread-import", "Import catalog…")}${button("thread-manual", "Add thread…")}${button("thread-prefer", "Use brand / line as default")}${button("thread-remove-line", "Remove selected line…")}</div><div class="thread-filters"><label>Brand<select id="thread-brand">${option("", "All brands")}${family()
+      `<p class="property-note">Personal catalogs stay on this device. Import does not grant redistribution rights. PEC machine colors are separate from physical thread products.</p><div class="thread-top-actions">${button("thread-match", "Match design colors…")}${button("thread-import", "Import catalog…")}${button("thread-manual", "Add thread…")}${button("thread-prefer", "Use brand / line as default")}${button("thread-remove-line", "Remove selected line…")}</div><div class="thread-filters"><label>Brand<select id="thread-brand">${option("", "All brands")}${family()
         .map(([id, n]) => option(id, n))
         .join(
           "",
@@ -316,6 +319,7 @@ export function installThreads(api) {
       input.click();
     };
     $("thread-manual").onclick = () => manual();
+    $("thread-match").onclick = match;
     renderList();
   }
   function importer() {
@@ -436,7 +440,20 @@ export function installThreads(api) {
       }
     };
   }
-  async function open(nextTargets = []) {
+  function match() {
+    matchingUI({
+      dialog,
+      library,
+      targets,
+      api,
+      back: picker,
+      esc,
+      option,
+      display,
+      dot,
+    });
+  }
+  async function open(nextTargets = [], matching = false) {
     if (opening || dialog.open) return;
     opening = true;
     invoker = document.activeElement;
@@ -449,7 +466,8 @@ export function installThreads(api) {
       library = await loadThreads();
       if (!dialog.open) return;
       targets = nextTargets;
-      picker();
+      if (matching) match();
+      else picker();
     } catch (e) {
       dialog.close();
       api.toast(
@@ -484,5 +502,10 @@ export function installThreads(api) {
       .querySelector("[data-thread-clear]")
       ?.addEventListener("click", () => api.mutate(() => clearThread(scoped)));
   }
-  return { open, inspector };
+  return {
+    open,
+    inspector,
+    match: (objects) =>
+      open(threadTargets(objects, { bulkOperations: "all" }, false), true),
+  };
 }

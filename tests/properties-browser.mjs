@@ -133,9 +133,11 @@ try {
       (e) => e.objectId !== boundary.id && e.cmd === "stitch",
     ) < events.findIndex((e) => e.operationId === finish && e.cmd === "stitch"),
   );
+  await page.locator("#preview-tab").click();
   assert(
     (await page.locator("#sewing-order").innerText()).includes("Finish patch"),
   );
+  await page.locator("#design-tab").click();
   const before = (await plan()).stats.stitches;
   await field("shape-width", boundary.shape.width + 3);
   assert.notEqual((await plan()).stats.stitches, before);

@@ -217,6 +217,7 @@
   flex: 1;
   min-height: 0;
   display: flex;
+  flex-direction: column;
   overflow: hidden;
 }
 .canvas-surface {
@@ -231,27 +232,32 @@
 }
 .tool-rail {
   display: flex;
-  flex-direction: column;
-  width: 49px;
-  flex: 0 0 49px;
+  flex-direction: row;
+  width: 100%;
+  flex: 0 0 52px;
+  height: 52px;
   min-height: 0;
-  padding: 4px 3px;
+  min-width: 0;
+  padding: 3px;
   background: #eeeee1;
-  border-right: 1px solid #aab39e;
+  color: #344c38;
+  border-bottom: 1px solid #aab39e;
 }
 .tool-rail .drawing-tools {
   position: static;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   flex-wrap: nowrap;
   flex: 1;
   min-height: 0;
-  width: 100%;
+  min-width: 0;
+  width: auto;
   max-width: none;
   padding: 2px 1px;
   gap: 2px;
-  overflow-x: hidden;
-  overflow-y: auto;
+  overflow-x: auto;
+  overflow-y: hidden;
+  touch-action: pan-x;
   border: 0;
   border-radius: 0;
   box-shadow: none;
@@ -259,30 +265,92 @@
   scrollbar-width: thin;
 }
 .tool-rail .drawing-tools button {
-  width: 36px;
-  height: 36px;
-  min-height: 36px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 6px;
+  width: 40px;
+  height: 40px;
+  min-height: 40px;
   flex-shrink: 0;
+  border: 0;
+  color: inherit;
+  background: transparent;
+  border-radius: 5px;
+}
+.tool-rail .drawing-tools {
+  scrollbar-width: none;
+}
+.tool-rail .drawing-tools::-webkit-scrollbar {
+  display: none;
 }
 .tool-rail > button {
-  height: 22px;
-  min-height: 22px;
-  width: 36px;
+  display: flex;
+  align-items: center;
+  height: 40px;
+  min-height: 40px;
+  width: 24px;
   flex-shrink: 0;
   padding: 0;
   background: transparent;
   border: 0;
-  color: #425c41;
+  color: inherit;
   font-size: 22px;
   line-height: 1;
-  transform: rotate(90deg);
 }
 .tool-rail > button:disabled {
   opacity: 0.25;
 }
-.drawing-tools [aria-pressed="true"] {
+.tool-group {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 2px;
+}
+.tool-group + .tool-group {
+  border-left: 1px solid #aab39e;
+  padding-left: 7px;
+  margin-left: 5px;
+}
+.tool-icon {
+  display: block;
+  flex: none;
+  pointer-events: none;
+}
+.tool-rail .drawing-tools button:hover,
+.tool-rail summary:hover {
+  background: #d9dfcf;
+}
+.tool-rail .drawing-tools [aria-pressed="true"],
+.tool-rail .shape-family.active summary {
   background: #344c38;
-  color: #eed0a8;
+  color: #f2cb9c;
+}
+.tool-rail :is(button, summary):focus-visible {
+  outline: 2px solid #496640;
+  outline-offset: -2px;
+}
+@media (prefers-color-scheme: dark) {
+  .tool-rail {
+    background: var(--panel);
+    color: #dce4df;
+    border-color: var(--line);
+  }
+  .tool-group + .tool-group {
+    border-color: #627263;
+  }
+  .tool-rail .drawing-tools button:hover,
+  .tool-rail summary:hover {
+    background: #34463a;
+  }
+  .tool-rail .drawing-tools [aria-pressed="true"],
+  .tool-rail .shape-family.active summary {
+    background: var(--accent);
+    color: var(--dark);
+  }
+  .tool-rail :is(button, summary):focus-visible {
+    outline-color: var(--accent);
+  }
 }
 .stage-top {
   gap: 4px;
@@ -542,8 +610,8 @@
     flex-direction: column;
   }
   .tool-rail {
-    flex: 0 0 46px;
-    height: 46px;
+    flex: 0 0 52px;
+    height: 52px;
     width: 100%;
     flex-direction: row;
     border-right: 0;
@@ -562,7 +630,7 @@
   .tool-rail > button {
     transform: none;
     width: 23px;
-    height: 36px;
+    height: 40px;
   }
   .tool-rail .drawing-tools > span {
     height: 22px;
@@ -851,15 +919,19 @@
   line-height: 1.4;
 }
 .shape-family {
-  width: 36px;
+  width: 40px;
   flex-shrink: 0;
 }
 .shape-family summary {
   list-style: none;
   cursor: pointer;
-  text-align: center;
-  min-height: 36px;
-  color: #536650;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  min-height: 40px;
+  color: inherit;
   border-radius: 5px;
   font-size: 22px;
 }
@@ -874,8 +946,13 @@
 }
 .shape-family > div {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   gap: 2px;
+}
+.shape-family[open] {
+  display: flex;
+  width: auto;
+  align-items: center;
 }
 @media (max-width: 1099px), (max-height: 799px) {
   .shape-family[open] {
@@ -887,16 +964,14 @@
     flex-direction: row;
   }
   .shape-family summary {
-    width: 36px;
+    width: 40px;
     flex-shrink: 0;
   }
   .vector-controls {
     max-height: 140px;
   }
 }
-/* With the sequence panel open, very short screens cannot fit every dock.
-   Keep a usable drawing surface and scroll the workspace instead of letting
-   navigation controls cover the drawing-tool rail. Collapsing Sequence reclaims it. */
+/* Very short screens keep a usable surface below extended editing options. */
 @media (max-height: 600px) {
   .stage-shell:has(#vector-controls:not([hidden])) {
     overflow-y: auto;
@@ -904,5 +979,27 @@
   .stage-shell:has(#vector-controls:not([hidden])) .canvas-area {
     min-height: 136px;
     flex-shrink: 0;
+  }
+}
+@media (pointer: coarse) {
+  .tool-rail {
+    height: 56px;
+    flex-basis: 56px;
+  }
+  .tool-rail .drawing-tools button,
+  .tool-rail .shape-family summary {
+    width: 44px;
+    height: 44px;
+    min-height: 44px;
+  }
+  .tool-rail .shape-family {
+    width: 44px;
+  }
+  .tool-rail .shape-family[open] {
+    width: auto;
+  }
+  .tool-rail > button {
+    height: 44px;
+    min-height: 44px;
   }
 }

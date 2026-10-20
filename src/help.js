@@ -122,7 +122,7 @@ const descriptions = {
   "trace-alpha":
     "Ignore pixels at or below this opacity threshold, from 0 transparent to 254 nearly opaque. Use the preview to inspect antialiased edges.",
   "toggle-sequence":
-    "Show or hide the stitch sequence, timeline and playback panel. Hiding it expands the canvas without changing any generated commands.",
+    "Open Stitch preview to inspect sequence, timeline and playback. In preview, toggle its panel. Design mode automatically hides it without changing generated commands.",
   "maximize-canvas":
     "Temporarily hide all three panels to expand the canvas. Restore or Escape brings back your previous panel sizes and visibility.",
   "reset-layout":
@@ -142,7 +142,7 @@ const descriptions = {
   "view-command":
     "Fit selection, all artwork or the hoop; center the hoop view at the current zoom, or reset to Fit Hoop. Panel resizing never changes source artwork.",
   "context-help":
-    "Turn hover and keyboard-focus hints on or off. On touch, hold a control to read its hint. Ordinary taps still operate controls. Your preference is remembered on this device.",
+    "Turn detailed hover and keyboard-focus hints on or off. Design tool names remain available when off; on adds descriptions. On touch, hold a control to read its hint. Ordinary taps still operate controls. Your preference is remembered on this device.",
   help: "Open the workflow guide and keyboard shortcuts.",
   "new-project":
     "Start an empty design. You can save your current editable project before replacing it.",
@@ -324,6 +324,7 @@ const descriptions = {
 const selector =
   "button,input:not([type=hidden]):not([type=file]),select,summary,canvas[tabindex],[data-help]";
 function description(el) {
+  if (el.dataset.toolDescription) return el.dataset.toolDescription;
   if (descriptions[el.id]) return descriptions[el.id];
   if (el.dataset.help) return el.dataset.help;
   if (el.matches("[data-close-panel]"))
@@ -405,6 +406,7 @@ export function installHelp() {
     hold = null,
     blockedClick = null;
   const preferenceKey = "embroidery-hints-v1";
+  const isTool = (el) => !!el?.dataset.toolName;
   try {
     enabled = localStorage.getItem(preferenceKey) === "true";
   } catch {}
@@ -421,14 +423,16 @@ export function installHelp() {
   }
   function show(el) {
     if (
-      !enabled ||
+      (!enabled && !isTool(el)) ||
       !el ||
       !el.isConnected ||
       !el.getClientRects().length ||
       document.body.classList.contains("reordering")
     )
       return;
-    const text = description(el);
+    const text = isTool(el)
+      ? `${el.dataset.toolName}${el.dataset.toolShortcut ? ` · ${el.dataset.toolShortcut}` : ""}${enabled ? ` — ${description(el)}` : ""}`
+      : description(el);
     if (!text) return;
     hide();
     active = el;
@@ -464,8 +468,9 @@ export function installHelp() {
     if (active && !active.isConnected) hide();
   }).observe(document.body, { childList: true, subtree: true });
   document.addEventListener("pointerover", (e) => {
-    if (!enabled || e.pointerType === "touch") return;
+    if (e.pointerType === "touch") return;
     const el = e.target.closest(selector);
+    if (!enabled && !isTool(el)) return;
     if (!el || el === active || el.tagName === "CANVAS") return;
     hide();
     timer = setTimeout(() => show(el), 400);
@@ -473,11 +478,18 @@ export function installHelp() {
   document.addEventListener("pointerout", (e) => {
     if (e.pointerType === "touch") return;
     const el = e.target.closest(selector);
-    if (!el?.contains(e.relatedTarget) && active !== document.activeElement)
+    if (
+      !el?.contains(e.relatedTarget) &&
+      (isTool(el) || active !== document.activeElement)
+    )
       hide();
   });
   document.addEventListener("focusin", (e) => {
-    if (enabled && !suppressFocus && e.target.tagName !== "CANVAS")
+    if (
+      (enabled || isTool(e.target)) &&
+      !suppressFocus &&
+      e.target.tagName !== "CANVAS"
+    )
       show(e.target.closest(selector));
   });
   document.addEventListener("focusout", hide);
@@ -486,11 +498,12 @@ export function installHelp() {
     (e) => {
       cancelHold();
       hide();
-      suppressFocus = e.pointerType === "touch";
+      suppressFocus =
+        e.pointerType === "touch" || isTool(e.target.closest(selector));
       blockedClick = null;
       const el = e.target.closest(selector);
       if (
-        !enabled ||
+        (!enabled && !isTool(el)) ||
         e.pointerType !== "touch" ||
         !el ||
         el.id === button.id ||
@@ -506,7 +519,8 @@ export function installHelp() {
       };
       hold = pending;
       pending.timer = setTimeout(() => {
-        if (hold !== pending || !enabled || !el.isConnected) return;
+        if (hold !== pending || (!enabled && !isTool(el)) || !el.isConnected)
+          return;
         show(el);
         pending.shown = !tip.hidden;
       }, 500);

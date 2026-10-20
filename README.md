@@ -29,6 +29,15 @@ Rounded satin borders, centerlines and stroke columns preserve spacing on the
 outer rail of bends. Running outlines follow rounded curves; tight turns report
 located Design Issues. See [corner coverage and validation](docs/CORNER_DENSITY.md).
 
+## Design tools and workspace
+
+The compact SVG toolbar above the canvas groups selection/editing, geometry,
+embroidery and lettering tools. Hover always identifies a tool; **Hints: On** adds
+its description. Swipe/scroll or use the arrows when the tools exceed the available
+width. The sequence pane belongs to **Stitch preview** and automatically hides in
+**Design**. The **Sequence** button opens preview without changing artwork.
+See [tool names, shortcuts and workspace behavior](docs/DESIGN_TOOLBAR.md).
+
 ## Effects, sewing styles and repeats
 
 **Properties → Artwork → Artwork effects** applies reversible simplification and

@@ -216,10 +216,47 @@
             ><strong id="machine-summary"></strong><span id="hoop-size"></span
             ><span id="fit-status"></span>
           </summary>
-          <div class="machine-settings">
-            <label for="machine">Machine profile</label
-            ><select id="machine"></select
-            ><span>Changing the hoop does not resize artwork.</span>
+          <div class="machine-settings" aria-label="Equipment selection">
+            <label>Brand<select id="machine-brand"></select></label>
+            <label>Model<select id="machine"></select></label>
+            <label
+              >Hoop / design field<select id="machine-hoop"></select
+            ></label>
+            <div class="equipment-actions">
+              <button id="equipment-center" type="button" hidden>
+                Center design in hoop
+              </button>
+              <button id="equipment-view" type="button" hidden>
+                View full design
+              </button>
+              <button id="equipment-default" type="button">
+                Use as My Machine
+              </button>
+              <button id="equipment-new" type="button">Custom machine…</button>
+              <button id="equipment-edit" type="button" hidden>
+                Edit profile
+              </button>
+              <button id="equipment-copy" type="button" hidden>
+                Duplicate profile
+              </button>
+              <button id="equipment-delete" type="button" hidden>
+                Delete profile
+              </button>
+              <button id="equipment-hoop-add" type="button" hidden>
+                Save another hoop…
+              </button>
+              <button id="equipment-hoop-edit" type="button" hidden>
+                Edit hoop
+              </button>
+              <button id="equipment-hoop-delete" type="button" hidden>
+                Delete hoop
+              </button>
+            </div>
+            <details class="equipment-evidence">
+              <summary>Profile details &amp; sources</summary>
+              <p id="equipment-notes"></p>
+              <div id="equipment-sources"></div>
+            </details>
           </div>
         </details>
         <div class="workspace-description">

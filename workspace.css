@@ -1006,3 +1006,61 @@
     min-width: 36px;
   }
 }
+/* Equipment stays in the existing expandable workspace strip. */
+.workspace-machine .machine-settings {
+  align-items: end;
+}
+.workspace-machine .machine-settings > label {
+  display: grid;
+  gap: 4px;
+  min-width: 140px;
+  flex: 1 1 160px;
+  color: #284333;
+}
+.workspace-machine .machine-settings select {
+  width: 100%;
+}
+.equipment-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  flex: 1 0 100%;
+}
+.equipment-actions button {
+  font-size: 11px;
+  padding: 6px 9px;
+  min-height: 34px;
+  color: #284333;
+  background: #f7f6ee;
+  border-color: #9cae94;
+}
+.equipment-actions button:hover {
+  background: #d9e2ce;
+  border-color: #526c4f;
+}
+.equipment-actions button:focus-visible {
+  outline: 2px solid #284333;
+  outline-offset: 2px;
+}
+.equipment-evidence {
+  flex: 1 0 100%;
+  font-size: 11px;
+  line-height: 1.5;
+}
+.equipment-evidence p {
+  margin: 5px 0;
+  max-width: 90ch;
+}
+.equipment-evidence a {
+  color: inherit;
+  text-decoration: underline;
+}
+.equipment-actions [hidden] {
+  display: none;
+}
+@media (max-width: 700px) {
+  .workspace-machine .machine-settings > label {
+    min-width: 0;
+    flex-basis: 100%;
+  }
+}

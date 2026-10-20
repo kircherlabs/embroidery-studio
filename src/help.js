@@ -1,4 +1,16 @@
 const descriptions = {
+  "machine-brand":
+    "Choose a manufacturer, or Generic / Custom for your own dimensions. Selecting equipment changes the design field; artwork is never resized automatically.",
+  "machine-hoop":
+    "Only documented compatible hoops are listed for verified models. Dimensions are sewing fields in millimeters, not outside hoop measurements. Custom dimensions are user-provided.",
+  "equipment-default":
+    "Use this machine and hoop for future new designs on this device. Existing projects retain their own selection.",
+  "equipment-new":
+    "Save a named custom machine with your continuous field dimensions and preferred export format. These measurements are not manufacturer-verified.",
+  "equipment-center":
+    "Center unlocked visible embroidery artwork in the hoop without changing its size, colors or stitching. Locked objects retain their position. Undo restores the previous positions.",
+  "equipment-view":
+    "Fit all embroidery artwork in the view. This changes the camera only; it does not resize artwork to fit the hoop.",
   "text-use-path":
     "Place this editable lettering along a copy of the selected curve. The baseline becomes part of the lettering source and generates no separate stitches; Node edits it later.",
   "text-hide-path":

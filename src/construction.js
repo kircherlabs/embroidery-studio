@@ -1,3 +1,4 @@
+import { getMachine } from "./equipment.js";
 import { objectBounds, MACHINES, uid } from "./model.js";
 import {
   fillPolygons,
@@ -278,7 +279,7 @@ export function createSurroundingPatch(project, ids, options) {
     selectedRoots = roots(project, ids);
   const check = preflightConstruction(
     [boundary],
-    MACHINES[project.machine],
+    getMachine(project),
     options.border ?? 2.5,
     options,
   );
@@ -346,16 +347,11 @@ export function refitPatch(project, boundary, margin) {
     radius: shape.radius,
     color: boundary.color,
   });
-  const check = preflightConstruction(
-    [made],
-    MACHINES[project.machine],
-    border,
-    {
-      tackdown: boundary.operations?.some(
-        (op) => op.type === "tackdown" && op.enabled !== false,
-      ),
-    },
-  );
+  const check = preflightConstruction([made], getMachine(project), border, {
+    tackdown: boundary.operations?.some(
+      (op) => op.type === "tackdown" && op.enabled !== false,
+    ),
+  });
   if (!check.valid)
     throw Error(
       check.issues

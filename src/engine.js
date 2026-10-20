@@ -1,9 +1,10 @@
+import { getMachine } from "./equipment.js";
 import { centerlineRails, paceRails, shortInnerTurns } from "./satin-rails.js";
 import { strokeSatin } from "./stroke-satin.js";
 import { manualSatin } from "./manual-satin.js";
 import { designIssues } from "./design-issues.js";
 import { quantizeColumnPaths } from "./column-routing.js";
-import { bounds, MACHINES } from "./model.js";
+import { bounds } from "./model.js";
 import { inside, distance, safeConnector, simplifyPath } from "./geometry.js";
 import { preparePlan } from "./planning.js";
 import { routeFill } from "./fill-routing.js";
@@ -401,7 +402,7 @@ export function generate(project) {
         });
   const events = [],
     warnings = [],
-    machine = MACHINES[project.machine];
+    machine = getMachine(project);
   let last = { x: 0, y: 0 },
     lastColor = null,
     activeRegion = null,

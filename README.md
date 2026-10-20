@@ -1,7 +1,7 @@
 # Embroidery Studio
 
 A free, browser-based embroidery workbench for drawing, digitizing and inspecting
-machine embroidery. Designed around the **Brother SE700's 100 × 100 mm field**.
+machine embroidery. Includes documented consumer machine/hoop profiles and custom design fields, while preserving the **Brother SE700's 100 × 100 mm workflow**.
 No account, paid service, design upload or backend required.
 
 **[Open the studio](https://kircherlabs.github.io/embroidery-studio/)**
@@ -55,6 +55,15 @@ While drawing points, **Ctrl/Cmd Z** removes the last point, **Shift Ctrl/Cmd Z*
 restores it, and **Backspace** or the contextual undo icon removes one point.
 Finishing/canceling restores ordinary project history. Export remembers successful
 format choices per machine; the exact SE700 profile initially selects PES.
+
+## Equipment
+
+Open **Machine & hoop** for **Brand → Model → Hoop**, generic design fields,
+custom millimeter/inch profiles, saved hoop presets and **Use as My Machine**.
+Equipment changes never resize artwork. Custom profiles travel with saved projects;
+local defaults are separate. Documented specifications and software/hardware export
+validation remain distinct. See [controls and evidence](docs/MACHINE_PROFILES.md)
+and [stage-by-stage progress](docs/EQUIPMENT_THREADS_PROGRESS.md).
 
 ## Design tools and workspace
 

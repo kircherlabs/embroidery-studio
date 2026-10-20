@@ -1,3 +1,4 @@
+import { machineOf } from "./equipment.js";
 export const EXPORT_FORMATS = ["pes", "pec", "dst", "exp", "jef", "vp3"];
 export const EXPORT_PREFERENCE_KEY = "embroidery-export-formats-v1";
 // Exact model evidence; hoop-only profiles are deliberately not brand guesses.
@@ -14,14 +15,27 @@ export function preferredExport(
   preferences = {},
   profiles = FORMAT_PROFILES,
 ) {
+  const selected = typeof machine === "object" ? machineOf(machine) : null;
+  machine = typeof machine === "object" ? machine.machine : machine;
+  const preferred = selected?.preferred || profiles[machine]?.preferred;
   return EXPORT_FORMATS.includes(preferences[machine])
     ? preferences[machine]
-    : EXPORT_FORMATS.includes(profiles[machine]?.preferred)
-      ? profiles[machine].preferred
+    : EXPORT_FORMATS.includes(preferred)
+      ? preferred
       : "pes";
 }
 export function exportGuidance(machine, format) {
+  const selected = typeof machine === "object" ? machineOf(machine) : null;
+  machine = typeof machine === "object" ? machine.machine : machine;
   const profile = FORMAT_PROFILES[machine];
+  if (!profile && selected && selected.brand !== "generic")
+    return selected.formats.includes(format)
+      ? "This format is documented for " +
+          selected.name +
+          ". Export encoding is software-tested; physical hardware compatibility remains unverified."
+      : "The design field is documented for " +
+          selected.name +
+          ", but this export format has not been verified for this model. Check its manual before stitching.";
   if (!profile)
     return "This is a hoop profile, not a verified machine model. Choose a format accepted by your exact machine. Formats are software-tested; physical compatibility is not inferred from the brand.";
   if (!profile.supported.includes(format))

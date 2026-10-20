@@ -1,4 +1,7 @@
 import { railArtwork, railCandidates } from "./rail-ui.js";
+import { captureStyle } from "./style-transfer.js";
+import { syncLinkedArtwork } from "./linked-artwork.js";
+import { sewingStyleDialog, repeatDialog } from "./artwork-tools-ui.js";
 import { baselineCandidate, constructionBaseline } from "./text-path.js";
 import { splitRailSource, railLayout } from "./manual-satin.js";
 import {
@@ -143,6 +146,7 @@ let history = [],
   machinePlan = false;
 const pendingFormats = new Map();
 let clipboard = null;
+let sewingStyleClipboard = null;
 let workspaceLayout, arrangeMenu;
 const worker = new Worker(new URL("./digitize-worker.js", import.meta.url), {
   type: "module",
@@ -171,6 +175,18 @@ function selected() {
   return state.project.objects.find((o) => o.id === state.selection);
 }
 function record(before) {
+  try {
+    const detached = syncLinkedArtwork(state.project);
+    if (detached)
+      toast(
+        `${detached} linked copies retained as independent paths because their original was deleted.`,
+      );
+  } catch (e) {
+    state.project = JSON.parse(before);
+    select(null);
+    toast(e.message);
+    return false;
+  }
   normalizeSewingOrder(state.project);
   if (before === JSON.stringify(state.project)) {
     renderPanels();
@@ -916,7 +932,7 @@ function renderPanels() {
     <button class="drag-grip" data-tree-grip aria-label="Reorder ${esc(o.name)}">${icon("grip")}</button>
     <button class="selection-check" data-check="${esc(o.id)}" aria-label="Select ${esc(o.name)}" aria-pressed="${selectedIds.has(o.id) ? "true" : affected.has(o.id) ? "mixed" : "false"}"><span>${selectedIds.has(o.id) ? "✓" : affected.has(o.id) ? "−" : ""}</span></button>
     ${o.kind ? `<button class="tree-toggle" data-expand="${esc(o.id)}" aria-label="${state.collapsed.has(o.id) ? "Expand" : "Collapse"} ${esc(o.name)}">${state.collapsed.has(o.id) ? "▸" : "▾"}</button>` : '<span class="tree-toggle"></span>'}
-    <button class="object-select" data-select="${esc(o.id)}">${swatch(o)}<span class="object-text"><span class="object-title">${esc(o.name)}</span><span class="object-type">${o.kind ? `${leaves(state.project, [o.id]).length} regions · ${o.kind === "svg" ? "Imported SVG" : "Group"}` : o.operations ? `${o.operations.length} operations` : o.type === "reference" ? "Reference image · no stitches" : o.svgLabel ? esc(o.svgLabel) : o.type === "fill" ? "Tatami fill" : o.type === "satin" ? "Satin centerline" : o.type === "manual" ? "Manual stitches" : "Running stitch"}</span></span></button>
+    <button class="object-select" data-select="${esc(o.id)}">${swatch(o)}<span class="object-text"><span class="object-title">${esc(o.name)}</span><span class="object-type">${o.linkedGeometry ? "Linked · " : ""}${o.kind ? `${leaves(state.project, [o.id]).length} regions · ${o.kind === "svg" ? "Imported SVG" : "Group"}` : o.operations ? `${o.operations.length} operations` : o.type === "reference" ? "Reference image · no stitches" : o.svgLabel ? esc(o.svgLabel) : o.type === "fill" ? "Tatami fill" : o.type === "satin" ? "Satin centerline" : o.type === "manual" ? "Manual stitches" : "Running stitch"}</span></span></button>
     <button class="tree-lock" data-lock="${esc(o.id)}" aria-label="${o.locked ? "Unlock" : "Lock"} ${esc(o.name)}" aria-pressed="${isLocked(state.project, o)}">${icon(isLocked(state.project, o) ? "lock" : "unlock")}</button><button class="visibility" data-visibility="${esc(o.id)}" aria-label="${o.visible === false ? "Show" : "Hide"} ${esc(o.name)}" aria-pressed="${!isVisible(state.project, o)}">${icon(isVisible(state.project, o) ? "eye" : "hidden")}</button></div>`;
   $("object-list").setAttribute("role", "tree");
   $("object-list").setAttribute("aria-multiselectable", "true");
@@ -993,6 +1009,7 @@ function renderProperties() {
   if (
     renderInspector({
       state,
+      select,
       mutate,
       toast,
       ask,
@@ -1654,6 +1671,10 @@ function removeSelected() {
     !isLocked(state.project, o) &&
     !["manual", "reference"].includes(o.type)
   ) {
+    if (o.effects || o.linkedGeometry)
+      return toast(
+        "Remove/bake effects, or unlink the copy, before deleting individual source nodes.",
+      );
     if (stage.activeCurve(o)) {
       const c = stage.activeCurve(o);
       if (c.nodes.length > (c.closed ? 3 : 2))
@@ -2006,6 +2027,33 @@ const collapseCompactSequence = () => {
 collapseCompactSequence();
 compactSequence.addEventListener("change", collapseCompactSequence);
 async function editCommand(command) {
+  if (command === "repeat") {
+    await repeatDialog({ state, ask, mutate, toast });
+    return;
+  }
+  if (command === "copy-style") {
+    const objects = selectedLeaves(state, { editable: true });
+    if (objects.length !== 1)
+      return toast(
+        "Select one artwork object and its sewing action to copy a style.",
+      );
+    try {
+      sewingStyleClipboard = captureStyle(objects[0], state.activeOperationId);
+      toast(
+        `Copied sewing style from ${objects[0].name}. Use Arrange → Transfer sewing style.`,
+      );
+    } catch (e) {
+      toast(e.message);
+    }
+    return;
+  }
+  if (command === "transfer-style") {
+    await sewingStyleDialog(
+      { state, ask, mutate, toast },
+      sewingStyleClipboard,
+    );
+    return;
+  }
   if (command === "rename") {
     beginRename(state.selection);
     return;

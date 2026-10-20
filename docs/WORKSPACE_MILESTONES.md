@@ -1,13 +1,13 @@
 # Professional workspace roadmap and implementation audit
 
-## Current status — 0.11.0
+## Current status — 0.12.0
 
-| Milestone | Status | Delivered / remaining |
-| --- | --- | --- |
-| 1 — Drawing and editing | Complete | Pencil, sculpting, cutting, joining and erasing. |
-| 2 — Manual satin | Complete | Independent rails, rungs, variable width, seams and paired splitting. |
-| 3A — Text along paths | Complete | Editable curved/circular lettering and baselines. |
-| Rest of 3 — Advanced artwork | Remaining | Additional nondestructive effects, style transfer/eyedropper, linear/radial/linked repetition. |
+| Milestone                    | Status   | Delivered / remaining                                                                                                           |
+| ---------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| 1 — Drawing and editing      | Complete | Pencil, sculpting, cutting, joining and erasing.                                                                                |
+| 2 — Manual satin             | Complete | Independent rails, rungs, variable width, seams and paired splitting.                                                           |
+| 3A — Text along paths        | Complete | Editable curved/circular lettering and baselines.                                                                               |
+| Rest of 3 — Advanced artwork | Complete | Reversible offsets/simplification, sewing-style sampling/transfer, linear/radial/mirrored repeats and optional linked geometry. |
 
 Physical sew-outs of new satin and lettering remain necessary. See the release
 sections below for software validation and known limitations.
@@ -81,7 +81,19 @@ changes, along/across positioning, reversal, baseline Node editing, transformati
 sewing actions and portable projects remain editable. Embedded baseline geometry
 is excluded from sewing and hoop bounds. See [path lettering](TEXT_PATH.md).
 
-Milestone 3 is **in progress**, not complete. Additional nondestructive offsets and
-simplification, style transfer/eyedropper, and linear/radial/linked repetition remain
-for subsequent coherent releases. Existing offsets, fillets and ordinary
-copy/paste/mirroring remain available in the meantime.
+At 0.11.0, additional nondestructive effects, style transfer and repetition remained.
+They are delivered below; the initial audit above records historical availability.
+
+## Milestone 3B delivered in 0.12.0 — milestone 3 complete
+
+Properties provides source-preserving contour offsets and bounded simplification,
+alongside existing reversible corner rounding. Arrange provides color-only sampling,
+single-action settings transfer and confirmed full-setup replacement, plus linear,
+radial and mirrored repeats. Optional linked vector/lettering instances share geometry
+while keeping independent transforms and sewing actions. Source editing, unlinking,
+copy/paste, deletion, project persistence, Undo/Redo and machine output are integrated.
+See [Artwork tools](ARTWORK_TOOLS.md) for controls, construction ordering and limits.
+
+The scoped roadmap's three milestones are complete. Linked manual satin rails and
+general modifier stacks are not claimed; paired rails retain their dedicated source
+tools and support independent repeats. Physical sew-outs remain necessary.

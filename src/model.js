@@ -450,11 +450,81 @@ export function validateProject(p) {
   }
   if (new Set(p.objects.map((o) => o.id)).size !== p.objects.length)
     throw Error("Duplicate object identifiers.");
+  for (const o of p.objects.filter((o) => o.linkedGeometry)) {
+    const source = p.objects.find((n) => n.id === o.linkedGeometry.sourceId);
+    if (
+      !source ||
+      source.linkedGeometry ||
+      source.satinRails ||
+      ["manual", "reference"].includes(source.type)
+    )
+      throw Error("A linked copy needs an ordinary original in this project.");
+  }
   return p;
 }
 
 function validateSource(o) {
   const number = (v, a, b) => Number.isFinite(v) && v >= a && v <= b;
+  if (o.linkedGeometry) {
+    const l = o.linkedGeometry;
+    if (
+      typeof l.sourceId !== "string" ||
+      !l.sourceId ||
+      l.sourceId === o.id ||
+      ["manual", "reference"].includes(o.type) ||
+      [
+        "shape",
+        "curve",
+        "textSource",
+        "rounding",
+        "effects",
+        "satinRails",
+      ].some((k) => o[k]) ||
+      !Array.isArray(l.frame) ||
+      l.frame.length !== 6 ||
+      !l.frame.every((v) => number(v, -10000, 10000)) ||
+      Math.abs(l.frame[0] * l.frame[3] - l.frame[1] * l.frame[2]) < 1e-12
+    )
+      throw Error("Invalid linked geometry source or transformation.");
+  }
+  if (o.effects) {
+    const e = o.effects;
+    if (
+      !e.source ||
+      e.source.effects ||
+      e.source.linkedGeometry ||
+      e.source.satinRails ||
+      (e.source.closed !== undefined && typeof e.source.closed !== "boolean") ||
+      (e.source.fillRule !== undefined &&
+        !["evenodd", "nonzero"].includes(e.source.fillRule)) ||
+      !["fill", "run", "satin"].includes(e.source.type) ||
+      ["shape", "curve", "textSource", "rounding", "satinRails"].some(
+        (k) => o[k],
+      ) ||
+      !number(e.offset, -5, 5) ||
+      !number(e.simplify, 0, 1) ||
+      !Array.isArray(e.frame) ||
+      e.frame.length !== 6 ||
+      !e.frame.every((v) => number(v, -10000, 10000)) ||
+      Math.abs(e.frame[0] * e.frame[3] - e.frame[1] * e.frame[2]) < 1e-12
+    )
+      throw Error("Invalid artwork effect source or parameters.");
+    const rings = e.source.rings;
+    if (
+      !Array.isArray(rings) ||
+      !rings.length ||
+      rings.length > 5000 ||
+      rings.some(
+        (r) =>
+          !Array.isArray(r) ||
+          r.length < 2 ||
+          r.some((p) => !number(p.x, -2000, 2000) || !number(p.y, -2000, 2000)),
+      ) ||
+      rings.reduce((n, r) => n + r.length, 0) > 100000
+    )
+      throw Error("Invalid artwork effect contours.");
+    validateSource(e.source);
+  }
   if (o.satinRails) {
     const r = o.satinRails;
     if (

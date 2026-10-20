@@ -31,6 +31,7 @@ jobs:
           trap 'kill "$STUDIO_PID"' EXIT
           node tests/workspace-browser.mjs
           node tests/text-path-browser.mjs
+          node tests/artwork-tools-browser.mjs
           node tests/browser.mjs
           node tests/svg-browser.mjs
           node tests/digitizing-browser.mjs

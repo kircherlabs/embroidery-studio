@@ -293,6 +293,14 @@ export function pencilCurve(points, tolerance = 0.15, closed = false) {
   return c;
 }
 function editable(o) {
+  if (o.linkedGeometry)
+    throw Error(
+      "Edit the linked original, or unlink this copy before editing its geometry.",
+    );
+  if (o.effects)
+    throw Error(
+      "Remove effects to edit the original, or Bake to paths before cutting, joining or reshaping the result.",
+    );
   if (o.satinRails)
     throw Error(
       "Edit the individual satin rails, or use Split into two columns in Artwork. Generic vector cutting would discard rail correspondence.",

@@ -193,6 +193,25 @@ export function installArrangeMenu({ state, command, fitDesign, fitHoop }) {
         !any,
       ) +
       "</div>" +
+      '<div class="menu-caption">Repeat & sewing style</div>' +
+      add(
+        "repeat",
+        "Repeat artwork…",
+        "Create independent editable linear, radial or mirrored copies. Keeps hierarchy and complete sewing actions; Undo removes copies.",
+        !any,
+      ) +
+      add(
+        "copy-style",
+        "Copy sewing style",
+        "Copy the selected artwork’s current sewing action and complete setup without copying its geometry.",
+        !any,
+      ) +
+      add(
+        "transfer-style",
+        "Transfer sewing style…",
+        "Choose a source to sample thread color, one action’s settings or its complete setup. Complete replacement requires confirmation; incompatible targets stay unchanged.",
+        !any,
+      ) +
       '<div class="menu-caption">View & selection</div><div class="alignment-grid">' +
       add(
         "fit-design",

@@ -1,4 +1,5 @@
 import { bounds, objectBounds } from "./model.js";
+import { resolvedLinkedProject } from "./linked-artwork.js";
 import { isVisible, ancestors } from "./hierarchy.js";
 import { operationsOf, operationObject, isSewing } from "./operations.js";
 import { isManualOrder, sewingIds } from "./sequencing.js";
@@ -427,7 +428,9 @@ function prepareBasicPlan(project) {
 // Ordinary artwork still completes object by object; only the boundary has a
 // preparation and finishing phase, surrounding its linked decorative objects.
 export function preparePlan(project) {
+  project = resolvedLinkedProject(project);
   const result = prepareBasicPlan(project);
+  result.project = project;
   const boundaries = project.objects.filter(
     (o) => o.constructionArtworkIds?.length && isVisible(project, o),
   );

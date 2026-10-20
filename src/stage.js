@@ -998,6 +998,18 @@ export class Stage {
       isVisible(s.project, selected) &&
       selectionIds(s).length === 1
     ) {
+      if (selected.linkedGeometry) {
+        this.actions.notice?.(
+          "Edit the linked original, or Unlink this copy in Artwork to edit its nodes independently.",
+        );
+        return;
+      }
+      if (selected.effects) {
+        this.actions.notice?.(
+          "Remove effects to edit the original nodes, or Bake effects to edit the result. Both are in Artwork effects.",
+        );
+        return;
+      }
       if (this.activeCurve(selected)) {
         const c = this.activeCurve(selected);
         let best = 8 / this.scale,
@@ -1468,6 +1480,14 @@ export class Stage {
       isLocked(this.state.project, o)
     )
       return;
+    if (o.effects || o.linkedGeometry) {
+      this.actions.notice?.(
+        o.linkedGeometry
+          ? "Edit the linked original or unlink this copy before editing nodes."
+          : "Remove or bake Artwork effects before editing nodes.",
+      );
+      return;
+    }
     if (this.activeCurve(o)) {
       const c = this.activeCurve(o);
       let best = 8 / this.scale,
@@ -1555,6 +1575,8 @@ export class Stage {
       else o.rings = structuredClone(original.rings);
       o.angle = original.angle;
       for (const key of [
+        "effects",
+        "linkedGeometry",
         "shape",
         "textSource",
         "rounding",

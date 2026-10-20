@@ -237,10 +237,11 @@ export function copySelection(p, ids) {
       .map((n) => n.id),
   };
 }
-export function pasteSelection(p, clipboard, offset = 3) {
+export function pasteSelection(p, clipboard, offset = 3, remap = null) {
   const copy = structuredClone(clipboard),
     all = [...copy.groups, ...copy.objects],
     ids = new Map(all.map((n) => [n.id, uid()]));
+  if (remap) for (const [old, next] of ids) remap.set(old, next);
   const assetIds = new Map();
   for (const [id, asset] of Object.entries(copy.referenceAssets || {})) {
     const assets = (p.referenceAssets ||= {}),
@@ -262,6 +263,15 @@ export function pasteSelection(p, clipboard, offset = 3) {
       (nodeById(p, n.parentId)?.kind ? n.parentId : null);
     if (wasRoot) n.name = n.name.slice(0, 195) + " copy";
     if (n.svgFillId) n.svgFillId = ids.get(n.svgFillId) || null;
+    if (n.linkedGeometry) {
+      n.linkedGeometry.sourceId =
+        ids.get(n.linkedGeometry.sourceId) || n.linkedGeometry.sourceId;
+      if (
+        ![...ids.values()].includes(n.linkedGeometry.sourceId) &&
+        !p.objects.some((o) => o.id === n.linkedGeometry.sourceId)
+      )
+        delete n.linkedGeometry;
+    }
     if (n.operations) n.operations.forEach((op) => (op.id = uid()));
     if (n.constructionArtworkIds)
       n.constructionArtworkIds = n.constructionArtworkIds

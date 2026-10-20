@@ -258,6 +258,14 @@ waiting for its new plan. All existing dimension, geometry, history and persiste
 assertions remain. Source and production-build equipment tests pass again. Await the
 updated PR CI before merging; no intermediate release has been deployed.
 
+The updated PR CI passed equipment and all new thread/export suites on Linux. It
+then exposed a similar pre-existing image-test race when starting the next upload
+before the previous import's finally/input-reset completed. The smart-import browser
+test now explicitly waits for file processing to finish before another upload and
+after commit. Original PNG/JPEG, 12/24/32/64-color, background/merge/geometry, Undo,
+persistence and every-PES-needle assertions remain unchanged and pass locally again
+(`release-smart-import-completion.log`). Await the next full PR run; do not bypass CI.
+
 ## Research and licensing boundary
 
 Read `C:/Users/david/Desktop/ThreadResearch.zip` in place; did not extract or commit its

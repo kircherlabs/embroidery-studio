@@ -1,3 +1,4 @@
+import { TRANSFORM_PREFERENCE } from "./transform-ui.js";
 import { sculptIntersections } from "./sculpt-contour.js";
 import { focusClass } from "./focus-ui.js";
 import { railArtwork, railCandidates } from "./rail-ui.js";
@@ -128,6 +129,12 @@ const state = {
   space: false,
   manualIndex: 0,
 };
+try {
+  state.transformOrientation =
+    localStorage.getItem(TRANSFORM_PREFERENCE) === "canvas"
+      ? "canvas"
+      : "object";
+} catch {}
 let restored = false;
 try {
   const saved = localStorage.getItem("embroidery-studio-v1");

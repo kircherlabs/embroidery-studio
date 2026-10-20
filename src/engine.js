@@ -798,6 +798,37 @@ export function generate(project) {
     warnings.push(
       `${diagnostics.overlapPairs} overlapping or compensated boundary pairs retain layer order. Overlapping fills are not automatically cut away; underlay and construction may require them.`,
     );
+  // Locate hoop violations using machine movements only, never selection cages,
+  // source guides, or reference artwork.
+  if (!stats.fits) {
+    const outside = new Map();
+    for (const e of events) {
+      if (
+        !["stitch", "jump"].includes(e.cmd) ||
+        !e.objectId ||
+        (Math.abs(e.x) <= machine.width / 2 &&
+          Math.abs(e.y) <= machine.height / 2)
+      )
+        continue;
+      const key = `${e.objectId}:${e.operationId || ""}`;
+      if (!outside.has(key)) outside.set(key, { e, count: 0 });
+      outside.get(key).count++;
+    }
+    for (const { e, count } of outside.values()) {
+      const o = project.objects.find((o) => o.id === e.objectId);
+      (diagnostics.operationIssues ||= []).push({
+        code: "outside-hoop",
+        severity: "warning",
+        objectId: e.objectId,
+        objectName: o?.name,
+        operationId: e.operationId,
+        operationName: e.operationName,
+        message: `${count} generated stitch or jump positions extend beyond the selected hoop.`,
+        action:
+          "Move or resize this artwork, or choose a larger supported hoop. Source guides and reference images are excluded.",
+      });
+    }
+  }
   if (!stats.fits)
     warnings.push(
       "Stitches extend beyond the selected hoop. Move or resize the design before export.",

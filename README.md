@@ -38,6 +38,12 @@ accuracy tolerance. Repeated edits retain the points needed for the bend without
 continually subdividing whole edges. Sharp turns, other contours and existing
 Bézier controls are preserved. See [vertex counts and accuracy tests](docs/SCULPT_CONTOURS.md).
 
+Rotated selections now keep their handles and resize axes aligned with artwork.
+**Properties → Position, size & rotation → Transform orientation** switches
+between Object and Canvas without altering the design. Shift toggles corner
+proportions; Alt resizes about the center. Shared-axis groups use a rotated frame;
+mixed orientations use Canvas. See [controls, compatibility and tests](docs/OBJECT_TRANSFORMS.md).
+
 ## Design tools and workspace
 
 The compact SVG toolbar above the canvas groups selection/editing, geometry,

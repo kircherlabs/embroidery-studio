@@ -1,4 +1,11 @@
 import {
+  selectionBox,
+  boxPoint,
+  boxHandles,
+  resizeBox,
+  handleCursor,
+} from "./transform-box.js";
+import {
   nearestSegment,
   sculptArtwork,
   alignHandle,
@@ -272,19 +279,10 @@ export class Stage {
     return (index > 0 ? chain[index - 1] : index === 0 ? o : chain.at(-1)).id;
   }
   handles(b) {
-    const x = (b.minX + b.maxX) / 2,
-      y = (b.minY + b.maxY) / 2;
-    return [
-      ["nw", b.minX, b.minY],
-      ["n", x, b.minY],
-      ["ne", b.maxX, b.minY],
-      ["e", b.maxX, y],
-      ["se", b.maxX, b.maxY],
-      ["s", x, b.maxY],
-      ["sw", b.minX, b.maxY],
-      ["w", b.minX, y],
-      ["rotate", x, b.minY - 22 / this.scale],
-    ].map(([id, x, y]) => ({ id, x, y }));
+    return boxHandles(b, this.scale);
+  }
+  selectionBox(objects) {
+    return selectionBox(objects, this.state.transformOrientation);
   }
   zoomAt(f, x = this.w / 2, y = this.h / 2) {
     const old = this.scale,
@@ -341,6 +339,7 @@ export class Stage {
       scale = this.scale,
       c = this.center,
       m = MACHINES[s.project.machine];
+    this.transformCage = null;
     const selection = selectedLeaves(s, { editable: true, visible: true }),
       selected = selection.length === 1 ? selection[0] : null,
       activeIds = new Set(selection.map((o) => o.id));
@@ -592,10 +591,24 @@ export class Stage {
           activeOperationId: s.activeOperationId,
           multiple: selection.length > 1,
         });
-      const b = selectionBounds(selection);
+      // Hidden descendants still transform with a selected parent. Use the same
+      // complete editable scope for the drawn cage and pointer hit testing.
+      const b = this.selectionBox(selectedLeaves(s, { editable: true }));
+      this.transformCage = { box: b, handles: this.handles(b) };
       strokeEditingPath(
         ctx,
-        (c) => c.rect(b.minX, b.minY, b.width, b.height),
+        (c) => {
+          for (const [i, p] of [
+            [b.minX, b.minY],
+            [b.maxX, b.minY],
+            [b.maxX, b.maxY],
+            [b.minX, b.maxY],
+          ]
+            .map(([x, y]) => boxPoint({ x, y }, b))
+            .entries())
+            i ? c.lineTo(p.x, p.y) : c.moveTo(p.x, p.y);
+          c.closePath();
+        },
         scale,
         { width: 1, dash: [4, 3] },
       );
@@ -638,8 +651,10 @@ export class Stage {
         strokeEditingPath(
           ctx,
           (c) => {
-            c.moveTo((b.minX + b.maxX) / 2, b.minY);
-            c.lineTo((b.minX + b.maxX) / 2, b.minY - 22 / scale);
+            const a = boxPoint({ x: (b.minX + b.maxX) / 2, y: b.minY }, b),
+              r = this.handles(b).at(-1);
+            c.moveTo(a.x, a.y);
+            c.lineTo(r.x, r.y);
           },
           scale,
           { width: 1 },
@@ -868,15 +883,19 @@ export class Stage {
       .querySelector('[data-tool="pan"]')
       ?.classList.toggle("temporary", Boolean(s.space));
     this.canvas.style.cursor =
-      s.tool === "pan" || s.space || this.drag?.type === "pan"
-        ? this.drag
+      this.drag?.type === "resize"
+        ? handleCursor(this.drag.handle, this.drag.b)
+        : this.drag?.type === "rotate"
           ? "grabbing"
-          : "grab"
-        : this.satinGuideTarget()
-          ? "crosshair"
-          : ["select", "node"].includes(s.tool)
-            ? "default"
-            : "crosshair";
+          : s.tool === "pan" || s.space || this.drag?.type === "pan"
+            ? this.drag
+              ? "grabbing"
+              : "grab"
+            : this.satinGuideTarget()
+              ? "crosshair"
+              : ["select", "node"].includes(s.tool)
+                ? "default"
+                : "crosshair";
   }
   roundRect(ctx, x, y, w, h, r) {
     ctx.beginPath();
@@ -1180,7 +1199,7 @@ export class Stage {
       }
     }
     if (s.tool === "select" && selection.length) {
-      const b = selectionBounds(selection),
+      const b = this.selectionBox(selection),
         handle = this.handles(b).find(
           (h) =>
             distance(p, h) < (e.pointerType === "touch" ? 13 : 8) / this.scale,
@@ -1275,7 +1294,16 @@ export class Stage {
       return;
     }
     const d = this.drag;
-    if (!d) return;
+    if (!d) {
+      if (this.state.tool === "select" && !this.state.space) {
+        // Reuse the last rendered frame: hovering must not walk every vertex of
+        // a dense imported region on each pointer event.
+        const cage = this.transformCage,
+          h = cage?.handles.find((h) => distance(h, p) < 8 / this.scale);
+        this.canvas.style.cursor = h ? handleCursor(h, cage.box) : "default";
+      }
+      return;
+    }
     if (d.type === "pan") {
       this.pan = { x: d.pan.x + e.clientX - d.x, y: d.pan.y + e.clientY - d.y };
     } else if (d.type === "satin-guide") {
@@ -1309,10 +1337,7 @@ export class Stage {
     } else if (d.type === "resize" || d.type === "rotate") {
       this.restoreGeometry(d);
       if (d.type === "rotate") {
-        const center = {
-          x: (d.b.minX + d.b.maxX) / 2,
-          y: (d.b.minY + d.b.maxY) / 2,
-        };
+        const center = d.b.center;
         let angle =
           ((Math.atan2(p.y - center.y, p.x - center.x) -
             Math.atan2(d.start.y - center.y, d.start.x - center.x)) *
@@ -1321,37 +1346,17 @@ export class Stage {
         if (e.shiftKey) angle = Math.round(angle / 15) * 15;
         transformSelection(d.objects, { angle, pivot: center });
       } else {
-        const horizontal = /[we]/.test(d.handle.id),
-          vertical = /[ns]/.test(d.handle.id);
-        const pivot = {
-          x: d.handle.id.includes("w")
-            ? d.b.maxX
-            : d.handle.id.includes("e")
-              ? d.b.minX
-              : (d.b.minX + d.b.maxX) / 2,
-          y: d.handle.id.includes("n")
-            ? d.b.maxY
-            : d.handle.id.includes("s")
-              ? d.b.minY
-              : (d.b.minY + d.b.maxY) / 2,
-        };
         const target =
           this.state.snapGrid && !e.altKey
             ? { x: Math.round(p.x), y: Math.round(p.y) }
             : p;
-        let sx = horizontal
-            ? Math.max(0.02, (target.x - pivot.x) / (d.handle.x - pivot.x || 1))
-            : 1,
-          sy = vertical
-            ? Math.max(0.02, (target.y - pivot.y) / (d.handle.y - pivot.y || 1))
-            : 1;
-        if (
-          horizontal &&
-          vertical &&
-          (this.state.proportional !== false) !== !!e.shiftKey
-        )
-          sx = sy = Math.abs(sx - 1) > Math.abs(sy - 1) ? sx : sy;
-        transformSelection(d.objects, { sx, sy, pivot });
+        transformSelection(
+          d.objects,
+          resizeBox(d.b, d.handle, target, {
+            center: e.altKey,
+            proportional: (this.state.proportional !== false) !== !!e.shiftKey,
+          }),
+        );
       }
     } else if (d.type === "pencil") {
       for (const event of e.getCoalescedEvents?.().length
@@ -1654,6 +1659,9 @@ export class Stage {
       else o.rings = structuredClone(original.rings);
       o.angle = original.angle;
       for (const key of [
+        "localAxis",
+        "satinRails",
+        "satinGuides",
         "effects",
         "linkedGeometry",
         "shape",

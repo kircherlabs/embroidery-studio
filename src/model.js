@@ -433,6 +433,14 @@ export function validateProject(p) {
         if (!Number.isFinite(o[k]) || o[k] < min || o[k] > max)
           throw Error(`Invalid ${k} setting.`);
     }
+    if (
+      o.localAxis !== undefined &&
+      (!Array.isArray(o.localAxis) ||
+        o.localAxis.length !== 2 ||
+        !o.localAxis.every(Number.isFinite) ||
+        Math.abs(Math.hypot(...o.localAxis) - 1) > 1e-6)
+    )
+      throw Error("Invalid artwork orientation axis.");
     if (o.type !== "reference") validateSource(o);
     const pts = o.type === "manual" ? o.commands : o.rings.flat();
     total += pts.length;

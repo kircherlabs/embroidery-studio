@@ -177,8 +177,11 @@ try {
   );
   await drag({ x: 43, y: 24 }, { x: 51, y: 28 }, true);
   ref = (await project()).objects.find((o) => o.id === ref.id);
-  near(ref.reference.frame[0], 88);
-  near(ref.reference.frame[3], 44);
+  // Alt now explicitly scales about the center as well as bypassing snapping.
+  near(ref.reference.frame[0], 96);
+  near(ref.reference.frame[3], 48);
+  near(ref.reference.frame[4], 3);
+  near(ref.reference.frame[5], 4);
   await page.locator("#proportional").uncheck();
   await field("size-h", 32);
   await field("rotate", 25);

@@ -1,3 +1,5 @@
+import { selectionBox } from "./transform-box.js";
+import { orientationControl, bindOrientation } from "./transform-ui.js";
 import {
   methodPicker,
   categoryHelp,
@@ -15,7 +17,6 @@ import {
   nodeById,
   selectionIds,
   selectedLeaves,
-  selectionBounds,
   transformSelection,
   PROJECT,
   isVisible,
@@ -122,7 +123,7 @@ export function renderInspector(api) {
     selectedType = common("type"),
     constructionType = selectedType in CONSTRUCTION_METHODS ? selectedType : "",
     defaultAddType = vectors.every(closedArtwork) ? "border" : "run";
-  const b = selectionBounds(objects),
+  const b = selectionBox(objects, state.transformOrientation),
     name = ids[0] === PROJECT ? p.name : one?.name;
   const field = (
     label,
@@ -172,7 +173,7 @@ export function renderInspector(api) {
     ${targets.some(isSewing) ? `<div class="section-label">STITCH SETTINGS</div><div class="two-col">${hasFill || hasSatin ? field("Row spacing", "spacing", "spacing", "mm", 0.15, 5) : ""}${control.some((o) => propertyApplies(o.type, "length")) ? field(hasFill ? "Maximum segment length" : "Running stitch length", "length", "length", "mm", 0.3, 7) : ""}</div>${hasDirectional ? field("Stitch direction", "angle", "angle", "°", -360, 360, 1) : ""}${hasDirectional ? `<label class="field">Fill pattern<select id="fill-pattern">${mixed("pattern") ? '<option value="" disabled selected>Mixed</option>' : ""}<option value="quarter">Quarter stagger</option><option value="half">Half stagger</option><option value="aligned">Aligned penetrations</option></select></label>` : ""}${hasSatin ? field("Satin band width", "satin-width", "width", "mm", 0.3, 7) : ""}` : ""}
     ${targets.length ? `<details class="advanced-settings" data-section="advanced"><summary>Advanced</summary>${hasFill || hasSatin ? field("Pull compensation", "compensation", "compensation", "mm", 0, 1) : ""}${control.some((o) => propertyApplies(o.type, "underlay")) ? check(hasFill || hasSatin ? "Light underlay" : "Preliminary outline pass", "underlay", "underlay") : ""}${control.some((o) => propertyApplies(o.type, "closed")) ? check("Sew closing segment", "closed-path", "closed") : ""}${hasPath ? check("Reverse sewing direction", "reverse-path", "reverse") : ""}${hasOutline ? field("Contour offset", "op-offset", "offset", "mm", -5, 5) + check("Outer boundary only", "outer-only", "outerOnly") : ""}${hasPath && control.some((o) => o.closed || ["placement", "tackdown", "basting", "contour", "border"].includes(o.type)) ? field("Start at vertex index", "start-index", "startIndex", "", 0, 500000, 1) : ""}${targets.some(isSewing) ? check("Tie-in · secure thread at start", "tie-in", "tieIn") + check("Tie-off · secure thread at end", "tie-off", "tieOff") : ""}${leaf && active ? `<label class="field">Sewing action name<input id="operation-name" maxlength="100" value="${escape(active.name)}"></label>` : ""}${leaf?.constructionArtworkIds?.length && active ? `<label class="field">This action sews<select id="construction-stage"><option value="prepare">Before decorative artwork</option><option value="finish">After decorative artwork</option></select></label>` : ""}</details>` : ""}
     ${targets.length ? `<details class="construction-method-picker" data-section="construction-method" ${constructionType ? "open" : ""}><summary>Advanced Construction</summary><label class="field">This action's construction purpose<select id="construction-method">${methodOptions(CONSTRUCTION_METHODS, constructionType, control.length > 1 && control.every((o) => o.type in CONSTRUCTION_METHODS) ? "Mixed construction purposes" : "Choose construction action…")}</select></label><p class="property-note" id="construction-method-guidance">Changes this action into a fabric-construction step or machine command. To keep existing stitching, use Add another sewing action instead.</p></details>` : ""}
-    </div></section><details id="transform-settings" data-section="transform" open><summary>Position, size & rotation</summary><div class="section-label">POSITION & SIZE · SELECTION</div><div class="two-col">${field("Center X", "pos-x", null, "mm", -1000, 1000, 0.1, (b.minX + b.maxX) / 2)}${field("Center Y", "pos-y", null, "mm", -1000, 1000, 0.1, (b.minY + b.maxY) / 2)}${field("Width", "size-w", null, "mm", 0.1, 500, 0.1, b.width)}${field("Height", "size-h", null, "mm", 0.1, 500, 0.1, b.height)}</div><label class="check"><input id="proportional" type="checkbox" ${state.proportional !== false ? "checked" : ""}>Keep proportions · Shift while dragging to toggle</label>${field("Rotate selection by", "rotate", null, "°", -360, 360, 1, 0)}
+    </div></section><details id="transform-settings" data-section="transform" open><summary>Position, size & rotation</summary><div class="section-label">POSITION & SIZE · SELECTION</div>${orientationControl(state, b)}<div class="two-col">${field("Center X", "pos-x", null, "mm", -1000, 1000, 0.1, b.center.x)}${field("Center Y", "pos-y", null, "mm", -1000, 1000, 0.1, b.center.y)}${field(b.local ? "Local width" : "Width", "size-w", null, "mm", 0.1, 500, 0.1, b.width)}${field(b.local ? "Local height" : "Height", "size-h", null, "mm", 0.1, 500, 0.1, b.height)}</div><label class="check"><input id="proportional" type="checkbox" ${state.proportional !== false ? "checked" : ""}>Keep proportions · Shift while dragging to toggle</label>${field("Rotate selection by", "rotate", null, "°", -360, 360, 1, 0)}
     </details><details id="object-sewing-options" data-section="object-sewing"><summary>Object sewing options</summary>${check("Keep sewing order position", "sequence-locked", "sequenceLocked")}
     ${leaf?.type === "manual" ? `<div id="manual-action-editor">${manualEditor(leaf)}</div>` : leaf ? `<button id="convert-manual" ${leaf.constructionArtworkIds?.length ? 'disabled aria-describedby="construction-manual-note"' : ""}>Make stitches editable</button>${leaf.constructionArtworkIds?.length ? '<p class="property-note" id="construction-manual-note">A linked patch boundary needs its sewing phases to surround the artwork. Duplicate the boundary alone before converting it to manual stitches.</p>' : ""}` : ""}</details>
     <section class="inspector-section" id="embroidery-settings"><h3>Embroidery</h3>
@@ -423,14 +424,19 @@ export function renderInspector(api) {
         `${externalPins.length} objects remain pinned by their parent; select that group to change its pin.`,
       );
   };
-  const tx = (opts) => mutate(() => transformSelection(objects, opts));
-  bind("pos-x", (v) => tx({ dx: v - (b.minX + b.maxX) / 2 }), -1000, 1000);
-  bind("pos-y", (v) => tx({ dy: v - (b.minY + b.maxY) / 2 }), -1000, 1000);
+  const tx = (opts) =>
+    mutate(() => transformSelection(objects, { pivot: b.center, ...opts }));
+  bindOrientation(api);
+  if ($("reset-object-rotation"))
+    $("reset-object-rotation").onclick = () => tx({ angle: -b.angle });
+  bind("pos-x", (v) => tx({ dx: v - b.center.x }), -1000, 1000);
+  bind("pos-y", (v) => tx({ dy: v - b.center.y }), -1000, 1000);
   bind(
     "size-w",
     (v) =>
       tx({
         sx: b.width ? v / b.width : 1,
+        axes: b.angle,
         sy: state.proportional !== false && b.width ? v / b.width : 1,
       }),
     0.1,
@@ -441,6 +447,7 @@ export function renderInspector(api) {
     (v) =>
       tx({
         sy: b.height ? v / b.height : 1,
+        axes: b.angle,
         sx: state.proportional !== false && b.height ? v / b.height : 1,
       }),
     0.1,

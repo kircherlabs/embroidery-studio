@@ -427,6 +427,10 @@ export function importSVG(text, filename = "Imported SVG") {
             fills.map((p) => p.points.map((q) => ({ ...q }))),
             {
               color: fill,
+              localAxis:
+                Math.hypot(m.a, m.b) > 1e-12
+                  ? [m.a / Math.hypot(m.a, m.b), m.b / Math.hypot(m.a, m.b)]
+                  : [1, 0],
               fillRule: rule,
               closed: true,
               parentId: metadata.get(el).parentId,
@@ -446,6 +450,10 @@ export function importSVG(text, filename = "Imported SVG") {
                 outlines.map((p) => p.points.map((q) => ({ ...q }))),
                 {
                   type: "run",
+                  localAxis:
+                    Math.hypot(m.a, m.b) > 1e-12
+                      ? [m.a / Math.hypot(m.a, m.b), m.b / Math.hypot(m.a, m.b)]
+                      : [1, 0],
                   color: stroke,
                   closed,
                   underlay: false,

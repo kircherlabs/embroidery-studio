@@ -289,37 +289,63 @@ export function pasteSelection(p, clipboard, offset = 3, remap = null) {
 }
 export function transformSelection(
   objects,
-  { sx = 1, sy = 1, angle = 0, dx = 0, dy = 0, pivot } = {},
+  { sx = 1, sy = 1, angle = 0, dx = 0, dy = 0, pivot, axes = 0 } = {},
 ) {
   const b = selectionBounds(objects),
     c = pivot || { x: (b.minX + b.maxX) / 2, y: (b.minY + b.maxY) / 2 },
     a = (angle * Math.PI) / 180;
+  const phi = (axes * Math.PI) / 180,
+    u = Math.cos(phi),
+    v = Math.sin(phi),
+    xx = sx * u * u + sy * v * v,
+    xy = (sx - sy) * u * v,
+    yy = sx * v * v + sy * u * u,
+    ca = Math.cos(a),
+    sa = Math.sin(a),
+    m = [
+      ca * xx - sa * xy,
+      sa * xx + ca * xy,
+      ca * xy - sa * yy,
+      sa * xy + ca * yy,
+      0,
+      0,
+    ];
+  m[4] = c.x - m[0] * c.x - m[2] * c.y + dx;
+  m[5] = c.y - m[1] * c.x - m[3] * c.y + dy;
   for (const o of objects) {
     // Manual control commands also carry a position. Translate them with the
     // needle points, without counting them toward the selection bounds.
     const points = o.type === "manual" ? o.commands : o.rings.flat();
     for (const p of points) {
+      if (axes) {
+        const x = p.x,
+          y = p.y;
+        p.x = m[0] * x + m[2] * y + m[4];
+        p.y = m[1] * x + m[3] * y + m[5];
+        continue;
+      }
       const x = (p.x - c.x) * sx,
         y = (p.y - c.y) * sy;
       p.x = c.x + x * Math.cos(a) - y * Math.sin(a) + dx;
       p.y = c.y + x * Math.sin(a) + y * Math.cos(a) + dy;
     }
-    const ca = Math.cos(a),
-      sa = Math.sin(a);
-    sourceTransform(o, [
-      ca * sx,
-      sa * sx,
-      -sa * sy,
-      ca * sy,
-      c.x - c.x * ca * sx + c.y * sa * sy + dx,
-      c.y - c.x * sa * sx - c.y * ca * sy + dy,
-    ]);
+    sourceTransform(o, m);
     // Reflect stitch directions with the source without changing physical density.
     if (angle || sx * sy < 0) {
       const direction = (v) => {
         if (v === undefined) return v;
         let d = v;
-        if (sx * sy < 0)
+        if (sx * sy < 0 && axes) {
+          const t = ((v - axes) * Math.PI) / 180;
+          d =
+            (Math.atan2(
+              Math.sign(sy) * Math.sin(t),
+              Math.sign(sx) * Math.cos(t),
+            ) *
+              180) /
+              Math.PI +
+            axes;
+        } else if (sx * sy < 0)
           d =
             (Math.atan2(
               Math.sign(sy) * Math.sin((v * Math.PI) / 180),

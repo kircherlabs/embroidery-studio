@@ -111,6 +111,8 @@ export function designIssues(project, warnings = [], diagnostics = {}) {
   }
   for (const warning of warnings) {
     if (
+      (warning.startsWith("Stitches extend beyond") &&
+        diagnostics.operationIssues?.some((i) => i.code === "outside-hoop")) ||
       warning.includes("this offset collapses") ||
       warning.includes("require operator action") ||
       warning.includes("spacing below 0.25")

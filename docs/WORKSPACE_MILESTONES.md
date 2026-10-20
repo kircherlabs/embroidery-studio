@@ -1,6 +1,6 @@
 # Professional workspace roadmap and implementation audit
 
-## Current status — 0.12.6
+## Current status — 0.12.7
 
 | Milestone                    | Status   | Delivered / remaining                                                                                                           |
 | ---------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------- |
@@ -97,3 +97,11 @@ See [Artwork tools](ARTWORK_TOOLS.md) for controls, construction ordering and li
 The scoped roadmap's three milestones are complete. Linked manual satin rails and
 general modifier stacks are not claimed; paired rails retain their dedicated source
 tools and support independent repeats. Physical sew-outs remain necessary.
+
+## v0.12.7 — Object-aligned transforms
+
+Rotated cages and local-axis pointer/numerical resizing share the existing affine
+source pipeline. Object/Canvas preference, fixed anchors, center resizing,
+rotation reset, SVG orientation metadata, source/rail preservation and located
+hoop issues are covered by new math, pixel, touch and PES regression checks.
+See [scope, controls and limitations](OBJECT_TRANSFORMS.md).

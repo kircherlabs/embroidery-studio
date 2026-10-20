@@ -292,13 +292,15 @@ const descriptions = {
   "pos-y":
     "Move the center of the selected artwork vertically, in millimeters relative to hoop center. Positive Y moves down.",
   "size-w":
-    "Resize selected artwork to this physical width in millimeters. Stitches regenerate; stitch spacing and satin width keep their millimeter values.",
+    "Resize selected artwork to this physical width along the chosen Object or Canvas axes in millimeters. Stitches regenerate; stitch spacing and satin width keep their millimeter values.",
   "size-h":
-    "Resize selected artwork to this physical height in millimeters. With proportions enabled, both dimensions scale together.",
+    "Resize selected artwork to this physical height along the chosen Object or Canvas axes in millimeters. With proportions enabled, both dimensions scale together.",
   proportional:
     "Keep the selection's width-to-height ratio while resizing. Shift temporarily toggles this during handle dragging.",
+  "transform-orientation":
+    "Object resizes along the artwork's rotated axes. Mixed orientations fall back to Canvas axes. Canvas resizes horizontally/vertically; unequal scaling can skew rotated artwork. This view preference does not alter geometry. Shift toggles corner proportions; Alt resizes about the center and bypasses grid snapping.",
   rotate:
-    "Rotate the selection BY this angle in degrees, relative to its current orientation. The field resets to zero after applying. Fill directions rotate with artwork.",
+    "Rotate the selection BY this angle in degrees, relative to its current orientation. The field resets to zero after applying. The current object-axis angle and Reset rotation are shown in Object mode. Fill directions rotate with artwork.",
   "sequence-locked":
     "Pin this object's position during automatic sequencing. Other objects cannot cross it; a pinned group protects all its descendants.",
   "convert-manual":

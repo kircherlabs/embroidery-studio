@@ -1,3 +1,4 @@
+import { updateLocalAxis } from "./transform-box.js";
 // Editable source descriptions are additive: the embroidery engine still consumes rings.
 export const identity = () => [1, 0, 0, 1, 0, 0];
 export const mapPoint = (p, m) => ({
@@ -15,6 +16,7 @@ export function compose(a, b) {
   ].map((v) => (Object.is(v, -0) ? 0 : v));
 }
 export function sourceTransform(o, m) {
+  updateLocalAxis(o, m);
   if (o.linkedGeometry)
     o.linkedGeometry.frame = compose(m, o.linkedGeometry.frame);
   if (o.effects) o.effects.frame = compose(m, o.effects.frame);
@@ -38,6 +40,7 @@ export function sourceTransform(o, m) {
     );
 }
 export function detachSource(o) {
+  updateLocalAxis(o, identity());
   delete o.linkedGeometry;
   delete o.effects;
   delete o.satinRails;

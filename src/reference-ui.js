@@ -1,10 +1,7 @@
+import { selectionBox } from "./transform-box.js";
+import { orientationControl, bindOrientation } from "./transform-ui.js";
 import { addReference } from "./references.js";
-import {
-  selectionBounds,
-  transformSelection,
-  isLocked,
-  ancestors,
-} from "./hierarchy.js";
+import { transformSelection, isLocked, ancestors } from "./hierarchy.js";
 const esc = (s) =>
   String(s).replace(
     /[&<>"']/g,
@@ -109,12 +106,12 @@ export function referenceInspector(api, all, one) {
   const { state, mutate, refresh, toast } = api,
     p = state.project,
     editable = all.filter((o) => !isLocked(p, o)),
-    b = selectionBounds(all);
+    b = selectionBox(all, state.transformOrientation);
   const field = (label, id, v, min, max) =>
     `<label class="field">${label}<input id="${id}" type="number" min="${min}" max="${max}" step="0.1" value="${Number(v.toFixed(3))}" ${!editable.length ? "disabled" : ""}></label>`;
   document.getElementById("inspector-title").textContent = "Reference image";
   document.getElementById("properties").innerHTML =
-    `<section class="inspector-section"><h3>Reference image · no stitches</h3><p class="property-note">Always behind embroidery artwork. References never sew, export, or affect hoop-fit checks. Select this layer in Objects to edit it; normal canvas clicks target artwork.</p>${one ? `<label class="field">Image name<input id="reference-name" maxlength="200" value="${esc(one.name)}"></label>` : ""}<button id="edit-reference">${editable.length === all.length ? "Finish editing & lock reference" : "Edit reference · unlock"}</button><label class="field">Opacity · %<input id="reference-opacity" type="range" min="0" max="100" value="${Math.round(all[0].reference.opacity * 100)}" ${!editable.length ? "disabled" : ""}></label><output id="reference-opacity-value">${all.every((o) => o.reference.opacity === all[0].reference.opacity) ? Math.round(all[0].reference.opacity * 100) + "%" : "Mixed"}</output><div class="two-col">${field("Center X · mm", "pos-x", (b.minX + b.maxX) / 2, -1000, 1000)}${field("Center Y · mm", "pos-y", (b.minY + b.maxY) / 2, -1000, 1000)}${field("Width · mm", "size-w", b.width, 0.1, 500)}${field("Height · mm", "size-h", b.height, 0.1, 500)}</div><label class="check"><input id="proportional" type="checkbox" ${state.proportional !== false ? "checked" : ""}>Keep proportions · Shift toggles while dragging</label>${field("Rotate selection by · °", "rotate", 0, -360, 360)}${one ? `<p class="property-note">${p.referenceAssets[one.reference.assetId].width} × ${p.referenceAssets[one.reference.assetId].height} stored pixels. ${p.referenceAssets[one.reference.assetId].optimized ? "Optimized copy embedded; original file is not stored." : "Original image bytes embedded without re-encoding."} Shared image assets are saved inside .embstudio projects.</p>` : ""}<p class="property-note">Use the tree eye and lock controls to show, hide or lock layers. Duplicate, Delete and Rename use the normal object commands. The Node tool edits embroidery paths, not image pixels.</p></section>`;
+    `<section class="inspector-section"><h3>Reference image · no stitches</h3><p class="property-note">Always behind embroidery artwork. References never sew, export, or affect hoop-fit checks. Select this layer in Objects to edit it; normal canvas clicks target artwork.</p>${one ? `<label class="field">Image name<input id="reference-name" maxlength="200" value="${esc(one.name)}"></label>` : ""}<button id="edit-reference">${editable.length === all.length ? "Finish editing & lock reference" : "Edit reference · unlock"}</button><label class="field">Opacity · %<input id="reference-opacity" type="range" min="0" max="100" value="${Math.round(all[0].reference.opacity * 100)}" ${!editable.length ? "disabled" : ""}></label><output id="reference-opacity-value">${all.every((o) => o.reference.opacity === all[0].reference.opacity) ? Math.round(all[0].reference.opacity * 100) + "%" : "Mixed"}</output>${orientationControl(state, b)}<div class="two-col">${field("Center X · mm", "pos-x", b.center.x, -1000, 1000)}${field("Center Y · mm", "pos-y", b.center.y, -1000, 1000)}${field(b.local ? "Local width · mm" : "Width · mm", "size-w", b.width, 0.1, 500)}${field(b.local ? "Local height · mm" : "Height · mm", "size-h", b.height, 0.1, 500)}</div><label class="check"><input id="proportional" type="checkbox" ${state.proportional !== false ? "checked" : ""}>Keep proportions · Shift toggles while dragging</label>${field("Rotate selection by · °", "rotate", 0, -360, 360)}${one ? `<p class="property-note">${p.referenceAssets[one.reference.assetId].width} × ${p.referenceAssets[one.reference.assetId].height} stored pixels. ${p.referenceAssets[one.reference.assetId].optimized ? "Optimized copy embedded; original file is not stored." : "Original image bytes embedded without re-encoding."} Shared image assets are saved inside .embstudio projects.</p>` : ""}<p class="property-note">Use the tree eye and lock controls to show, hide or lock layers. Duplicate, Delete and Rename use the normal object commands. The Node tool edits embroidery paths, not image pixels.</p></section>`;
   const $ = (id) => document.getElementById(id);
   if (one)
     $("reference-name").onchange = (e) =>
@@ -153,12 +150,12 @@ export function referenceInspector(api, all, one) {
         return;
       }
       const v = Number(e.target.value),
-        box = selectionBounds(editable),
+        box = selectionBox(editable, state.transformOrientation),
         opts =
           id === "pos-x"
-            ? { dx: v - (box.minX + box.maxX) / 2 }
+            ? { dx: v - box.center.x }
             : id === "pos-y"
-              ? { dy: v - (box.minY + box.maxY) / 2 }
+              ? { dy: v - box.center.y }
               : id === "rotate"
                 ? { angle: v }
                 : id === "size-w"
@@ -174,7 +171,21 @@ export function referenceInspector(api, all, one) {
                           ? v / (box.height || 1)
                           : 1,
                     };
-      mutate(() => transformSelection(editable, opts));
+      mutate(() =>
+        transformSelection(editable, {
+          pivot: box.center,
+          axes: id.startsWith("size-") ? box.angle : 0,
+          ...opts,
+        }),
+      );
     };
+  bindOrientation(api);
+  if ($("reset-object-rotation") && !editable.length)
+    $("reset-object-rotation").disabled = true;
+  if ($("reset-object-rotation"))
+    $("reset-object-rotation").onclick = () =>
+      mutate(() =>
+        transformSelection(editable, { angle: -b.angle, pivot: b.center }),
+      );
   return true;
 }

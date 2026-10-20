@@ -245,6 +245,19 @@ machine and export compatibility docs for exact model/format evidence and limits
 Protected backup branches remain unchanged, including newly observed BACKUP-V0.12.8
 at the original v0.12.8 main commit.
 
+### Publication checkpoint — PR #23
+
+Release commit `10cef2a` is in [PR #23](https://github.com/kircherlabs/embroidery-studio/pull/23).
+The production build independently passed equipment, catalogs, matching and inventory
+browser workflows. First PR CI passed all JS/native and new thread/export browsers,
+then exposed an equipment test timing race on Linux Chromium: immediately after a
+native dialog closes, its asynchronous handler has not necessarily committed the
+new hoop, so the test read the previous 203.2 mm plan instead of the new 100 mm field.
+`tests/equipment-browser.mjs` now waits for the actual project transaction before
+waiting for its new plan. All existing dimension, geometry, history and persistence
+assertions remain. Source and production-build equipment tests pass again. Await the
+updated PR CI before merging; no intermediate release has been deployed.
+
 ## Research and licensing boundary
 
 Read `C:/Users/david/Desktop/ThreadResearch.zip` in place; did not extract or commit its

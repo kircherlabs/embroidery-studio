@@ -20,6 +20,18 @@ try {
   page.on("pageerror", (e) => errors.push(e.stack));
   const project = () => page.evaluate(() => window.studio.getProject()),
     ready = () => page.waitForFunction(() => window.studio?.getPlan()),
+    // Native dialog close is queued differently across Chromium versions. An old
+    // plan can still exist until the close handler commits the equipment edit.
+    // Wait for that transaction, then for its new plan; keep every dimension assertion.
+    submitEdit = async () => {
+      const before = JSON.stringify(await project());
+      await page.locator("#dialog-submit").click();
+      await page.waitForFunction(
+        (before) => JSON.stringify(window.studio.getProject()) !== before,
+        before,
+      );
+      await ready();
+    },
     load = async (p) => {
       await page.locator("#file-input").setInputFiles({
         name: "equipment.embstudio",
@@ -100,8 +112,7 @@ try {
   await page.locator("#eq-width").fill("8");
   await page.locator("#eq-height").fill("10");
   await page.locator("#eq-format").selectOption("jef");
-  await page.locator("#dialog-submit").click();
-  await ready();
+  await submitEdit();
   let p = await project(),
     id = p.machine;
   assert.ok(id.startsWith("user-"));
@@ -116,31 +127,26 @@ try {
   await page.locator("#eq-hname").fill("Small 100");
   await page.locator("#eq-hw").fill("100");
   await page.locator("#eq-hh").fill("100");
-  await page.locator("#dialog-submit").click();
-  await ready();
+  await submitEdit();
   assert.equal(getMachine(await project()).width, 100);
   await page.locator("#equipment-hoop-edit").click();
   await page.locator("#eq-hname").fill("Square 120");
   await page.locator("#eq-hw").fill("120");
   await page.locator("#eq-hh").fill("120");
-  await page.locator("#dialog-submit").click();
-  await ready();
+  await submitEdit();
   assert.equal(getMachine(await project()).width, 120);
   await page.locator("#equipment-default").click();
   await page.locator("#new-project").click();
-  await page.locator("#dialog-submit").click();
-  await ready();
+  await submitEdit();
   assert.equal((await project()).machine, id);
   assert.equal((await project()).objects.length, 0);
   assert.equal(getMachine(await project()).width, 120);
   await page.locator("#equipment-copy").click();
   await page.locator("#eq-name").fill("Copy of my machine");
-  await page.locator("#dialog-submit").click();
-  await ready();
+  await submitEdit();
   assert.notEqual((await project()).machine, id);
   await page.locator("#equipment-delete").click();
-  await page.locator("#dialog-submit").click();
-  await ready();
+  await submitEdit();
   assert.equal((await project()).machine, "generic");
   await page.locator("#undo").click();
   await ready();
@@ -152,8 +158,7 @@ try {
   await ready();
   await page.locator("#equipment-edit").click();
   await page.locator("#eq-name").fill("Renamed machine");
-  await page.locator("#dialog-submit").click();
-  await ready();
+  await submitEdit();
   assert.equal(getMachine(await project()).name, "Renamed machine");
   const pref = await page.evaluate(() =>
     JSON.parse(localStorage.getItem("embroidery-equipment-v1")),

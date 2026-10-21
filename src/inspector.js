@@ -194,6 +194,21 @@ export function renderInspector(api) {
     $("fill-pattern")?.closest("label").replaceWith(wrapper);
     if (control.some((o) => o.type === "fill" && o.fillSettings))
       $("angle")?.closest("label").setAttribute("hidden", "");
+    if (
+      control.every(
+        (o) =>
+          o.type === "fill" &&
+          o.fillSettings &&
+          o.fillSettings.method !== "tatami",
+      )
+    ) {
+      $("compensation")?.closest("label").setAttribute("hidden", "");
+      $("underlay")?.closest("label").setAttribute("hidden", "");
+      const title = $("spacing")
+        ?.closest("label")
+        .querySelector(".field-title");
+      if (title) title.textContent = "Contour spacing";
+    }
   }
   const transformPanel = $("transform-settings");
   if (transformPanel) $("artwork-settings").append(transformPanel);

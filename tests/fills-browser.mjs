@@ -74,11 +74,7 @@ try {
   const original = await project(),
     legacy = needles(await plan());
   assert.equal(await page.locator("#fill-pattern:visible").count(), 1);
-  assert.equal(
-    await page.locator("#fill-method").count(),
-    0,
-    "no redundant one-choice method selector",
-  );
+  assert.equal(await page.locator("#fill-method").inputValue(), "tatami");
   await page.locator("#fill-pattern").selectOption("twill");
   await ready();
   let p = await project(),

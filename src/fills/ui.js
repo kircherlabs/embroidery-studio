@@ -82,7 +82,9 @@ export function fillControls(control) {
           .join(
             "",
           )}</div></details>${advanced ? num("Pattern direction · degrees", "angle", common(fills.map((o) => o.fillSettings?.angle ?? o.angle)), -360, 360, 1) : ""}<div class="two-col">${["twill", "chevron", "wave"].includes(texture) ? field(texture === "wave" ? "Wave period · rows" : "Repeat · rows", "period", 2, 128, 1) : ""}${texture === "wave" ? field("Wave amplitude", "amplitude", 0, 1, 0.05) : ""}${texture === "progressive" ? field("Offset per row · fraction", "step", -1, 1, 0.01) : ""}${texture === "random" ? num("Random seed", "seed", common(fills.map((o) => o.fillSettings?.seed ?? 1)), 0, 2147483647, 1) + field("Random variation", "variation", 0, 0.15, 0.01) : ""}</div>${texture === "custom" ? `<label class="field">Row offsets · fractions<input id="fill-sequence" value="${esc(common(fills.map((o) => (o.fillSettings?.sequence || []).join(", "))))}" placeholder="0, 0.4, 0.1, 0.65" data-help="One offset per row, repeating. Enter 1–32 comma-separated fractions from 0 up to, but not including, 1; each is a fraction of the maximum segment length."></label>` : ""}<details class="fill-advanced"><summary>Pattern placement &amp; edge quality</summary><label class="field">Pattern anchor<select id="fill-anchor">${options({ object: "Follow artwork", global: "Shared canvas grid" }, common(fills.map((o) => o.fillSettings?.anchor || "object")))}</select></label><p class="property-note">Follow artwork carries the pattern through moves and turns. Shared canvas grid stays fixed, allowing adjacent regions to share a lattice. Sizes remain in millimeters.</p><div class="two-col">${num("Origin X · mm", "originX", common(fills.map((o) => o.fillSettings?.frame?.[4] ?? makeFillSettings("tatami", o).frame[4])), -10000, 10000)}${num("Origin Y · mm", "originY", common(fills.map((o) => o.fillSettings?.frame?.[5] ?? makeFillSettings("tatami", o).frame[5])), -10000, 10000)}${field("Boundary inset · mm", "inset", 0, 10, 0.1)}</div><label class="check"><input id="fill-edge" type="checkbox" ${fills.every((o) => o.fillSettings?.edgeOptimize) ? "checked" : ""} ${fills.some((o) => o.fillSettings?.edgeOptimize) && !fills.every((o) => o.fillSettings?.edgeOptimize) ? 'data-mixed="true"' : ""}>Redistribute short edge intervals</label><p class="property-note">Repositions needle penetrations while preserving row endpoints and maximum segment length. Narrow spans retain coverage and may remain short. This does not change row density.</p>${field("Minimum interval · mm", "edgeMinimum", 0, 1, 0.05)}</details>`
-      : `<p class="property-note">${esc(FILL_METHODS[method] || "Mixed fill methods")}</p>`
+      : method === "contour"
+        ? `<label class="field">Sew contours<select id="fill-direction">${options({ "outside-in": "Outside to inside", "inside-out": "Inside to outside" }, common(fills.map((o) => o.fillSettings?.direction || "outside-in")))}</select></label>${num("Boundary inset · mm", "inset", common(fills.map((o) => o.fillSettings?.inset ?? 0)), 0, 10)}<p class="property-note">Running loops follow successive insets. Spacing is the distance between loops; maximum segment length controls needle placement along each loop. Narrow tips and the final core may remain less covered. This method uses no dense-fill underlay or pull compensation.</p>`
+        : `<p class="property-note">${esc(FILL_METHODS[method] || "Mixed fill methods")}</p>`
   }<p class="property-note">${advanced ? "Expanded fill settings are active; spacing and length stay in millimeters." : "Classic, Brick and Aligned retain the original Tatami behavior until expanded settings are used."}</p><button id="fill-reset" type="button">Reset fill to Classic</button><p id="fill-input-error" role="status" class="property-note"></p></section>`;
 }
 export function bindFillControls(api, objects, single) {
@@ -114,6 +116,7 @@ export function bindFillControls(api, objects, single) {
             op = id === "base" ? ops[0] : ops.find((op) => op.id === id);
           if (!op) throw Error("Select the sewing action again.");
           op.pattern = draft.pattern || "quarter";
+          op.name = draft.name;
           if (draft.fillSettings)
             op.fillSettings = structuredClone(draft.fillSettings);
           else delete op.fillSettings;
@@ -138,6 +141,33 @@ export function bindFillControls(api, objects, single) {
     });
   const pattern = document.getElementById("fill-pattern");
   if (pattern) pattern.onchange = (e) => choose(e.target.value);
+  const method = document.getElementById("fill-method");
+  if (method)
+    method.onchange = () =>
+      change((op, o) => {
+        const previous = op.fillSettings;
+        op.fillSettings = makeFillSettings(
+          method.value,
+          { ...o, ...op },
+          previous
+            ? {
+                anchor: previous.anchor,
+                frame: previous.frame,
+                angle: previous.angle,
+                seed: previous.seed,
+                inset: previous.inset,
+              }
+            : {},
+        );
+        if (["Tatami fill", ...Object.values(FILL_METHODS)].includes(op.name))
+          op.name = FILL_METHODS[method.value];
+      });
+  const direction = document.getElementById("fill-direction");
+  if (direction)
+    direction.onchange = () =>
+      change((op) => {
+        op.fillSettings = { ...op.fillSettings, direction: direction.value };
+      });
   document
     .querySelectorAll("[data-fill-texture]")
     .forEach((el) => (el.onclick = () => choose(el.dataset.fillTexture)));

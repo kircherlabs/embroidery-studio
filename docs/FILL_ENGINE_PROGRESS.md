@@ -83,12 +83,31 @@ passes custom edits/validation, anchors/origin, edge settings, Undo/Redo,
 save/reload, mobile, legacy Reset and independently decoded PES coordinates.
 Build and diff check pass. These are software measurements, not sew-out results.
 
-Implementation status: A, B and C complete.
-D Contour, E Meander, F Cross, G Emboss, H Ripple/Spiral and I release integration
-remain unimplemented. Order: A → B → C → D → F → E → G → H → I.
+Milestone C committed: `37dd06a`.
 
-Baseline commit: `787ef69`. Next: commit C, then D Contour Fill with topology-aware
-offset levels, safe routing, contextual controls and export/browser verification.
+Milestone D: real Contour Fill offsets every level from the original normalized
+region using the existing Clipper library, preserves counters/islands, follows
+explicit outside-in/inside-out levels and chooses nearby seams within a level.
+Quantized sewn paths and connectors are checked against the entire material
+region. Invalid tight geometry fails explicitly; no replacement fill is sewn.
+Core collapse and narrow-neck splitting are explained. The category is now Fill,
+with a contextual fill-method selector; irrelevant dense-fill underlay and pull
+compensation are hidden for Contour while retained for later Tatami editing.
+
+D verification: 326 Node tests pass, including every legacy event hash; rectangle,
+donut, islands, narrow-neck split, reversal, spacing, transforms and collapse
+cases verify real loops and full-segment containment. Edge browser tests verify
+one-action switching, colors/source preserved, controls, Undo/Redo, reload and
+independently decoded Contour PES needle coordinates/dimensions. Tatami texture
+Edge and existing sewing-action Chrome workflows also pass. Build/diff check pass.
+Screenshot: test-results/contour-fill-desktop.png (ignored). No physical sew-out.
+
+Implementation status: A, B, C and D complete. F Cross is next. E Meander,
+G Emboss, H Ripple/Spiral and I release integration remain unimplemented.
+Order: A → B → C → D → F → E → G → H → I.
+
+Baseline commit: `787ef69`. Next: commit D, then F Cross Stitch: complete-contained
+X cells, consistent top diagonal, safe row tours and real export verification.
 Preserve every protected backup ref. Do not regenerate legacy expectations to
 accommodate changed output. No public release until validated working milestones.
 

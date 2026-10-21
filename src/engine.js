@@ -12,6 +12,7 @@ import { routeFill } from "./fill-routing.js";
 import { duplicateArtwork } from "./artwork-diagnostics.js";
 import { generateFill } from "./fills/registry.js";
 import "./fills/tatami.js";
+import "./fills/contour.js";
 export { inside, distance } from "./geometry.js";
 const rotate = (p, a) => ({
   x: p.x * Math.cos(a) - p.y * Math.sin(a),

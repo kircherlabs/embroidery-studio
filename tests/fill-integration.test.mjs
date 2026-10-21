@@ -15,6 +15,7 @@ import {
 import { assignThread, threadTargets } from "../src/thread-assignment.js";
 import { builtinThreads } from "../src/thread-records.js";
 import { methodPreview } from "../src/fills/previews.js";
+import { setEmbroideryStyle, embroideryStyle } from "../src/styles.js";
 const rect = (r) => [
     { x: -r, y: -r },
     { x: r, y: -r },
@@ -98,4 +99,57 @@ test("method picker samples are real nonempty, distinct cached generator results
     svgs.add(svg);
   }
   assert.equal(svgs.size, 7);
+});
+test("ordinary sewing presets replace decorative fills deliberately; style transfer and colors remain separate", () => {
+  for (const sourceLevel of [true, false])
+    for (const style of ["fill", "combined", "fill-border"]) {
+      const o = object("Preset source", [rect(15)], {
+          closed: true,
+          angle: 0,
+          color: "#6689a5",
+          underlay: false,
+        }),
+        geometry = structuredClone(o.rings),
+        cfg = makeFillSettings("contour", o);
+      if (sourceLevel) o.fillSettings = cfg;
+      else {
+        o.operations = [makeOperation("fill", o)];
+        o.operations[0].fillSettings = cfg;
+      }
+      assert.equal(embroideryStyle(o), "custom");
+      setEmbroideryStyle(o, style);
+      assert.equal(o.fillSettings, undefined);
+      assert(o.operations.every((op) => !op.fillSettings));
+      assert.equal(embroideryStyle(o), style);
+      assert.equal(o.operations[0].color, "#6689a5");
+      assert.deepEqual(o.rings, geometry);
+      const p = project([o]);
+      assert.equal(p.version, 1);
+      assert(!generate(p).issues.some((i) => i.severity === "error"));
+    }
+});
+test("style transfer distinguishes absent ordinary-fill settings from inherited source defaults", () => {
+  const source = object("Ordinary", [rect(12)], { closed: true, angle: 0 }),
+    style = captureStyle(source, "base");
+  for (const mode of ["color", "action"]) {
+    const target = object("Target", [rect(12)], { closed: true, angle: 0 });
+    target.fillSettings = makeFillSettings("contour", target);
+    target.operations = [
+      makeOperation("fill", target),
+      makeOperation("fill", target),
+    ];
+    delete target.operations[0].fillSettings;
+    target.operations[1].fillSettings = makeFillSettings("tatami", target, {
+      texture: "twill",
+    });
+    transferStyle([target], style, mode, {
+      activeOperationId: target.operations[0].id,
+    });
+    assert.equal(target.fillSettings, undefined);
+    assert.equal(target.operations[1].fillSettings.texture, "twill");
+    assert.equal(
+      target.operations[0].fillSettings?.method,
+      mode === "color" ? "contour" : undefined,
+    );
+  }
 });

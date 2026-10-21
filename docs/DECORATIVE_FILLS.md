@@ -9,6 +9,9 @@ another sewing action** deliberately creates a separate pass/color.
 Artwork stays editable. Sewing actions keep their color, physical-thread snapshot,
 position in the stack and identity. Geometry/text/rails are not converted to
 stitches. Undo/Redo, project files, style transfer and My Artwork carry fill settings.
+Ordinary **Sewing presets** deliberately replace the setup with their labeled
+Tatami/outline construction. Use **Transfer sewing style** to copy a decorative
+fill; **Thread color only** keeps the target's existing construction.
 
 ## Choosing a construction
 

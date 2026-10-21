@@ -61,6 +61,22 @@ try {
     (await project()).objects[0].operations[0].fillSettings.method,
     "contour",
   );
+  await page.locator("#sewing-presets").click();
+  await page.locator("#sewing-preset").selectOption("fill");
+  await page.locator("#dialog-submit").click();
+  await ready();
+  assert.equal(
+    (await project()).objects[0].operations[0].fillSettings,
+    undefined,
+  );
+  assert.equal((await project()).version, 1);
+  await page.locator("#undo").click();
+  await ready();
+  await page.locator('[data-select="reusable-fill"]').click();
+  assert.equal(
+    (await project()).objects[0].operations[0].fillSettings.method,
+    "contour",
+  );
   await page.locator(".fill-method-picker > summary").click();
   assert.equal(await page.locator("[data-fill-method]").count(), 7);
   await page.locator('[data-fill-method="meander"]').focus();

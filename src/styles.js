@@ -34,6 +34,10 @@ export function setEmbroideryStyle(o, style) {
     type: o.type,
     closed: closedArtwork(o),
   };
+  // These explicit presets mean ordinary Tatami/outline construction. Copying a
+  // decorative fill belongs to style transfer, not to an unrelated preset.
+  delete source.fillSettings;
+  delete o.fillSettings;
   o.operations = (
     style === "combined"
       ? ["fill", "run"]
@@ -50,6 +54,8 @@ export function setEmbroideryStyle(o, style) {
 }
 
 export function embroideryStyle(o) {
+  if (o.fillSettings || o.operations?.some((op) => op.fillSettings))
+    return "custom";
   const ops = o.operations || [{ type: o.type }];
   if (ops.length === 2 && ops[0].type === "fill" && ops[1].type === "run")
     return "combined";

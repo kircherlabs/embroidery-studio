@@ -95,9 +95,9 @@ try {
     5,
   );
   await page.locator(".fill-pattern-picker > summary").click();
-  assert.equal(await page.locator(".fill-textures button").count(), 11);
+  assert.equal(await page.locator("[data-fill-texture]").count(), 11);
   assert(
-    (await page.locator(".fill-textures svg circle").count()) > 100,
+    (await page.locator(".fill-pattern-picker svg circle").count()) > 100,
     "samples contain real generated needle coordinates",
   );
   await page.locator('[data-fill-texture="random"]').click();

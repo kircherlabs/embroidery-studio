@@ -41,6 +41,28 @@ try {
   await page.goto(process.env.STUDIO_URL || "http://127.0.0.1:5173/");
   await ready();
   const initialProject = await project();
+  const headerOrder = [
+    "thread-library",
+    "new-project",
+    "open-file",
+    "save-project",
+    "export",
+  ];
+  assert.deepEqual(
+    await page
+      .locator(".file-actions > button")
+      .evaluateAll((es) => es.map((e) => e.id)),
+    headerOrder,
+  );
+  await page.locator("#thread-library").focus();
+  for (const id of headerOrder.slice(1)) {
+    await page.keyboard.press("Tab");
+    assert.equal(
+      await page.evaluate(() => document.activeElement.id),
+      id,
+      "keyboard order matches file-action layout",
+    );
+  }
   await open();
   assert.equal(await view("all").getAttribute("aria-pressed"), "true");
   assert.equal(await page.locator(".thread-result").count(), 50);
@@ -318,6 +340,29 @@ try {
     path: "test-results/ux-after-equipment-desktop.png",
   });
   await page.setViewportSize({ width: 390, height: 844 });
+  const headerBoxes = await page
+    .locator(".file-actions > button")
+    .evaluateAll((es) =>
+      es.map((e) => {
+        const b = e.getBoundingClientRect();
+        return { left: b.left, right: b.right, top: b.top, bottom: b.bottom };
+      }),
+    );
+  assert.ok(
+    headerBoxes.every(
+      (b) => b.left >= 0 && b.right <= 391 && b.top >= 0 && b.bottom <= 844,
+    ),
+    "all mobile file actions remain visible",
+  );
+  assert.ok(
+    headerBoxes.every(
+      (b, i) =>
+        !i ||
+        b.top > headerBoxes[i - 1].top ||
+        b.left >= headerBoxes[i - 1].right,
+    ),
+    "mobile visual order follows Threads, New, Import, Save, Export",
+  );
   assert.ok(
     await page
       .locator(".machine-settings")

@@ -26,6 +26,9 @@ Protected backup branches are untouched.
 - Library management stays discoverable in a collapsed disclosure near filters.
   Catalog imports, backups, defaults, corrections, matching, substitutions and
   project requirements/shopping lists remain accessible.
+- The header now reads **Threads · New · Import / Open · Save project · Export**.
+  Threads sits left of the file actions; Save and Export remain adjacent. DOM,
+  keyboard and responsive visual order agree, with all five controls visible on mobile.
 - Equipment search uses a full-width first row, followed by aligned Brand, Model
   and Hoop fields of equal height. Compact secondary actions and collapsible
   sources remain; narrow workspace widths stack fields cleanly.

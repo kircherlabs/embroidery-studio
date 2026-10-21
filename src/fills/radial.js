@@ -100,6 +100,7 @@ export function radialFill(ctx, from) {
     hand = cfg.clockwise ? -1 : 1,
     components = [];
   const append = (source) => {
+    const firstComponent = components.length;
     const clipped = clipPath(source, clipRings, budget);
     // Join the two pieces separated only by the sampling seam of a closed ring.
     if (
@@ -136,7 +137,7 @@ export function radialFill(ctx, from) {
         r = local ? Math.hypot((local.x - cx) / ratio, local.y - cy) : 0,
         curvatureRadius = (r * minAxis * minAxis) / (2 * maxAxis);
       const join =
-        cfg.method === "spiral" &&
+        (cfg.method === "spiral" || components.length > firstComponent) &&
         prior &&
         (d < 1e-8 ||
           (d <= o.length &&
@@ -190,8 +191,51 @@ export function radialFill(ctx, from) {
       "No radial paths reach this region at the selected spacing and center. Adjust the center/spacing or choose Contour Fill.",
     );
   verify(components, ctx, o.spacing);
+  // Clipping creates independent arcs. Group nearby arcs before moving to a
+  // different corner/island; preserve each arc's direction and every needle.
+  // An unclipped spiral remains one path in its original parameter order.
+  const remaining = [...components],
+    ordered = [];
+  let cursor = from;
+  while (remaining.length) {
+    budget.step(remaining.length);
+    let best = 0,
+      cost = Infinity,
+      reverse = false,
+      seam = 0;
+    remaining.forEach((p, i) => {
+      const closed = distance(p[0], p.at(-1)) < 1e-8;
+      const choices =
+        closed && cursor
+          ? p.slice(0, -1).map((q, j) => ({ q, j, reverse: false }))
+          : [
+              { q: p[0], j: 0, reverse: false },
+              ...(components.length > 1
+                ? [{ q: p.at(-1), j: 0, reverse: true }]
+                : []),
+            ];
+      for (const option of choices) {
+        const d = cursor ? distance(cursor, option.q) : i;
+        if (d < cost) {
+          cost = d;
+          best = i;
+          reverse = option.reverse;
+          seam = option.j;
+        }
+      }
+    });
+    let p = remaining.splice(best, 1)[0];
+    if (reverse) p = [...p].reverse();
+    if (seam) {
+      const core = p.slice(0, -1);
+      p = [...core.slice(seam), ...core.slice(0, seam)];
+      p.push(p[0]);
+    }
+    ordered.push(p);
+    cursor = p.at(-1);
+  }
   let at = from;
-  const paths = components.map((p) => {
+  const paths = ordered.map((p) => {
     const connect =
       cfg.method === "ripple" &&
       at &&

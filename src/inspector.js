@@ -192,6 +192,11 @@ export function renderInspector(api) {
     const wrapper = document.createElement("div");
     wrapper.innerHTML = fillControls(control);
     $("fill-pattern")?.closest("label").replaceWith(wrapper);
+    const family = $("fill-method-family");
+    if (family)
+      $("stitch-type")
+        ?.closest("label")
+        .insertAdjacentElement("afterend", family);
     if (control.some((o) => o.type === "fill" && o.fillSettings))
       $("angle")?.closest("label").setAttribute("hidden", "");
     if (

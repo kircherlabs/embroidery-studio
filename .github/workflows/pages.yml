@@ -68,6 +68,9 @@ jobs:
           node tests/drawing-style-browser.mjs
           node tests/tool-context-browser.mjs
           node tests/sewing-actions-browser.mjs
+          node tests/fills-browser.mjs
+          node tests/fill-methods-browser.mjs
+          node tests/fill-integration-browser.mjs
           node tests/corner-density-browser.mjs
           node tests/method-categories-browser.mjs
           node tests/path-editing-browser.mjs

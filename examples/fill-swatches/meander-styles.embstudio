@@ -1,0 +1,385 @@
+{
+  "version": 2,
+  "name": "Fill swatch: meander-styles",
+  "machine": "se700",
+  "objects": [
+    {
+      "id": "swatch-classic",
+      "name": "classic",
+      "rings": [
+        [
+          {
+            "x": -40,
+            "y": -26
+          },
+          {
+            "x": -16,
+            "y": -26
+          },
+          {
+            "x": -16,
+            "y": -2
+          },
+          {
+            "x": -40,
+            "y": -2
+          }
+        ]
+      ],
+      "color": "#303b53",
+      "type": "fill",
+      "spacing": 0.42,
+      "length": 2.8,
+      "angle": 0,
+      "width": 2.5,
+      "underlay": false,
+      "compensation": 0,
+      "visible": true,
+      "closed": true,
+      "operations": [
+        {
+          "id": "swatch-classic-fill",
+          "name": "Tatami fill",
+          "closed": true,
+          "enabled": true,
+          "color": "#303b53",
+          "type": "fill",
+          "spacing": 0.42,
+          "length": 2.8,
+          "angle": 0,
+          "width": 2.5,
+          "underlay": false,
+          "compensation": 0,
+          "offset": 0,
+          "reverse": false,
+          "startIndex": 0,
+          "outerOnly": false,
+          "fillSettings": {
+            "version": 1,
+            "method": "meander",
+            "anchor": "object",
+            "frame": [
+              1,
+              0,
+              0,
+              1,
+              -28,
+              -14
+            ],
+            "angle": 0,
+            "seed": 1,
+            "inset": 0,
+            "style": "classic",
+            "pitch": 3,
+            "lineSpacing": 1.2,
+            "curviness": 0.7,
+            "variation": 0.12
+          }
+        }
+      ]
+    },
+    {
+      "id": "swatch-fine",
+      "name": "fine",
+      "rings": [
+        [
+          {
+            "x": -12,
+            "y": -26
+          },
+          {
+            "x": 12,
+            "y": -26
+          },
+          {
+            "x": 12,
+            "y": -2
+          },
+          {
+            "x": -12,
+            "y": -2
+          }
+        ]
+      ],
+      "color": "#303b53",
+      "type": "fill",
+      "spacing": 0.42,
+      "length": 2.8,
+      "angle": 0,
+      "width": 2.5,
+      "underlay": false,
+      "compensation": 0,
+      "visible": true,
+      "closed": true,
+      "operations": [
+        {
+          "id": "swatch-fine-fill",
+          "name": "Tatami fill",
+          "closed": true,
+          "enabled": true,
+          "color": "#303b53",
+          "type": "fill",
+          "spacing": 0.42,
+          "length": 2.8,
+          "angle": 0,
+          "width": 2.5,
+          "underlay": false,
+          "compensation": 0,
+          "offset": 0,
+          "reverse": false,
+          "startIndex": 0,
+          "outerOnly": false,
+          "fillSettings": {
+            "version": 1,
+            "method": "meander",
+            "anchor": "object",
+            "frame": [
+              1,
+              0,
+              0,
+              1,
+              0,
+              -14
+            ],
+            "angle": 0,
+            "seed": 1,
+            "inset": 0,
+            "style": "fine",
+            "pitch": 1.8,
+            "lineSpacing": 0.7,
+            "curviness": 0.8,
+            "variation": 0.1
+          }
+        }
+      ]
+    },
+    {
+      "id": "swatch-open",
+      "name": "open",
+      "rings": [
+        [
+          {
+            "x": 16,
+            "y": -26
+          },
+          {
+            "x": 40,
+            "y": -26
+          },
+          {
+            "x": 40,
+            "y": -2
+          },
+          {
+            "x": 16,
+            "y": -2
+          }
+        ]
+      ],
+      "color": "#303b53",
+      "type": "fill",
+      "spacing": 0.42,
+      "length": 2.8,
+      "angle": 0,
+      "width": 2.5,
+      "underlay": false,
+      "compensation": 0,
+      "visible": true,
+      "closed": true,
+      "operations": [
+        {
+          "id": "swatch-open-fill",
+          "name": "Tatami fill",
+          "closed": true,
+          "enabled": true,
+          "color": "#303b53",
+          "type": "fill",
+          "spacing": 0.42,
+          "length": 2.8,
+          "angle": 0,
+          "width": 2.5,
+          "underlay": false,
+          "compensation": 0,
+          "offset": 0,
+          "reverse": false,
+          "startIndex": 0,
+          "outerOnly": false,
+          "fillSettings": {
+            "version": 1,
+            "method": "meander",
+            "anchor": "object",
+            "frame": [
+              1,
+              0,
+              0,
+              1,
+              28,
+              -14
+            ],
+            "angle": 0,
+            "seed": 1,
+            "inset": 0,
+            "style": "open",
+            "pitch": 4.5,
+            "lineSpacing": 1.8,
+            "curviness": 0.7,
+            "variation": 0.12
+          }
+        }
+      ]
+    },
+    {
+      "id": "swatch-organic",
+      "name": "organic",
+      "rings": [
+        [
+          {
+            "x": -40,
+            "y": 2
+          },
+          {
+            "x": -16,
+            "y": 2
+          },
+          {
+            "x": -16,
+            "y": 26
+          },
+          {
+            "x": -40,
+            "y": 26
+          }
+        ]
+      ],
+      "color": "#303b53",
+      "type": "fill",
+      "spacing": 0.42,
+      "length": 2.8,
+      "angle": 0,
+      "width": 2.5,
+      "underlay": false,
+      "compensation": 0,
+      "visible": true,
+      "closed": true,
+      "operations": [
+        {
+          "id": "swatch-organic-fill",
+          "name": "Tatami fill",
+          "closed": true,
+          "enabled": true,
+          "color": "#303b53",
+          "type": "fill",
+          "spacing": 0.42,
+          "length": 2.8,
+          "angle": 0,
+          "width": 2.5,
+          "underlay": false,
+          "compensation": 0,
+          "offset": 0,
+          "reverse": false,
+          "startIndex": 0,
+          "outerOnly": false,
+          "fillSettings": {
+            "version": 1,
+            "method": "meander",
+            "anchor": "object",
+            "frame": [
+              1,
+              0,
+              0,
+              1,
+              -28,
+              14
+            ],
+            "angle": 0,
+            "seed": 1,
+            "inset": 0,
+            "style": "organic",
+            "pitch": 3,
+            "lineSpacing": 1.2,
+            "curviness": 1,
+            "variation": 0.16
+          }
+        }
+      ]
+    },
+    {
+      "id": "swatch-looping",
+      "name": "looping",
+      "rings": [
+        [
+          {
+            "x": -12,
+            "y": 2
+          },
+          {
+            "x": 12,
+            "y": 2
+          },
+          {
+            "x": 12,
+            "y": 26
+          },
+          {
+            "x": -12,
+            "y": 26
+          }
+        ]
+      ],
+      "color": "#303b53",
+      "type": "fill",
+      "spacing": 0.42,
+      "length": 2.8,
+      "angle": 0,
+      "width": 2.5,
+      "underlay": false,
+      "compensation": 0,
+      "visible": true,
+      "closed": true,
+      "operations": [
+        {
+          "id": "swatch-looping-fill",
+          "name": "Tatami fill",
+          "closed": true,
+          "enabled": true,
+          "color": "#303b53",
+          "type": "fill",
+          "spacing": 0.42,
+          "length": 2.8,
+          "angle": 0,
+          "width": 2.5,
+          "underlay": false,
+          "compensation": 0,
+          "offset": 0,
+          "reverse": false,
+          "startIndex": 0,
+          "outerOnly": false,
+          "fillSettings": {
+            "version": 1,
+            "method": "meander",
+            "anchor": "object",
+            "frame": [
+              1,
+              0,
+              0,
+              1,
+              0,
+              14
+            ],
+            "angle": 0,
+            "seed": 1,
+            "inset": 0,
+            "style": "looping",
+            "pitch": 4,
+            "lineSpacing": 1.4,
+            "curviness": 0.9,
+            "variation": 0.16
+          }
+        }
+      ]
+    }
+  ],
+  "requires": [
+    "fills-1"
+  ]
+}

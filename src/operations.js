@@ -1,6 +1,7 @@
 import { uid, objectBounds } from "./model.js";
 import { fillPolygons } from "./geometry.js";
 import Clipper from "../vendor/clipper.js";
+import { FILL_METHODS } from "./fills/schema.js";
 
 export const OPERATION_TYPES = {
   fill: "Tatami fill",
@@ -19,6 +20,10 @@ export const OPERATION_TYPES = {
   trim: "Thread trim",
 };
 export const isSewing = (op) => !["stop", "trim"].includes(op.type);
+export const operationLabel = (op) =>
+  op.type === "fill" && op.fillSettings
+    ? FILL_METHODS[op.fillSettings.method] || "Fill"
+    : OPERATION_TYPES[op.type] || "Stitches";
 export const requiresClosed = (type) =>
   [
     "fill",
@@ -134,7 +139,7 @@ const settings = [
 export function defaultOperation(o) {
   return {
     id: "base",
-    name: OPERATION_TYPES[o.type] || "Stitches",
+    name: operationLabel(o),
     closed: closedArtwork(o),
     enabled: true,
     ...Object.fromEntries(
@@ -170,7 +175,7 @@ export function makeOperation(type, o) {
   const op = {
     ...defaultOperation(o),
     id: uid(),
-    name: OPERATION_TYPES[type],
+    name: operationLabel({ ...o, type }),
     type,
     enabled: true,
     offset: 0,

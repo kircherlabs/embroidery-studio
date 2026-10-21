@@ -8,6 +8,7 @@ import { makeFillSettings, FILL_DEFAULTS } from "./context.js";
 import { texturePhase } from "./tatami.js";
 import { availableFillMethods } from "./registry.js";
 import { fillRows } from "../engine.js";
+import { methodPreview } from "./previews.js";
 import {
   materialize,
   operationTargets,
@@ -77,7 +78,18 @@ export function fillControls(control) {
       max,
       step,
     );
-  const markup = `<section class="fill-controls" aria-label="Fill settings">${Object.keys(methods).length > 1 ? `<label class="field">Fill method<select id="fill-method">${options(methods, method)}</select></label>` : ""}${fills.length !== control.length ? '<p class="property-note">Fill settings apply only to fill sewing actions; other methods stay unchanged.</p>' : ""}${
+  const methodControl =
+    Object.keys(methods).length > 1
+      ? `<div id="fill-method-family"><label class="field">Fill method<select id="fill-method" data-help="Changes this sewing action's construction. Tatami and Emboss are dense row fills; Contour, Meander and radial fills use running paths; Cross stitches complete Xs. Source geometry, color and sewing position are retained.">${options(methods, method)}</select></label><details class="fill-method-picker"><summary>Browse fill samples</summary><div class="fill-textures">${Object.entries(
+          methods,
+        )
+          .map(
+            ([id, name]) =>
+              `<button type="button" data-fill-method="${id}" aria-pressed="${method === id}" data-help="Choose ${esc(name)} for this sewing action. These are generated needle samples; inspect the actual design in Stitch preview.">${methodPreview(id)}<span>${esc(name)}</span></button>`,
+          )
+          .join("")}</div></details></div>`
+      : "";
+  const markup = `<section class="fill-controls" aria-label="Fill settings">${methodControl}${fills.length !== control.length ? '<p class="property-note">Fill settings apply only to fill sewing actions; other methods stay unchanged.</p>' : ""}${
     method === "tatami"
       ? `<label class="field">Tatami texture<select id="fill-pattern">${options(textures, texture)}</select></label><details class="fill-pattern-picker"><summary>Browse texture samples</summary><div class="fill-textures">${Object.entries(
           textures,
@@ -96,7 +108,7 @@ export function fillControls(control) {
           : `<p class="property-note">${esc(FILL_METHODS[method] || "Mixed fill methods")}</p>`
   }${method === "meander" ? `<label class="field">Meander style<select id="fill-style">${options({ classic: "Classic Meander", fine: "Fine Stipple", open: "Open Stipple", organic: "Organic Meander", looping: "Looping Meander" }, common(fills.map((o) => o.fillSettings?.style || "classic")))}</select></label><div class="two-col">${num("Pattern scale · mm", "pitch", common(fills.map((o) => o.fillSettings?.pitch ?? 3)), 0.8, 20)}${num("Line spacing · mm", "lineSpacing", common(fills.map((o) => o.fillSettings?.lineSpacing ?? 1.2)), 0.4, 10)}${num("Curviness", "curviness", common(fills.map((o) => o.fillSettings?.curviness ?? 0.7)), 0, 1, 0.05)}${num("Random seed", "seed", common(fills.map((o) => o.fillSettings?.seed ?? 1)), 0, 2147483647, 1)}</div>${num("Pattern direction · degrees", "angle", common(fills.map((o) => o.fillSettings?.angle ?? 0)), -360, 360, 1)}${num("Boundary inset · mm", "inset", common(fills.map((o) => o.fillSettings?.inset ?? 0)), 0, 10)}<p class="property-note">Curved running paths provide open coverage. Scale controls wandering extent; line spacing separates paired branches. Organic uses irregular Poisson stations. Looping adds checked decorative loops. Styles reset scale, spacing and curvature; Undo restores previous values. No dense underlay is applied.</p>` : ""}${method === "emboss" ? `<label class="field">Needle-placement motif<select id="fill-motif">${options({ dots: "Dots", diamonds: "Diamonds", checker: "Checkerboard", lattice: "Lattice", diagonal: "Diagonal bands", waves: "Waves" }, common(fills.map((o) => o.fillSettings?.motif || "diamonds")))}</select></label><div class="two-col">${num("Motif scale · mm", "scale", common(fills.map((o) => o.fillSettings?.scale ?? 4)), 1, 50)}${num("Repeat spacing · mm", "repeat", common(fills.map((o) => o.fillSettings?.repeat ?? 6)), 1, 50)}${num("Motif emphasis", "strength", common(fills.map((o) => o.fillSettings?.strength ?? 0.5)), 0, 1, 0.05)}${num("Motif angle · degrees", "motifAngle", common(fills.map((o) => o.fillSettings?.motifAngle ?? 0)), -360, 360, 1)}</div>${num("Fill direction · degrees", "angle", common(fills.map((o) => o.fillSettings?.angle ?? 0)), -360, 360, 1)}<p class="property-note">Real needle penetrations form a surface texture; this is not raised padding. Emphasis is the fraction of rows pinned to motif edges. Row density remains unchanged. Close marks may be reduced to avoid thread buildup. For line motifs, scale/repeat adjust slope and lattice proportions.</p><details><summary>Motif placement</summary><div class="two-col">${num("Motif offset X · mm", "phaseX", common(fills.map((o) => o.fillSettings?.phaseX ?? 0)), -1000, 1000)}${num("Motif offset Y · mm", "phaseY", common(fills.map((o) => o.fillSettings?.phaseY ?? 0)), -1000, 1000)}${num("Boundary inset · mm", "inset", common(fills.map((o) => o.fillSettings?.inset ?? 0)), 0, 10)}</div></details>` : ""}${["cross", "meander", "emboss"].includes(method) ? placement(fills) : ""}<p class="property-note">${advanced ? "Expanded fill settings are active; spacing and length stay in millimeters." : "Classic, Brick and Aligned retain the original Tatami behavior until expanded settings are used."}</p><button id="fill-reset" type="button">Reset fill to Classic</button><p id="fill-input-error" role="status" class="property-note"></p></section>`;
   const radial = ["ripple", "spiral"].includes(method)
-    ? `<div class="two-col">${num("Ellipse ratio · width/height", "ratio", common(fills.map((o) => o.fillSettings?.ratio ?? 1)), 0.2, 5, 0.1)}${num("Center X · mm from origin", "centerX", common(fills.map((o) => o.fillSettings?.centerX ?? 0)), -1000, 1000)}${num("Center Y · mm from origin", "centerY", common(fills.map((o) => o.fillSettings?.centerY ?? 0)), -1000, 1000)}${num("Pattern direction · degrees", "angle", common(fills.map((o) => o.fillSettings?.angle ?? 0)), -360, 360, 1)}</div><label class="check"><input type="checkbox" id="fill-clockwise" ${fills.every((o) => o.fillSettings?.clockwise) ? "checked" : ""}>Clockwise in pattern frame</label>${num("Boundary inset · mm", "inset", common(fills.map((o) => o.fillSettings?.inset ?? 0)), 0, 10)}<p class="property-note">${method === "ripple" ? "Concentric rings or ellipses; safe nearby seams connect." : "A true Archimedean spiral; holes and concave edges can split it into separate arcs."} Turn spacing is the minimum physical gap; elongated ellipses have wider gaps in other directions. A 0.12 mm clipping clearance protects machine rounding. Tight geometry may need Contour Fill instead. No dense underlay or pull compensation is used.</p>${placement(fills)}`
+    ? `<div class="two-col">${num("Ellipse ratio · width/height", "ratio", common(fills.map((o) => o.fillSettings?.ratio ?? 1)), 0.2, 5, 0.1)}${num("Center X · mm from origin", "centerX", common(fills.map((o) => o.fillSettings?.centerX ?? 0)), -1000, 1000)}${num("Center Y · mm from origin", "centerY", common(fills.map((o) => o.fillSettings?.centerY ?? 0)), -1000, 1000)}${num("Pattern direction · degrees", "angle", common(fills.map((o) => o.fillSettings?.angle ?? 0)), -360, 360, 1)}</div><label class="check"><input type="checkbox" id="fill-clockwise" ${fills.every((o) => o.fillSettings?.clockwise) ? "checked" : ""}>Clockwise base curve (clipped arcs may reverse)</label>${num("Boundary inset · mm", "inset", common(fills.map((o) => o.fillSettings?.inset ?? 0)), 0, 10)}<p class="property-note">${method === "ripple" ? "Concentric rings or ellipses; safe nearby seams connect." : "A true Archimedean spiral; holes and concave edges can split it into separate arcs."} Turn spacing is the minimum physical gap; elongated ellipses have wider gaps in other directions. A 0.12 mm clipping clearance protects machine rounding. Tight geometry may need Contour Fill instead. No dense underlay or pull compensation is used.</p>${placement(fills)}`
     : "";
   return markup.replace(
     '<button id="fill-reset"',
@@ -158,26 +170,29 @@ export function bindFillControls(api, objects, single) {
   const pattern = document.getElementById("fill-pattern");
   if (pattern) pattern.onchange = (e) => choose(e.target.value);
   const method = document.getElementById("fill-method");
-  if (method)
-    method.onchange = () =>
-      change((op, o) => {
-        const previous = op.fillSettings;
-        op.fillSettings = makeFillSettings(
-          method.value,
-          { ...o, ...op },
-          previous
-            ? {
-                anchor: previous.anchor,
-                frame: previous.frame,
-                angle: previous.angle,
-                seed: previous.seed,
-                inset: previous.inset,
-              }
-            : {},
-        );
-        if (["Tatami fill", ...Object.values(FILL_METHODS)].includes(op.name))
-          op.name = FILL_METHODS[method.value];
-      });
+  const selectMethod = (value) =>
+    change((op, o) => {
+      const previous = op.fillSettings;
+      op.fillSettings = makeFillSettings(
+        value,
+        { ...o, ...op },
+        previous
+          ? {
+              anchor: previous.anchor,
+              frame: previous.frame,
+              angle: previous.angle,
+              seed: previous.seed,
+              inset: previous.inset,
+            }
+          : {},
+      );
+      if (["Tatami fill", ...Object.values(FILL_METHODS)].includes(op.name))
+        op.name = FILL_METHODS[value];
+    });
+  if (method) method.onchange = () => selectMethod(method.value);
+  document
+    .querySelectorAll("[data-fill-method]")
+    .forEach((el) => (el.onclick = () => selectMethod(el.dataset.fillMethod)));
   const direction = document.getElementById("fill-direction");
   if (direction)
     direction.onchange = () =>
@@ -191,6 +206,10 @@ export function bindFillControls(api, objects, single) {
         op.fillSettings = { ...op.fillSettings, motif: motif.value };
       });
   const clockwise = document.getElementById("fill-clockwise");
+  if (clockwise)
+    clockwise.indeterminate =
+      targets.some((t) => t.op.fillSettings?.clockwise) &&
+      !targets.every((t) => t.op.fillSettings?.clockwise);
   if (clockwise)
     clockwise.onchange = () =>
       change((op) => {
@@ -273,5 +292,7 @@ export function bindFillControls(api, objects, single) {
       change((op) => {
         delete op.fillSettings;
         op.pattern = "quarter";
+        if (Object.values(FILL_METHODS).includes(op.name))
+          op.name = "Tatami fill";
       });
 }

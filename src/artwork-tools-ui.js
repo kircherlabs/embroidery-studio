@@ -14,7 +14,12 @@ import {
   selectionBounds,
   isVisible,
 } from "./hierarchy.js";
-import { operationsOf, isSewing, OPERATION_TYPES } from "./operations.js";
+import {
+  operationsOf,
+  isSewing,
+  OPERATION_TYPES,
+  operationLabel,
+} from "./operations.js";
 import { validateProject } from "./model.js";
 
 const esc = (s) =>
@@ -114,10 +119,10 @@ export async function sewingStyleDialog(api, copied) {
       ? style.actions
           .map(
             (op, i) =>
-              `${i + 1}. ${OPERATION_TYPES[op.type]}${op.color ? " · " + op.color : ""}`,
+              `${i + 1}. ${operationLabel(op)}${op.color ? " · " + op.color : ""}`,
           )
           .join(" → ")
-      : `${OPERATION_TYPES[style.action.type]} · ${style.action.color}`;
+      : `${operationLabel(style.action)} · ${style.action.color}`;
     $("style-scope").textContent = stack
       ? `Replaces complete setups, including enabled states and stops. This assigns ${targets.length * style.actions.filter((op) => op.type === "stop" && op.enabled !== false).length} machine stops across the selection. External patch links are not copied.`
       : targets.length === 1

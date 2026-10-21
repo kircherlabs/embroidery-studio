@@ -182,14 +182,42 @@ verifies radial controls/action identity and exact independently decoded Ripple
 and Spiral PES coordinates. Rendered screenshots reviewed. Build/diff check pass.
 No physical sew-out claimed.
 
+Milestone H committed: `cf6f335`.
+
+Milestone I integration implemented locally: cached real-generator method samples
+beside the method selector, moved before thread controls; correct method labels
+in source/style views; mixed checkbox state; exact spatially indexed clipping;
+nearby clipped-arc routing and closed-ring seam placement. Independent clipped
+arcs may reverse; a single unclipped Spiral keeps its parametric order. Stress
+testing exposed the original radial clipping budget and excessive-trim problems.
+Both are fixed without raising the work cap or dropping holes: the 147-vertex
+trace/counter now generates every method; square radial trims drop from 189 to
+Ripple 9 / Spiral 7. See FILL_BENCHMARKS.md for current measured counts/timings.
+
+Ten original editable reference projects + PES files and exact settings/issue
+manifest are in examples/fill-swatches. Regression tests compare every stored
+PES needle to the current plan. All seven families round-trip through PES, PEC,
+DST, EXP, JEF and VP3; PES coordinates are independently decoded. No writer was
+rewritten and existing safety restrictions remain.
+
+Local verification so far: 342 Node tests + 4 codec / 6 format-safety Python tests
+pass. Fill integration browser covers keyboard samples, method/thread layout,
+My Artwork save/new-project/insert, independent IDs/history/reload, seven mobile
+methods and actual obsolete-worker termination. Full established browser suite
+is currently running. Documentation: DECORATIVE_FILLS.md, FILL_BENCHMARKS.md,
+examples/fill-swatches/README.md. Proposed release v0.16.0.
+
 Implementation status: A–H complete in the approved A→B→C→D→F→E→G→H order.
-I integration, reference swatches, broader regressions, documentation and release
-remain outstanding. Nothing from this branch is deployed yet.
+I source integration is implemented; full browser completion, final review,
+commit/PR/CI/merge/Pages/live verification remain outstanding. Nothing from this
+branch is deployed yet. Do not mark release complete before those checks pass.
 Order: A → B → C → D → F → E → G → H → I.
 
-Baseline commit: `787ef69`. Next: commit H, then I integration: compact generated
-method previews, source/library/style/history/export coverage, reference sew-out
-projects, benchmarks, full browser suite/CI and validated Pages deployment.
+Baseline commit: `787ef69`. Next: finish/review the full browser run, fix any
+regressions, commit I, push this feature branch, attach its PR, wait for exact-head
+CI, merge, wait for Pages and verify the deployed source/version and isolated live
+fill workflows. Protected refs checked unchanged, including BACKUP-V0.15.0 at
+`6a0dcd2`, BACKUP-V0.14.1 at `8c6636b` and backup-before-creative-update at `99c0a78`.
 Preserve every protected backup ref. Do not regenerate legacy expectations to
 accommodate changed output. No public release until validated working milestones.
 

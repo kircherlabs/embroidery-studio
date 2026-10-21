@@ -128,6 +128,10 @@ test("96 mm radial fills remain bounded and export real needles", () => {
       JSON.stringify(p.issues),
     );
     assert(p.events.length > 5000 && p.events.length < 50000);
+    assert(
+      p.stats.trims < 25,
+      "nearby clipped arcs are grouped instead of repeatedly trimming between corners",
+    );
     console.log(
       `96mm ${method}: ${p.events.length} events, ${Math.round(performance.now() - t)}ms.`,
     );

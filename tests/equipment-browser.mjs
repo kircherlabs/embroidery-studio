@@ -87,7 +87,13 @@ try {
   assert.deepEqual((await project()).objects, before);
   await page.locator("#machine-brand").selectOption("brother");
   await ready();
-  assert.equal(await page.locator("#machine-hoop option").count(), 1);
+  assert.equal(await page.locator("#machine-hoop option").count(), 2);
+  assert.deepEqual(
+    await page
+      .locator("#machine-hoop option")
+      .evaluateAll((options) => options.map((o) => o.value)),
+    ["brother-100", "brother-mag100"],
+  );
   assert.equal(
     await page.evaluate(() => window.studio.getPlan().stats.fits),
     false,
@@ -182,6 +188,49 @@ try {
   await page.screenshot({ path: "test-results/equipment-mobile.png" });
   await page.setViewportSize({ width: 1500, height: 1050 });
   await page.screenshot({ path: "test-results/equipment-desktop.png" });
+
+  const artworkBeforeSearch = (await project()).objects;
+  await page.locator("#machine-search").fill("Brother SE2000");
+  await page.locator("#machine-search").press("Enter");
+  await page.waitForFunction(
+    () => window.studio.getProject().machine === "brother-se2000",
+  );
+  assert.equal(getMachine(await project()).width, 130);
+  assert.equal(await page.locator("#machine-brand").inputValue(), "brother");
+  assert.match(
+    await page.locator("#machine-hoop option:checked").innerText(),
+    /Included/,
+  );
+  await page.locator("#machine-hoop").selectOption("brother-mag180");
+  await ready();
+  assert.equal(getMachine(await project()).width, 100);
+  await page.locator("#machine-search").fill("Janome Memory Craft 550E");
+  await page.locator("#machine-search").press("Enter");
+  await page.waitForFunction(
+    () => window.studio.getProject().machine === "janome-mc550e",
+  );
+  assert.equal(getMachine(await project()).height, 360);
+  assert.equal(await page.locator("#machine-hoop option").count(), 4);
+  await page.locator("#machine-search").fill("Memory Craft 400E");
+  await page.locator("#machine-search").press("Enter");
+  await page.waitForFunction(
+    () => window.studio.getProject().machine === "janome-mc400e",
+  );
+  assert.equal(getMachine(await project()).height, 200);
+  await page.locator("#machine-search").fill("not a real machine");
+  await page.locator("#machine-search").press("Enter");
+  assert.match(
+    await page.locator("#machine-search-status").innerText(),
+    /full model name/,
+  );
+  assert.equal((await project()).machine, "janome-mc400e");
+  assert.deepEqual((await project()).objects, artworkBeforeSearch);
+  await page.setViewportSize({ width: 390, height: 844 });
+  assert.ok(
+    await page
+      .locator("#machine-search")
+      .evaluate((e) => e.getBoundingClientRect().right <= 391),
+  );
   assert.deepEqual(errors, []);
   console.log(
     "Equipment: legacy migrations, exact hoop filtering, real generation bounds, no artwork changes, custom inches/profile and hoop CRUD, My Machine defaults, history, transferable snapshots, reload and mobile passed.",

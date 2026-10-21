@@ -1223,3 +1223,57 @@
   height: 22px;
   margin: 0;
 }
+
+/* Thread discovery stays primary; administration and specialist filters are optional. */
+#thread-management,
+#thread-more-filters {
+  margin: 0.75rem 0;
+}
+#thread-management summary,
+#thread-more-filters summary {
+  cursor: pointer;
+  padding: 0.5rem 0;
+}
+.thread-empty {
+  padding: 1rem;
+  border: 1px dashed var(--line);
+  border-radius: 0.5rem;
+}
+#manual-thread-error:not(:empty) {
+  border-left: 3px solid var(--accent);
+  padding: 0.65rem;
+}
+
+.thread-color-editor {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  margin: 0.8rem 0;
+}
+#manual-color-preview {
+  display: grid;
+  place-items: center;
+  min-height: 6rem;
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 0.5rem;
+  font-weight: 600;
+  color: white;
+  text-shadow:
+    0 1px 2px black,
+    0 -1px 2px black;
+  padding: 0.75rem;
+}
+#manual-color-preview.unknown {
+  background: repeating-conic-gradient(#888 0% 25%, #bbb 0% 50%) 50% / 16px 16px;
+}
+.thread-rgb {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+  max-width: 19rem;
+}
+.thread-rgb input {
+  width: 100%;
+}

@@ -225,6 +225,17 @@
             ><span id="fit-status"></span>
           </summary>
           <div class="machine-settings" aria-label="Equipment selection">
+            <label
+              >Find a model<input
+                id="machine-search"
+                type="search"
+                list="machine-search-options"
+                placeholder="Search any brand or model"
+                autocomplete="off" /><datalist
+                id="machine-search-options"
+              ></datalist
+              ><span id="machine-search-status" role="status"></span
+            ></label>
             <label>Brand<select id="machine-brand"></select></label>
             <label>Model<select id="machine"></select></label>
             <label
@@ -623,7 +634,7 @@
     <footer class="status-bar">
       <span id="status">Ready</span
       ><span
-        >40 wt thread presets <i>·</i> v0.13.0 <i>·</i>
+        >40 wt thread presets <i>·</i> v0.14.0 <i>·</i>
         <a
           href="https://github.com/kircherlabs/embroidery-studio"
           target="_blank"

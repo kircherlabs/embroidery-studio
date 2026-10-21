@@ -4,11 +4,12 @@
 thread…** assigns to the selected sewing action or the displayed bulk scope.
 HEX and existing swatch controls remain available without configuring a catalog.
 
-The initial library contains brand identifiers, not licensed color charts. New
-brothread, Simthread and Brother remain separate. No third-party physical RGB
-catalog or conversion table is shipped. The supplied research archive stays outside
-the repository and public build. Import data you are entitled to use locally;
-uploading a chart does not grant the app redistribution rights.
+The library includes 171 factual starter entries across seven brands, clearly labeled
+as partial coverage. Their original Studio-estimated screen colors are approximate,
+not manufacturer measurements. New brothread, Simthread and Brother stay distinct.
+See [coverage and sources](THREAD_STARTERS.md). No chart graphics, copied manufacturer
+RGB dataset, research palette or official conversion table is shipped. Personal catalog
+imports and corrections stay on this device. Inventory is optional.
 
 ## Import
 
@@ -23,8 +24,19 @@ uploading a chart does not grant the app redistribution rights.
 Example schema only (synthetic, not a manufacturer catalog):
 
 ```json
-{"records":[{"brandName":"My Brand","lineName":"My line","number":"001",
-"colorName":"My blue approximation","hex":"#123456","material":null,"weight":null}]}
+{
+  "records": [
+    {
+      "brandName": "My Brand",
+      "lineName": "My line",
+      "number": "001",
+      "colorName": "My blue approximation",
+      "hex": "#123456",
+      "material": null,
+      "weight": null
+    }
+  ]
+}
 ```
 
 Every entry keeps stable identity, brand/line names and IDs, text spool number,
@@ -54,11 +66,11 @@ files and machine preferences. Only assigned product snapshots travel with a pro
 so a missing catalog does not lose brand, line, spool number or visual fallback.
 Storage failures are reported and do not silently replace existing data.
 Personal catalog import/deletion is not project Undo; preview and confirmation protect
-those local-library actions. Personal settings backup/restore follows in Stage E.
+those local-library actions. Personal settings backup/restore is available under Library management.
 
 The build guard rejects known research archives and unreviewed catalog assets in
 runtime directories. It is an engineering safeguard, not a determination of legal rights.
-No licensed manufacturer data pack has yet been approved for bundling.
+The reviewed factual starter subsets and original Studio swatches are documented separately; they are not licensed reproductions of manufacturer charts.
 
 Validation includes leading zeros and distinct brands, CSV/JSON/GPL mapping, duplicate
 handling, unknown HEX, independent actions, source-color restoration, catalog loss,
@@ -134,3 +146,13 @@ not share transactions, both old stores are retained and rolled back on a write
 failure, with explicit feedback if even rollback fails. Keep a backup outside browser
 storage. Backups remain personal data and do not establish catalog redistribution rights.
 The importer validates a versioned schema and accepts backup files up to 64 MB.
+
+## Starter catalogs and easier entry (v0.14.0)
+
+Built-in starter subsets are available immediately; coverage and source/accuracy review
+are in [THREAD_STARTERS.md](THREAD_STARTERS.md). Studio-estimated screen swatches are
+editable and approximate. Add thread requires only brand and text spool number; an
+unknown line is explicitly Unspecified product line. Use HEX, RGB or the color picker,
+or copy an existing catalog approximation. Personal entries can be corrected or removed.
+Library management contains import, backup/restore, defaults and starter browsing.
+Original HEX-only design/export workflows remain available without an inventory.

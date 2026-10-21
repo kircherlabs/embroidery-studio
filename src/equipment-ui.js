@@ -86,6 +86,32 @@ export function installEquipment(api) {
   $("machine-brand").innerHTML = Object.entries(BRANDS)
     .map(([id, n]) => option(id, n))
     .join("");
+  const searchModel = () => {
+    const query = $("machine-search").value.trim().toLowerCase();
+    if (!query) {
+      $("machine-search-status").textContent = "";
+      return;
+    }
+    const matches = models().filter(
+      (m) =>
+        m.name.toLowerCase() === query ||
+        m.id.toLowerCase() === query ||
+        m.model?.toLowerCase() === query,
+    );
+    if (matches.length === 1) {
+      apply(matches[0].id);
+      $("machine-search-status").textContent = "Selected " + matches[0].name;
+    } else
+      $("machine-search-status").textContent =
+        "Choose a full model name from the suggestions. Generic / Custom is always available.";
+  };
+  $("machine-search").onchange = searchModel;
+  $("machine-search").onkeydown = (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      searchModel();
+    }
+  };
   $("machine-brand").onchange = () =>
     apply(models().find((m) => m.brand === $("machine-brand").value)?.id);
   $("machine").onchange = () => {
@@ -262,6 +288,9 @@ export function installEquipment(api) {
     if (persist(next)) apply(m.id, m.hoops[0].id);
   };
   function render() {
+    $("machine-search-options").innerHTML = models()
+      .map((m) => option(m.name, m.name))
+      .join("");
     const p = api.state.project,
       e = equipmentOf(p),
       m = machineOf(p),
@@ -285,7 +314,12 @@ export function installEquipment(api) {
         ? m.hoops
         : m.hoops.map((id) => HOOPS[id]);
     const hh = hoops
-      .map((x) => option(x.id, `${x.name} · ${fieldLabel(x)}`))
+      .map((x) =>
+        option(
+          x.id,
+          `${x.name} · ${fieldLabel(x)}${m.hoopStatus?.[x.id] ? " · " + m.hoopStatus[x.id] : ""}`,
+        ),
+      )
       .join("");
     if ($("machine-hoop").innerHTML !== hh) $("machine-hoop").innerHTML = hh;
     $("machine-hoop").value = e.hoopId;
@@ -295,6 +329,8 @@ export function installEquipment(api) {
       (m.brand === "generic"
         ? "User / generic design field; compatibility is not manufacturer-verified. "
         : "Manufacturer-documented field / selected hoop. Physical testing not confirmed for this profile. ") +
+      (m.notes || "") +
+      " " +
       (h.notes || "") +
       " Changing equipment never scales artwork. No automatic split-hoop workflow. Planning speed and 7 mm stitch limit are application estimates.";
     $("equipment-sources").innerHTML = (m.sources || [])

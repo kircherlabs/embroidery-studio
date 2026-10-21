@@ -1,6 +1,6 @@
 // Reference facts are separate from application stitch-planning defaults.
 export const EQUIPMENT_VERSION = 1;
-export const EQUIPMENT_CATALOG_VERSION = "2026-10-20";
+export const EQUIPMENT_CATALOG_VERSION = "2026-10-20.2";
 export const EQUIPMENT_KEY = "embroidery-equipment-v1";
 export const BRANDS = {
   brother: "Brother",
@@ -242,6 +242,375 @@ export const MACHINE_CATALOG = {
     verification: "dimension-preset",
   },
 };
+// Exact-model expansion; field evidence and format evidence are recorded separately.
+const reference = (id, url, title) => {
+  SOURCES[id] = source(url, title);
+  return id;
+};
+reference(
+  "brotherSmallFields",
+  "https://help.brother-usa.com/app/answers/detail/a_id/59116/~/maximum-embroidery-area",
+  "Brother exact-model 100 × 100 mm field list",
+);
+reference(
+  "brotherLargeFields",
+  "https://help.brother-usa.com/app/answers/detail/a_id/123445/~/maximum-embroidery-area",
+  "Brother exact-model 5 × 7 inch field list",
+);
+reference(
+  "brotherFormats",
+  "https://help.brother-usa.com/app/answers/detail/a_id/185941/~/this-pattern-cannot-be-used-%252F-this-file-cannot-be-used-%252F-the-design-is-not",
+  "Brother exact-model PES/DST compatibility list",
+);
+reference(
+  "brotherFormats2",
+  "https://help.brother-usa.com/app/answers/detail/a_id/123892/p/9580",
+  "Brother PES/DST compatibility including LB5000",
+);
+reference(
+  "brother130Hoops",
+  "https://support.brother.com/g/b/colist.aspx?c=us&cao=hfemba&lang=en&prod=hf_se2000eus",
+  "SE2000 frames: continuous 130 × 180, medium and magnetic; larger reposition frame is not a continuous field",
+);
+reference(
+  "brotherMagnetic",
+  "https://www.brother-usa.com/p/hoops-stabilizers/SAMFM100",
+  "SAMFM100 compatibility list (optional accessory)",
+);
+HOOPS["brother-130"] = hoop(
+  "brother-130",
+  "Standard 130 × 180 field",
+  130,
+  180,
+  ["brotherLargeFields", "brother130Hoops"],
+);
+HOOPS["brother-mag100"] = hoop(
+  "brother-mag100",
+  "SAMFM100 magnetic",
+  100,
+  100,
+  ["brotherMagnetic"],
+  { part: "SAMFM100" },
+);
+HOOPS["brother-mag180"] = hoop(
+  "brother-mag180",
+  "SAMF180N magnetic",
+  100,
+  180,
+  ["brother130Hoops"],
+  { part: "SAMF180N" },
+);
+for (const model of [
+  "SE600",
+  "SE625",
+  "SE630",
+  "SE725",
+  "PE535",
+  "PE545",
+  "PE550D",
+  "SE400",
+  "SE425",
+  "PE500",
+  "PE525",
+  "LB5000",
+  "NS1750D",
+  "NS1850D",
+]) {
+  const id = "brother-" + model.toLowerCase();
+  const optional = [
+    "SE600",
+    "SE625",
+    "SE630",
+    "SE725",
+    "PE535",
+    "PE545",
+    "PE550D",
+    "LB5000",
+    "NS1750D",
+    "NS1850D",
+  ].includes(model);
+  MACHINE_CATALOG[id] = machine(
+    id,
+    "brother",
+    model,
+    100,
+    100,
+    ["brother-100", ...(optional ? ["brother-mag100"] : [])],
+    [
+      "brotherSmallFields",
+      model === "LB5000" ? "brotherFormats2" : "brotherFormats",
+      ...(optional ? ["brotherMagnetic"] : []),
+    ],
+    ["pes", "dst"],
+    "pes",
+  );
+  MACHINE_CATALOG[id].hoopStatus = { "brother-mag100": "Optional" };
+}
+for (const model of [
+  "PE700II",
+  "PE750D",
+  "PE770",
+  "PE780D",
+  "PE800",
+  "PE900",
+  "SE1900",
+  "SE1950",
+  "SE2000",
+  "SE2100DI",
+  "NS2850D",
+]) {
+  const id = "brother-" + model.toLowerCase();
+  MACHINE_CATALOG[id] = machine(
+    id,
+    "brother",
+    model,
+    130,
+    180,
+    [
+      "brother-130",
+      ...(model === "SE2000" ? ["brother-100", "brother-mag180"] : []),
+    ],
+    [
+      "brotherLargeFields",
+      "brotherFormats",
+      ...(model === "SE2000" ? ["brother130Hoops"] : []),
+    ],
+    ["pes", "dst"],
+    "pes",
+  );
+  if (model === "SE2000")
+    MACHINE_CATALOG[id].hoopStatus = {
+      "brother-130": "Included",
+      "brother-100": "Optional",
+      "brother-mag180": "Optional",
+    };
+}
+MACHINE_CATALOG.se700.hoops.push("brother-mag100");
+MACHINE_CATALOG.se700.hoopStatus = {
+  "brother-100": "Included",
+  "brother-mag100": "Optional",
+};
+MACHINE_CATALOG.se700.sources.push("brotherMagnetic");
+reference(
+  "janome400",
+  "https://www.janome.com/product/memory-craft-400e/",
+  "Janome MC400E field and JEF specifications",
+);
+reference(
+  "janome400Hoops",
+  "https://www.janome.com.au/wp-content/uploads/2017/12/17428-AW-Janome-MC400E-brochure.pdf",
+  "MC400E: SQ20b included; RE20b and SQ14b optional",
+);
+reference(
+  "janome550",
+  "https://www.janome.ca/product/memory-craft-550e/",
+  "Janome MC550E: field, four standard hoops and JEF/JEF+/JPX input",
+);
+reference(
+  "janome550Metric",
+  "https://janome.com.au/product/mc550e/",
+  "Janome MC550E metric continuous 200 × 360 mm field",
+);
+HOOPS["janome-re36b"] = hoop(
+  "janome-re36b",
+  "RE36b",
+  200,
+  360,
+  ["janome550", "janome550Metric"],
+  { part: "RE36b" },
+);
+MACHINE_CATALOG["janome-mc400e"] = machine(
+  "janome-mc400e",
+  "janome",
+  "Memory Craft 400E",
+  200,
+  200,
+  ["janome-sq20b", "janome-re20b", "janome-sq14b"],
+  ["janome400", "janome400Hoops"],
+  ["jef"],
+  "jef",
+);
+MACHINE_CATALOG["janome-mc400e"].hoopStatus = {
+  "janome-sq20b": "Included",
+  "janome-re20b": "Optional",
+  "janome-sq14b": "Optional",
+};
+MACHINE_CATALOG["janome-mc550e"] = machine(
+  "janome-mc550e",
+  "janome",
+  "Memory Craft 550E",
+  200,
+  360,
+  ["janome-re36b", "janome-sq20b", "janome-re20b", "janome-sq14b"],
+  ["janome550", "janome550Metric"],
+  ["jef", "jef+", "jpx"],
+  "jef",
+);
+MACHINE_CATALOG["janome-mc550e"].hoopStatus = Object.fromEntries(
+  MACHINE_CATALOG["janome-mc550e"].hoops.map((id) => [id, "Included"]),
+);
+reference(
+  "babyVerve",
+  "https://babylock.com/verve",
+  "Verve BLMVR: 100 × 100 field, included hoop, PES/DST",
+);
+reference(
+  "babyVesta",
+  "https://babylock.com/vesta",
+  "Vesta BLMVE: 160 × 260 field, PES/PHC/DST",
+);
+reference(
+  "babyVestaMetric",
+  "https://babylock.com/french",
+  "Vesta: metric 160 × 260 mm hoop",
+);
+reference(
+  "babyMeridian",
+  "https://babylock.com/meridian",
+  "Meridian BLMA: 9.5 × 14 field and PES/PEC/DST",
+);
+HOOPS["babylock-ef62"] = hoop(
+  "babylock-ef62",
+  "Medium EF62",
+  100,
+  100,
+  ["babyVerve", "babylockHoops"],
+  { part: "EF62" },
+);
+HOOPS["babylock-ef95"] = hoop(
+  "babylock-ef95",
+  "EF95",
+  240,
+  360,
+  ["babyMeridian", "babylockHoops"],
+  { part: "EF95" },
+);
+HOOPS["babylock-ef97s"] = hoop(
+  "babylock-ef97s",
+  "EF97S",
+  240,
+  240,
+  ["babylockHoops"],
+  { part: "EF97S" },
+);
+MACHINE_CATALOG["babylock-verve"] = machine(
+  "babylock-verve",
+  "babylock",
+  "Verve · BLMVR",
+  100,
+  100,
+  ["babylock-ef62"],
+  ["babyVerve", "babylockHoops"],
+  ["pes", "dst"],
+  "pes",
+);
+MACHINE_CATALOG["babylock-verve"].hoopStatus = { "babylock-ef62": "Included" };
+MACHINE_CATALOG["babylock-vesta"] = machine(
+  "babylock-vesta",
+  "babylock",
+  "Vesta · BLMVE",
+  160,
+  260,
+  ["babylock-ef81"],
+  ["babyVesta", "babyVestaMetric"],
+  ["pes", "phc", "dst"],
+  "pes",
+);
+MACHINE_CATALOG["babylock-meridian"] = machine(
+  "babylock-meridian",
+  "babylock",
+  "Meridian · BLMA",
+  240,
+  360,
+  ["babylock-ef95", "babylock-ef97s"],
+  ["babyMeridian", "babylockHoops"],
+  ["pes", "pec", "dst"],
+  "pes",
+);
+reference(
+  "bernina2017",
+  "https://shop.bernina.com.au/assets/files/BM_590E.pdf",
+  "2017 5-Series: exact generation fields, included-module hoops and input formats",
+);
+for (const [id, model] of [
+  ["bernina-b570-2017", "B 570 QE · 2017 · embroidery module required"],
+  ["bernina-b590-2017", "B 590 · 2017 generation"],
+]) {
+  MACHINE_CATALOG[id] = machine(
+    id,
+    "bernina",
+    model,
+    400,
+    150,
+    ["bernina-large-oval", "bernina-medium"],
+    ["bernina2017"],
+    ["exp", "dst", "pes", "pec", "jef", "sew", "pcs", "xxx"],
+    "exp",
+  );
+  MACHINE_CATALOG[id].notes =
+    "Generation-specific profile. Compatible embroidery module required; confirm your machine revision. No Mega-hoop repositioning workflow is offered.";
+}
+reference(
+  "pfaff640",
+  "https://pfaffbenelux.com/nl/product/creative-ambition-640/",
+  "creative ambition 640: included 240 × 150 MASTER hoop; exact input-format evidence pending",
+);
+MACHINE_CATALOG["pfaff-ambition640"] = machine(
+  "pfaff-ambition640",
+  "pfaff",
+  "creative ambition 640",
+  240,
+  150,
+  ["pfaff-master"],
+  ["pfaff640"],
+);
+MACHINE_CATALOG["pfaff-ambition640"].hoopStatus = {
+  "pfaff-master": "Included",
+};
+reference(
+  "vikingTopaz65",
+  "https://uk.singer.com/products/husqvarna-viking-designer-topaz-65-sewing-embroidery-machine",
+  "Designer Topaz 65: continuous field and two included hoops; input-format evidence pending",
+);
+HOOPS["viking-royal"] = hoop("viking-royal", "DESIGNER Royal", 360, 200, [
+  "vikingTopaz65",
+]);
+HOOPS["viking-splendid"] = hoop(
+  "viking-splendid",
+  "DESIGNER Splendid Square",
+  120,
+  120,
+  ["vikingTopaz65"],
+);
+MACHINE_CATALOG["viking-topaz65"] = machine(
+  "viking-topaz65",
+  "viking",
+  "Designer Topaz 65",
+  360,
+  200,
+  ["viking-royal", "viking-splendid"],
+  ["vikingTopaz65"],
+);
+MACHINE_CATALOG["viking-topaz65"].hoopStatus = {
+  "viking-royal": "Included",
+  "viking-splendid": "Included",
+};
+reference(
+  "singer9185",
+  "https://europe.singer.com/de/collections/all/products/singer-se9185-sewing-and-embroidery-machine-de",
+  "Singer SE9185: included 170 × 100 mm hoop; input-format evidence pending",
+);
+MACHINE_CATALOG["singer-se9185"] = machine(
+  "singer-se9185",
+  "singer",
+  "SE9185",
+  170,
+  100,
+  ["singer-170"],
+  ["singer9185"],
+);
+MACHINE_CATALOG["singer-se9185"].hoopStatus = { "singer-170": "Included" };
+
 export const LEGACY_EQUIPMENT = {
   se700: ["se700", "brother-100"],
   brother130: ["generic", "field-130-180"],

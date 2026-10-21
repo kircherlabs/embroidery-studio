@@ -156,6 +156,9 @@ try {
   await page.reload();
   await page.waitForFunction(() => window.studio?.getPlan());
   await page.locator("#thread-library").click();
+  await page.waitForFunction(
+    () => document.querySelectorAll(".thread-result").length === 50,
+  );
   assert.equal(await page.locator(".thread-result").count(), 50);
   assert.equal((await stock())[0].notes, "Do not lose");
   assert.deepEqual(errors, []);

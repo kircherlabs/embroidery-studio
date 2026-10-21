@@ -113,7 +113,12 @@ Exact next steps: require full CI success on the latest commit of PR #24 before 
 The final added ZIP regression verifies actual six-format thread-change pauses and
 ordered CSV spool numbers for distinct physical products sharing the same HEX. It
 passes, as does the complete 302-test rerun. No runtime changed in that test follow-up.
-Release preparation `33cd19c` and selected-ownership polish `5de8b2d` are pushed. Wait for the main
+Release preparation `33cd19c`, selected-ownership polish `5de8b2d` and ZIP identity
+regression `e73c9b5` are pushed. Final manual-entry review also resolves displayed
+existing line names to canonical IDs, offers brand/line suggestions, rejects ambiguous
+same-name lines and prevents a duplicate identity derived from a starter coverage label.
+Starter, entry and legacy catalog browser suites pass after that repair. Line suggestions
+are limited to 100; typed known names still resolve against the complete installed library. Wait for the main
 Pages deployment, compare published runtime sources and v0.14.0 footer, and run the
 new thread-entry/starter/equipment/ZIP browser workflows on the public URL. Only then
 record publication as verified. Do not bypass failed checks.

@@ -8,6 +8,7 @@ import { matchingUI } from "./thread-matching-ui.js";
 import {
   THREAD_BRANDS,
   normalizeThread,
+  brandIdentity,
   builtinThreads,
   mergeCatalog,
   libraryThreads,
@@ -228,7 +229,7 @@ export function installThreads(api) {
     pageIndex = 0;
     dialog.innerHTML =
       head("Thread library") +
-      `<p class="property-note">Find a spool to assign or optionally mark as owned. Your collection stays on this device; ordinary design colors work without it.</p><div class="thread-top-actions">${button("thread-manual", "Add thread…")}${button("thread-owned-add", "Mark checked owned")}${button("thread-collection-edit", "Collection details…")}${button("thread-match", "Match design colors…")}${button("thread-requirements", "Project threads…")}</div><details id="thread-management"><summary>Library management</summary><div class="thread-top-actions">${button("thread-import", "Import catalog…")}${button("thread-personal", "Backup / restore…")}${button("thread-prefer", "Use brand / line as default")}${button("thread-remove-line", "Remove selected line…")}</div><p class="property-note">Personal imports stay local. Built-in catalogs are partial factual starter subsets with Studio-estimated screen colors; verify against your spool. PEC machine colors are separate from physical thread products.</p><label class="check"><input id="thread-builtins" type="checkbox" ${library.preferences.includeBuiltins !== false ? "checked" : ""}>Browse built-in starter catalogs</label></details><p id="library-status" role="status"></p><div class="thread-filters"><label>Brand<select id="thread-brand">${option("", "All brands")}${family()
+      `<p class="property-note">Find a spool to assign or optionally mark as owned. Your collection stays on this device; ordinary design colors work without it.</p><div class="thread-top-actions">${button("thread-manual", "Add thread…")}${button("thread-owned-add", "Mark checked owned")}${button("thread-collection-edit", "Collection details…")}${button("thread-match", "Match design colors…")}${button("thread-requirements", "Project threads…")}</div><details id="thread-management"><summary>Library management</summary><div class="thread-top-actions">${button("thread-import", "Import catalog…")}${button("thread-personal", "Backup / restore…")}${button("thread-prefer", "Use brand / line as default")}${button("thread-remove-line", "Remove personal line…")}</div><p class="property-note">Personal imports stay local. Built-in catalogs are partial factual starter subsets with Studio-estimated screen colors; verify against your spool. PEC machine colors are separate from physical thread products.</p><label class="check"><input id="thread-builtins" type="checkbox" ${library.preferences.includeBuiltins !== false ? "checked" : ""}>Browse built-in starter catalogs</label></details><p id="library-status" role="status"></p><div class="thread-filters"><label>Brand<select id="thread-brand">${option("", "All brands")}${family()
         .map(([id, n]) => option(id, n))
         .join(
           "",
@@ -560,7 +561,11 @@ export function installThreads(api) {
   function manual(existing = null) {
     dialog.innerHTML =
       head(existing ? "Edit thread approximation" : "Add a personal thread") +
-      `<p class="property-note">Copy the spool label. Only brand and spool number are required. Leave product line blank if unknown; it will be listed as Unspecified product line.</p><div class="thread-filters"><label>Brand<input id="manual-thread-brand" required maxlength="160" autocomplete="off" aria-describedby="manual-thread-error"></label><label>Product line (optional)<input id="manual-thread-line" maxlength="160"></label><label>Spool number<input id="manual-thread-number" required maxlength="80" aria-describedby="manual-thread-error"></label><label>Color name (optional)<input id="manual-thread-name" maxlength="160"></label><label>HEX approximation (optional)<input id="manual-thread-hex" placeholder="#123456" maxlength="7" aria-describedby="manual-thread-error"></label></div><div class="thread-color-editor"><output id="manual-color-preview" aria-live="polite"></output><label>Visual color picker<input type="color" id="manual-color-picker" value="#4079b0"></label>${button("manual-color-use", "Use picker color")}<div class="thread-rgb">${["R", "G", "B"].map((c) => `<label>${c}<input id="manual-color-${c}" type="number" min="0" max="255" step="1" aria-label="${c} color channel"></label>`).join("")}</div></div><p class="property-note">Screen colors are approximate. Choose a color to enable visual matching, or leave HEX empty for a label-only spool. Corrections keep the same spool identity; saved project snapshots change only when reassigned.</p><details><summary>Use an existing catalog color</summary><label>Search color or spool number<input id="manual-color-search" type="search"></label><label>Copy an approximate color<select id="manual-color-source"></select></label></details><details><summary>Optional spool details</summary><div class="thread-filters"><label>Material<input id="manual-thread-material" maxlength="160"></label><label>Weight<input id="manual-thread-weight" maxlength="160"></label></div></details><p id="manual-thread-error" role="alert"></p>` +
+      `<p class="property-note">Copy the spool label. Only brand and spool number are required. Leave product line blank if unknown; it will be listed as Unspecified product line.</p><div class="thread-filters"><label>Brand<input id="manual-thread-brand" required maxlength="160" list="manual-brand-options" autocomplete="off" aria-describedby="manual-thread-error"></label><label>Product line (optional)<input id="manual-thread-line" maxlength="160" list="manual-line-options"></label><datalist id="manual-brand-options">${family()
+        .map(([id, name]) => option(name, name))
+        .join(
+          "",
+        )}</datalist><datalist id="manual-line-options"></datalist><label>Spool number<input id="manual-thread-number" required maxlength="80" aria-describedby="manual-thread-error"></label><label>Color name (optional)<input id="manual-thread-name" maxlength="160"></label><label>HEX approximation (optional)<input id="manual-thread-hex" placeholder="#123456" maxlength="7" aria-describedby="manual-thread-error"></label></div><div class="thread-color-editor"><output id="manual-color-preview" aria-live="polite"></output><label>Visual color picker<input type="color" id="manual-color-picker" value="#4079b0"></label>${button("manual-color-use", "Use picker color")}<div class="thread-rgb">${["R", "G", "B"].map((c) => `<label>${c}<input id="manual-color-${c}" type="number" min="0" max="255" step="1" aria-label="${c} color channel"></label>`).join("")}</div></div><p class="property-note">Screen colors are approximate. Choose a color to enable visual matching, or leave HEX empty for a label-only spool. Corrections keep the same spool identity; saved project snapshots change only when reassigned.</p><details><summary>Use an existing catalog color</summary><label>Search color or spool number<input id="manual-color-search" type="search"></label><label>Copy an approximate color<select id="manual-color-source"></select></label></details><details><summary>Optional spool details</summary><div class="thread-filters"><label>Material<input id="manual-thread-material" maxlength="160"></label><label>Weight<input id="manual-thread-weight" maxlength="160"></label></div></details><p id="manual-thread-error" role="alert"></p>` +
       end(
         button("manual-thread-back", "Back") +
           button("manual-thread-save", "Save thread"),
@@ -580,6 +585,21 @@ export function installThreads(api) {
     if (existing)
       for (const key of ["brand", "line", "number"])
         $("manual-thread-" + key).readOnly = true;
+    const lineSuggestions = () => {
+      const brand = brandIdentity($("manual-thread-brand").value).brandId;
+      const names = new Set(
+        libraryThreads(library)
+          .filter((r) => r.brandId === brand)
+          .map((r) => r.lineName),
+      );
+      $("manual-line-options").innerHTML = [...names]
+        .sort()
+        .slice(0, 100)
+        .map((n) => option(n, n))
+        .join("");
+    };
+    $("manual-thread-brand").oninput = lineSuggestions;
+    lineSuggestions();
     const preview = () => {
       const hex = $("manual-thread-hex").value.trim();
       const valid = /^#[0-9a-f]{6}$/i.test(hex);
@@ -677,7 +697,7 @@ export function installThreads(api) {
           ["R", "G", "B"].some((c) => !$("manual-color-" + c).checkValidity())
         )
           throw Error("RGB channels must be whole numbers from 0 to 255.");
-        const r = normalizeThread({
+        let r = normalizeThread({
           brandName: $("manual-thread-brand").value,
           lineName:
             $("manual-thread-line").value.trim() || "Unspecified product line",
@@ -697,6 +717,23 @@ export function installThreads(api) {
             verification: "user-entered",
           },
         });
+        if (!existing) {
+          const ids = new Set(
+            libraryThreads(library)
+              .filter(
+                (t) =>
+                  t.brandId === r.brandId &&
+                  t.lineName.toLowerCase() === r.lineName.toLowerCase(),
+              )
+              .map((t) => t.lineId),
+          );
+          if (ids.size > 1)
+            throw Error(
+              "Several product lines share this name. Use a distinct line name or import with explicit line IDs.",
+            );
+          if (ids.size === 1)
+            r = normalizeThread({ ...r, lineId: [...ids][0] });
+        }
         r.source.verification = "user-entered";
         r.source.colorAccuracy = r.hex ? "user-selected" : "unknown";
         if (existing) {

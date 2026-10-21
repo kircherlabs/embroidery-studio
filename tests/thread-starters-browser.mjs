@@ -93,6 +93,26 @@ try {
   await page.locator("#thread-brand").selectOption("newbrothread");
   await page.locator(".thread-result").click();
   assert.match(await page.locator("#thread-detail").innerText(), /#153975/);
+  // The displayed starter line name must resolve its existing canonical line ID,
+  // rather than creating a second identity from its coverage label.
+  const lineName = stored.records[0].lineName;
+  await page.locator("#thread-manual").click();
+  await page.locator("#manual-thread-brand").fill("New brothread");
+  assert.ok((await page.locator("#manual-line-options option").count()) > 0);
+  await page.locator("#manual-thread-line").fill(lineName);
+  await page.locator("#manual-thread-number").fill("007");
+  await page.locator("#manual-thread-save").click();
+  assert.match(
+    await page.locator("#manual-thread-error").innerText(),
+    /already exist/,
+  );
+  await page.locator("#manual-thread-back").click();
+  await page.locator("#thread-search").fill("Prussian");
+  await page.locator("#thread-brand").selectOption("newbrothread");
+  await page.waitForFunction(
+    () => document.querySelectorAll(".thread-result").length === 1,
+  );
+  await page.locator(".thread-result").click();
   await page.screenshot({ path: "test-results/thread-starters-desktop.png" });
   await page.setViewportSize({ width: 390, height: 844 });
   assert.ok(

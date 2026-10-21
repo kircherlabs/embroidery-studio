@@ -120,12 +120,36 @@ Rendered screenshot: test-results/cross-fill-desktop.png. Build/diff check pass.
 Physical sew-outs remain required; these are front-side crosses with jump travel,
 not claims about a hand-sewn reverse side or automatic machine trimming support.
 
-Implementation status: A, B, C, D and F complete. E Meander is next.
-G Emboss, H Ripple/Spiral and I release integration remain unimplemented.
+Milestone F committed: `2ecccde`.
+
+Milestone E: Classic, Fine, Open, Organic and Looping Meander. Coverage stations
+form a clearance-constrained spanning forest; round buffered branches and curved
+refinement yield wandering running paths. Organic/Looping use deterministic
+Poisson stations, rather than relabeling a grid maze. Every connected component
+is considered, holes are retained, and quantized paths undergo containment and
+crossing checks. Looping inserts complete circles only after local collision,
+clearance and containment tests; a spatial index keeps full-hoop work bounded.
+Scale, paired-line spacing, curviness, seed, direction and inset are contextual.
+Impossible geometry fails explicitly; narrow omitted stations/open coverage are
+explained. Dense-fill controls and irrelevant row-density warnings are excluded.
+
+E verification: 331 Node tests pass; five distinct deterministic real streams,
+no unintended proper crossings, holes/islands, actual needle containment,
+seed changes, scale limits and 96 mm designs. Full-suite local 96 mm measurements:
+Classic 4,340 events/285 ms; Fine 8,617/881 ms; Open 2,568/50 ms; Organic
+4,738/176 ms; Looping 6,623/91 ms. Times include concurrent test load and are
+measurements, not guarantees. The original unindexed full-hoop Looping exceeded
+the work budget; indexed collision queries fix that without weakening checks.
+Edge browser renders reviewed for all five styles and exact decoded Looping PES
+coordinates pass. Screenshots: test-results/meander-{style}-desktop.png. Static
+build/diff check pass. Physical sew-outs remain required.
+
+Implementation status: A, B, C, D, F and E complete. G Emboss is next.
+H Ripple/Spiral and I release integration remain unimplemented.
 Order: A → B → C → D → F → E → G → H → I.
 
-Baseline commit: `787ef69`. Next: commit F, then E Stipple/Meander: real curved
-coverage paths with containment/clearance checks and distinct reviewed presets.
+Baseline commit: `787ef69`. Next: commit E, then G Embossed Tatami: actual motif
+penetrations with bounded spacing/count growth, not a cosmetic overlay.
 Preserve every protected backup ref. Do not regenerate legacy expectations to
 accommodate changed output. No public release until validated working milestones.
 

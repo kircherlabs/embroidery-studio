@@ -1,4 +1,9 @@
-import { TEXTURES, FILL_METHODS, validateFillSettings } from "./schema.js";
+import {
+  TEXTURES,
+  FILL_METHODS,
+  validateFillSettings,
+  MEANDER_PRESETS,
+} from "./schema.js";
 import { makeFillSettings, FILL_DEFAULTS } from "./context.js";
 import { texturePhase } from "./tatami.js";
 import { availableFillMethods } from "./registry.js";
@@ -89,7 +94,7 @@ export function fillControls(control) {
         : method === "cross"
           ? `<div class="two-col">${num("Cross size · mm", "size", common(fills.map((o) => o.fillSettings?.size ?? 2)), 0.5, 10)}${num("Grid pitch · mm", "pitch", common(fills.map((o) => o.fillSettings?.pitch ?? 2)), 0.5, 20)}</div>${num("Grid direction · degrees", "angle", common(fills.map((o) => o.fillSettings?.angle ?? 0)), -360, 360, 1)}${num("Boundary inset · mm", "inset", common(fills.map((o) => o.fillSettings?.inset ?? 0)), 0, 10)}<p class="property-note">Complete Xs only; edge cells and counters are kept clear. Pitch must be at least the cross size. Every cross has the same top diagonal. Maximum segment length may subdivide long diagonals. No dense-fill underlay or pull compensation is used.</p>`
           : `<p class="property-note">${esc(FILL_METHODS[method] || "Mixed fill methods")}</p>`
-  }${method === "cross" ? placement(fills) : ""}<p class="property-note">${advanced ? "Expanded fill settings are active; spacing and length stay in millimeters." : "Classic, Brick and Aligned retain the original Tatami behavior until expanded settings are used."}</p><button id="fill-reset" type="button">Reset fill to Classic</button><p id="fill-input-error" role="status" class="property-note"></p></section>`;
+  }${method === "meander" ? `<label class="field">Meander style<select id="fill-style">${options({ classic: "Classic Meander", fine: "Fine Stipple", open: "Open Stipple", organic: "Organic Meander", looping: "Looping Meander" }, common(fills.map((o) => o.fillSettings?.style || "classic")))}</select></label><div class="two-col">${num("Pattern scale · mm", "pitch", common(fills.map((o) => o.fillSettings?.pitch ?? 3)), 0.8, 20)}${num("Line spacing · mm", "lineSpacing", common(fills.map((o) => o.fillSettings?.lineSpacing ?? 1.2)), 0.4, 10)}${num("Curviness", "curviness", common(fills.map((o) => o.fillSettings?.curviness ?? 0.7)), 0, 1, 0.05)}${num("Random seed", "seed", common(fills.map((o) => o.fillSettings?.seed ?? 1)), 0, 2147483647, 1)}</div>${num("Pattern direction · degrees", "angle", common(fills.map((o) => o.fillSettings?.angle ?? 0)), -360, 360, 1)}${num("Boundary inset · mm", "inset", common(fills.map((o) => o.fillSettings?.inset ?? 0)), 0, 10)}<p class="property-note">Curved running paths provide open coverage. Scale controls wandering extent; line spacing separates paired branches. Organic uses irregular Poisson stations. Looping adds checked decorative loops. Styles reset scale, spacing and curvature; Undo restores previous values. No dense underlay is applied.</p>` : ""}${["cross", "meander"].includes(method) ? placement(fills) : ""}<p class="property-note">${advanced ? "Expanded fill settings are active; spacing and length stay in millimeters." : "Classic, Brick and Aligned retain the original Tatami behavior until expanded settings are used."}</p><button id="fill-reset" type="button">Reset fill to Classic</button><p id="fill-input-error" role="status" class="property-note"></p></section>`;
 }
 export function bindFillControls(api, objects, single) {
   const targets = objects.flatMap((o) =>
@@ -171,6 +176,16 @@ export function bindFillControls(api, objects, single) {
     direction.onchange = () =>
       change((op) => {
         op.fillSettings = { ...op.fillSettings, direction: direction.value };
+      });
+  const style = document.getElementById("fill-style");
+  if (style)
+    style.onchange = () =>
+      change((op) => {
+        op.fillSettings = {
+          ...op.fillSettings,
+          ...MEANDER_PRESETS[style.value],
+          style: style.value,
+        };
       });
   document
     .querySelectorAll("[data-fill-texture]")

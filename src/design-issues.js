@@ -50,6 +50,11 @@ export function designIssues(project, warnings = [], diagnostics = {}) {
       }
       if (
         ["fill", "column", "satin", "border"].includes(op.type) &&
+        (op.type !== "fill" ||
+          !(op.fillSettings ?? o.fillSettings) ||
+          ["tatami", "emboss"].includes(
+            (op.fillSettings ?? o.fillSettings).method,
+          )) &&
         (op.spacing ?? o.spacing) < 0.25
       )
         add({

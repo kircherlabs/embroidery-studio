@@ -14,6 +14,7 @@ import { generateFill } from "./fills/registry.js";
 import "./fills/tatami.js";
 import "./fills/contour.js";
 import "./fills/cross.js";
+import "./fills/meander.js";
 export { inside, distance } from "./geometry.js";
 const rotate = (p, a) => ({
   x: p.x * Math.cos(a) - p.y * Math.sin(a),
@@ -835,6 +836,11 @@ export function generate(project) {
         (op) =>
           op.enabled !== false &&
           ["fill", "column", "satin", "border"].includes(op.type) &&
+          (op.type !== "fill" ||
+            !(op.fillSettings ?? o.fillSettings) ||
+            ["tatami", "emboss"].includes(
+              (op.fillSettings ?? o.fillSettings).method,
+            )) &&
           op.spacing < 0.25,
       ),
   );

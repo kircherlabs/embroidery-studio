@@ -1,7 +1,7 @@
 import { bounds } from "../model.js";
 import { localAxis } from "../transform-box.js";
 import { fillPolygons, points, inside, safeConnector } from "../geometry.js";
-import { validateFillSettings } from "./schema.js";
+import { validateFillSettings, MEANDER_PRESETS } from "./schema.js";
 import { offsetRings } from "../operations.js";
 export const FILL_DEFAULTS = {
   tatami: {
@@ -14,7 +14,7 @@ export const FILL_DEFAULTS = {
     edgeMinimum: 0.6,
   },
   contour: { direction: "outside-in" },
-  meander: { style: "classic", pitch: 3, curviness: 0.7, variation: 0.12 },
+  meander: { style: "classic", ...MEANDER_PRESETS.classic },
   cross: { size: 2, pitch: 2 },
   emboss: {
     motif: "diamonds",
@@ -41,6 +41,9 @@ export function makeFillSettings(method, o, changes = {}) {
     seed: 1,
     inset: 0,
     ...FILL_DEFAULTS[method],
+    ...(method === "meander" && changes.style
+      ? MEANDER_PRESETS[changes.style]
+      : {}),
     ...changes,
   };
   if (s.anchor === "global") {

@@ -22,6 +22,13 @@ export const TEXTURES = {
   chevron: "Chevron / reversing stagger",
   custom: "Custom sequence",
 };
+export const MEANDER_PRESETS = {
+  classic: { pitch: 3, lineSpacing: 1.2, curviness: 0.7, variation: 0.12 },
+  fine: { pitch: 1.8, lineSpacing: 0.7, curviness: 0.8, variation: 0.1 },
+  open: { pitch: 4.5, lineSpacing: 1.8, curviness: 0.7, variation: 0.12 },
+  organic: { pitch: 3, lineSpacing: 1.2, curviness: 1, variation: 0.16 },
+  looping: { pitch: 4, lineSpacing: 1.4, curviness: 0.9, variation: 0.16 },
+};
 export function unsupported(message) {
   const e = Error(message);
   e.code = "UNSUPPORTED_FEATURE";
@@ -37,7 +44,12 @@ const ranges = {
     edgeMinimum: [0, 1],
   },
   contour: {},
-  meander: { pitch: [0.8, 20], curviness: [0, 1], variation: [0, 0.2] },
+  meander: {
+    pitch: [0.8, 20],
+    lineSpacing: [0.4, 10],
+    curviness: [0, 1],
+    variation: [0, 0.2],
+  },
   cross: { size: [0.5, 10], pitch: [0.5, 20] },
   emboss: {
     scale: [1, 50],

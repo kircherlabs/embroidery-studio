@@ -208,7 +208,11 @@ export function renderInspector(api) {
         ?.closest("label")
         .querySelector(".field-title");
       if (title) title.textContent = "Contour spacing";
-      if (control.every((o) => o.fillSettings?.method === "cross"))
+      if (
+        control.every((o) =>
+          ["cross", "meander"].includes(o.fillSettings?.method),
+        )
+      )
         $("spacing")?.closest("label").setAttribute("hidden", "");
     }
   }

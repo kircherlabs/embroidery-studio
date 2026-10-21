@@ -57,7 +57,12 @@ try {
     await page.locator("#design-tab").click();
     await pick();
     await ready();
-    await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+    await page.evaluate(
+      () =>
+        new Promise((resolve) =>
+          requestAnimationFrame(() => requestAnimationFrame(resolve)),
+        ),
+    );
   };
   const outer = [
       { x: -18, y: -14 },
@@ -148,6 +153,29 @@ try {
   assert.equal((await project()).objects[0].operations[0].id, id);
   await exportCheck("cross-fill");
   await page.screenshot({ path: "test-results/cross-fill-desktop.png" });
+  await page.locator("#fill-method").selectOption("meander");
+  await ready();
+  assert(await page.locator("#spacing").isHidden());
+  const styleCounts = {};
+  for (const style of ["classic", "fine", "open", "organic", "looping"]) {
+    await page.locator("#fill-style").selectOption(style);
+    await ready();
+    const current = await plan();
+    assert(
+      !current.issues.some((i) => i.severity === "error"),
+      JSON.stringify(current.issues),
+    );
+    styleCounts[style] = current.events.length;
+    await page.screenshot({
+      path: `test-results/meander-${style}-desktop.png`,
+    });
+  }
+  assert(
+    styleCounts.fine > styleCounts.classic &&
+      styleCounts.classic > styleCounts.open,
+  );
+  await exportCheck("meander-fill");
+  assert.equal((await project()).objects[0].operations[0].id, id);
   await page.locator("#fill-method").selectOption("tatami");
   await ready();
   assert.equal((await project()).objects[0].operations[0].id, id);

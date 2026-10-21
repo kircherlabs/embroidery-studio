@@ -162,12 +162,34 @@ for representative full-emphasis motifs. Expanded Edge browser verifies all six
 motifs/controls/action identity and exact decoded Emboss PES coordinates.
 Build/diff check pass; physical texture appearance requires sew-out validation.
 
-Implementation status: A, B, C, D, F, E and G complete. H Ripple/Spiral is next.
-I release integration remains unimplemented.
+Milestone G committed: `28c81fe`.
+
+Milestone H: circular/elliptical Ripple and a monotonic Archimedean Spiral,
+with center/ratio/orientation/clockwise controls. Minimum physical turn spacing
+is retained; ellipse gaps may be larger in other directions. Exact contour
+interval clipping preserves holes/islands. A 0.12 mm clearance, chord refinement,
+quantized containment, repeated-point and crossing checks protect machine paths.
+Conservative clipping fragments may rejoin only via fully contained short chords
+within a 0.04 mm curvature bound; counters are never bridged. Ripple may connect
+nearby safe seams; genuinely separated Spiral arcs use jumps. Unsupported tight
+cases fail with actionable Contour guidance, not a renamed fallback algorithm.
+
+H verification: 337 Node tests pass, including closed concentric loops versus a
+single outward spiral on a disk, monotonic radius, holes/islands, ratio/center/
+direction, transforms, collapse and bounded 96 mm designs (Ripple 9,967 events,
+Spiral 9,649; standalone local measurements about 32–46 ms). Expanded Edge browser
+verifies radial controls/action identity and exact independently decoded Ripple
+and Spiral PES coordinates. Rendered screenshots reviewed. Build/diff check pass.
+No physical sew-out claimed.
+
+Implementation status: A–H complete in the approved A→B→C→D→F→E→G→H order.
+I integration, reference swatches, broader regressions, documentation and release
+remain outstanding. Nothing from this branch is deployed yet.
 Order: A → B → C → D → F → E → G → H → I.
 
-Baseline commit: `787ef69`. Next: commit G, then H distinct circular/elliptical
-Ripple and a true noncrossing Spiral, preserving all counters and safe travel.
+Baseline commit: `787ef69`. Next: commit H, then I integration: compact generated
+method previews, source/library/style/history/export coverage, reference sew-out
+projects, benchmarks, full browser suite/CI and validated Pages deployment.
 Preserve every protected backup ref. Do not regenerate legacy expectations to
 accommodate changed output. No public release until validated working milestones.
 

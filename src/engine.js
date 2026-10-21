@@ -16,6 +16,7 @@ import "./fills/contour.js";
 import "./fills/cross.js";
 import "./fills/meander.js";
 import "./fills/emboss.js";
+import "./fills/radial.js";
 export { inside, distance } from "./geometry.js";
 const rotate = (p, a) => ({
   x: p.x * Math.cos(a) - p.y * Math.sin(a),

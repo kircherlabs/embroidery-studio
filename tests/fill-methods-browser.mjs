@@ -200,6 +200,24 @@ try {
   await field("fill-motifAngle", 25);
   await exportCheck("emboss-fill");
   await page.screenshot({ path: "test-results/emboss-fill-desktop.png" });
+  for (const method of ["ripple", "spiral"]) {
+    await page.locator("#fill-method").selectOption(method);
+    await ready();
+    assert(await page.locator("#fill-ratio").isVisible());
+    assert(await page.locator("#underlay").isHidden());
+    await field("fill-ratio", 1.5);
+    await field("fill-centerX", 1);
+    await page.locator("#fill-clockwise").check();
+    await ready();
+    const current = await plan();
+    assert(
+      !current.issues.some((i) => i.severity === "error"),
+      JSON.stringify(current.issues),
+    );
+    assert.equal((await project()).objects[0].operations[0].id, id);
+    await exportCheck(`${method}-fill`);
+    await page.screenshot({ path: `test-results/${method}-fill-desktop.png` });
+  }
   await page.locator("#fill-method").selectOption("tatami");
   await ready();
   assert.equal((await project()).objects[0].operations[0].id, id);

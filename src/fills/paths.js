@@ -4,8 +4,8 @@ const point = (a, b, t) => ({
   y: Math.round((a.y + (b.y - a.y) * t) * 1e9) / 1e9,
 });
 export const quantize = (p) => ({
-  x: Math.round(p.x * 10) / 10,
-  y: Math.round(p.y * 10) / 10,
+  x: Math.round(p.x * 10) / 10 || 0,
+  y: Math.round(p.y * 10) / 10 || 0,
 });
 // Every contour crossing partitions the segment; midpoint classification of each
 // interval cannot skip a narrow hole as fixed-distance probes can.

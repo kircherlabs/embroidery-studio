@@ -207,7 +207,12 @@ export function renderInspector(api) {
       const title = $("spacing")
         ?.closest("label")
         .querySelector(".field-title");
-      if (title) title.textContent = "Contour spacing";
+      if (title)
+        title.textContent = control.every((o) =>
+          ["ripple", "spiral"].includes(o.fillSettings?.method),
+        )
+          ? "Minimum turn spacing"
+          : "Contour spacing";
       if (
         control.every((o) =>
           ["cross", "meander"].includes(o.fillSettings?.method),

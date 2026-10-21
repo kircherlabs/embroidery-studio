@@ -214,6 +214,14 @@ const descriptions = {
     "Show sewing needle movements in the canvas. This display toggle does not change the machine file.",
   "show-jumps":
     "Show dashed travel moves with the needle raised. Jumps are real commands and remain in the file when hidden here.",
+  "show-manual-trims":
+    "Highlight estimated connecting threads to inspect after sewing. Red solid = no effective trim; dashed/hollow = a trim command exists but machine execution is unverified. Blue jumps and orange trim commands remain separate. This diagnostic never changes stitches or exports.",
+  "sequence-zoom-in":
+    "Zoom the existing command timeline around the playback cursor. Ctrl/Command-wheel zooms at the pointer; Shift-wheel pans. Nearby important events remain individually inspectable.",
+  "sequence-zoom-out":
+    "Show a wider command range. Ordinary stitch marks aggregate by screen pixel; jump, trim, stop, color and cleanup markers retain separate lanes.",
+  "sequence-zoom-fit":
+    "Show the complete command sequence. The original stitch scrubber and playback controls still navigate the full design.",
   "show-underlay":
     "Show foundation stitches beneath the top stitching. This changes the display; enable or disable generated underlay in object properties.",
   "show-events":

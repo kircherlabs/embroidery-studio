@@ -30,6 +30,7 @@ jobs:
           node scripts/serve.mjs > /tmp/studio-preview.log 2>&1 &
           STUDIO_PID=$!
           trap 'kill "$STUDIO_PID"' EXIT
+          node tests/cleanup-browser.mjs
           node tests/export-package-browser.mjs
           node tests/thread-library-ux-browser.mjs
           node tests/thread-bulk-browser.mjs

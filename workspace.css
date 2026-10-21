@@ -1007,6 +1007,135 @@
   }
 }
 /* Equipment stays in the existing expandable workspace strip. */
+.sequence-track-wrap {
+  position: relative;
+  margin-top: 5px;
+}
+#command-track {
+  height: 56px;
+  margin: 0;
+  border-radius: 5px;
+  cursor: crosshair;
+  touch-action: pan-y;
+}
+#command-track:focus-visible {
+  outline: 2px solid var(--gold, #e9b77f);
+  outline-offset: 2px;
+}
+#sequence-cursor {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: #f5d3a8;
+  pointer-events: none;
+}
+.sequence-track-tools {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  margin-top: 4px;
+}
+.sequence-track-tools button,
+.sequence-event-detail button,
+#cleanup-pages button {
+  font-size: 11px;
+  min-height: 28px;
+  padding: 3px 8px;
+}
+#sequence-window-label {
+  font-size: 11px;
+  color: #bfcdb7;
+  white-space: nowrap;
+}
+#sequence-pan {
+  flex: 1;
+  min-width: 50px;
+  width: 100px;
+  height: 20px;
+  padding: 0;
+}
+.command-legend {
+  font-size: 11px;
+  flex-wrap: wrap;
+  gap: 3px 13px;
+  line-height: 1.5;
+  margin: 5px 0;
+}
+.command-legend .manual-key {
+  color: #ff7266;
+}
+.sequence-event-detail {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+  border-inline-start: 2px solid #e9b77f;
+  padding: 6px 8px;
+  font-size: 12px;
+  background: #192b24;
+}
+#sequence-event-description {
+  flex: 1 1 200px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.sequence-event-detail[hidden],
+#sequence-tooltip[hidden],
+#sequence-cursor[hidden] {
+  display: none;
+}
+#sequence-tooltip {
+  position: fixed;
+  z-index: 200;
+  max-width: min(340px, calc(100vw - 16px));
+  padding: 9px 12px;
+  border: 1px solid #8b9d85;
+  border-radius: 6px;
+  background: #192b24;
+  color: #f0efdf;
+  font-size: 12px;
+  line-height: 1.5;
+  pointer-events: none;
+  box-shadow: 0 4px 18px #0006;
+}
+.cleanup-report {
+  font-size: 12px;
+  margin: 5px 0;
+}
+.cleanup-report summary {
+  color: #f2baad;
+  cursor: pointer;
+  padding: 4px 0;
+}
+.cleanup-report p {
+  line-height: 1.5;
+  color: #c2ceb9;
+  margin: 6px 0;
+}
+#cleanup-locations {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(210px, 100%), 1fr));
+  gap: 5px;
+}
+#cleanup-locations button {
+  text-align: left;
+  font-size: 12px;
+  padding: 6px 8px;
+  border-inline-start: 2px solid #ff7266;
+}
+#cleanup-pages {
+  margin-top: 5px;
+}
+@media (pointer: coarse) {
+  .sequence-track-tools button,
+  .sequence-event-detail button,
+  #cleanup-pages button {
+    min-height: 36px;
+    min-width: 36px;
+  }
+}
 .workspace-machine .machine-settings {
   display: grid;
   grid-template-columns: minmax(100px, 0.8fr) minmax(140px, 1.2fr) minmax(

@@ -465,7 +465,11 @@
                   checked
                 />Stitches</label
               >
-              <label><input type="checkbox" id="show-jumps" />Jumps</label>
+              <label><input type="checkbox" id="show-jumps" />Show Jumps</label>
+              <label
+                ><input type="checkbox" id="show-manual-trims" />Show Manual
+                Trims</label
+              >
               <label
                 ><input
                   type="checkbox"
@@ -545,6 +549,88 @@
           </div>
           <div class="sequence-content">
             <div class="sequence-metrics" id="sequence-metrics"></div>
+            <div
+              class="timeline-colors"
+              id="color-timeline"
+              aria-label="Color blocks"
+            ></div>
+            <div class="sequence-track-wrap">
+              <canvas
+                id="command-track"
+                height="56"
+                tabindex="0"
+                role="group"
+                aria-label="Command timeline. Arrow keys inspect significant events; plus and minus zoom. Blue jumps, orange automatic trim commands, red estimated manual cleanup, diamonds for color changes and squares for stops."
+              ></canvas
+              ><span id="sequence-cursor" aria-hidden="true"></span>
+            </div>
+            <div
+              class="sequence-track-tools"
+              role="group"
+              aria-label="Timeline zoom"
+            >
+              <button id="sequence-zoom-out" aria-label="Zoom out timeline">
+                −
+              </button>
+              <button id="sequence-zoom-in" aria-label="Zoom in timeline">
+                +
+              </button>
+              <button id="sequence-zoom-fit">Fit</button>
+              <span id="sequence-window-label"></span>
+              <input
+                type="range"
+                id="sequence-pan"
+                min="0"
+                max="0"
+                value="0"
+                aria-label="Pan zoomed command timeline"
+                hidden
+              />
+            </div>
+            <div class="command-legend">
+              <span>━ Sew</span><span class="jump-key">┄ Jump</span
+              ><span class="trim-key">× Auto trim command</span
+              ><span class="manual-key">● Manual cleanup estimate</span
+              ><span>◇ Color change</span><span>□ Stop</span>
+            </div>
+            <div id="sequence-detail" class="sequence-event-detail" hidden>
+              <span id="sequence-event-description" role="status"></span>
+              <button
+                id="sequence-overlap-prev"
+                aria-label="Previous overlapping event"
+              >
+                ‹</button
+              ><button
+                id="sequence-overlap-next"
+                aria-label="Next overlapping event"
+              >
+                ›
+              </button>
+              <button id="sequence-event-zoom">Zoom here</button
+              ><button
+                id="sequence-detail-close"
+                aria-label="Close event details"
+              >
+                ×
+              </button>
+            </div>
+            <details id="cleanup-report" class="cleanup-report">
+              <summary id="cleanup-count">Potential manual trims: 0</summary>
+              <p id="cleanup-breakdown"></p>
+              <p id="cleanup-assumptions"></p>
+              <div id="cleanup-locations"></div>
+              <div id="cleanup-pages">
+                <button
+                  id="cleanup-prev"
+                  aria-label="Previous cleanup locations"
+                >
+                  ‹</button
+                ><span id="cleanup-page-label"></span
+                ><button id="cleanup-next" aria-label="Next cleanup locations">
+                  ›
+                </button>
+              </div>
+            </details>
             <details class="object-sequence" open>
               <summary>
                 Object sewing order <span id="order-badge">Automatic</span>
@@ -565,21 +651,6 @@
                 <div id="operation-order"></div>
               </details>
             </details>
-            <div
-              class="timeline-colors"
-              id="color-timeline"
-              aria-label="Color blocks"
-            ></div>
-            <canvas
-              id="command-track"
-              height="12"
-              aria-label="Command timeline: blue jumps, orange trims, white color changes"
-            ></canvas>
-            <div class="command-legend">
-              <span>━ Sew</span><span class="jump-key">┄ Jump</span
-              ><span class="trim-key">× Trim</span><span>○ Color change</span
-              ><span>□ Stop</span>
-            </div>
           </div>
           <input
             id="timeline"
@@ -643,7 +714,7 @@
     <footer class="status-bar">
       <span id="status">Ready</span
       ><span
-        >40 wt thread presets <i>·</i> v0.16.0 <i>·</i>
+        >40 wt thread presets <i>·</i> v0.17.0 <i>·</i>
         <a
           href="https://github.com/kircherlabs/embroidery-studio"
           target="_blank"
@@ -659,6 +730,7 @@
       accept=".svg,.png,.jpg,.jpeg,.webp,.pes,.pec,.dst,.exp,.jef,.vp3,.xxx,.embstudio,.json"
       hidden
     />
+    <div id="sequence-tooltip" role="tooltip" hidden></div>
     <div id="toast" role="status" aria-live="polite"></div>
     <dialog id="dialog">
       <form method="dialog">

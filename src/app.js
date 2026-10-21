@@ -5,6 +5,8 @@ import {
   packageName,
 } from "./export-package.js";
 import { installThreads } from "./thread-ui.js";
+import { estimateCleanup } from "./manual-cleanup.js";
+import { installSequenceTimeline } from "./sequence-timeline.js";
 import { installArtworkLibrary } from "./artwork-ui.js";
 import { stampFillFeatures } from "./fills/schema.js";
 import { LatestGenerationWorker } from "./generation-worker.js";
@@ -144,6 +146,10 @@ const state = {
   cursor: 0,
   showStitches: true,
   showJumps: false,
+  showManualTrims: false,
+  cleanupReport: null,
+  cleanupSelected: null,
+  previewFormat: null,
   showUnderlay: true,
   showEvents: false,
   space: false,
@@ -200,6 +206,26 @@ const stage = new Stage($("stage"), state, {
   scrub,
   contextMenu: ({ x, y }) => arrangeMenu?.open(x, y),
 });
+const sequenceTimeline = installSequenceTimeline({
+  state,
+  scrub,
+  locate: locateCleanup,
+});
+function locateCleanup(c) {
+  state.showManualTrims = true;
+  $("show-manual-trims").checked = true;
+  scrub(c.endIndex + 1);
+  state.cleanupSelected = c.id;
+  sequenceTimeline.paint();
+  stage.fitBounds({
+    minX: Math.min(c.from.x, c.to.x) - 5,
+    minY: Math.min(c.from.y, c.to.y) - 5,
+    maxX: Math.max(c.from.x, c.to.x) + 5,
+    maxY: Math.max(c.from.y, c.to.y) + 5,
+    width: Math.abs(c.to.x - c.from.x) + 10,
+    height: Math.abs(c.to.y - c.from.y) + 10,
+  });
+}
 function toast(message) {
   $("toast").textContent = message;
   $("toast").classList.add("show");
@@ -297,6 +323,9 @@ function autosave() {
 function scheduleGenerate() {
   const id = ++generation;
   state.plan = null;
+  state.cleanupReport = null;
+  state.cleanupSelected = null;
+  sequenceTimeline.update(null);
   $("status").textContent = "Generating stitch sequence…";
   $("export").disabled = true;
   clearTimeout(generationTimer);
@@ -324,6 +353,7 @@ worker.onmessage = ({ data }) => {
   }
   state.generationError = null;
   state.plan = data;
+  state.previewFormat = null;
   const satinStatus = $("satin-analysis");
   if (satinStatus?.dataset.object)
     satinStatus.textContent = satinSummary(
@@ -1374,6 +1404,20 @@ function renderTimeline() {
   const focusedObject =
     document.activeElement?.closest(".sewing-object")?.dataset.reorderId;
   const ev = state.plan?.events || [];
+  let preferences = {};
+  try {
+    preferences = JSON.parse(
+      localStorage.getItem(EXPORT_PREFERENCE_KEY) || "{}",
+    );
+  } catch {}
+  state.cleanupReport = estimateCleanup(ev, {
+    format: state.previewFormat || preferredExport(state.project, preferences),
+    decoded: machinePlan,
+    objects: state.project.objects,
+    machine: state.project.machine,
+  });
+  state.cleanupSelected = null;
+  sequenceTimeline.update(state.cleanupReport);
   let groups = [];
   ev.forEach((e, i) => {
     if (!groups.length || e.cmd === "color")
@@ -1397,9 +1441,8 @@ function renderTimeline() {
   $("timeline").value = state.cursor;
   const stats = state.plan?.stats;
   $("sequence-metrics").textContent = stats
-    ? `${stats.colors} color blocks · ${stats.manualChanges} manual changes · ${fmt(stats.jumps)} jumps${stats.stops ? ` · ${stats.stops} stops` : ""}${!isManualOrder(state.project) && stats.sourceColorBlocks !== undefined ? ` · layer order: ${stats.sourceColorBlocks} blocks` : ""}`
+    ? `${stats.colors} color blocks · ${stats.manualChanges} manual changes · ${fmt(stats.jumps)} jumps${stats.stops ? ` · ${stats.stops} stops` : ""}${!isManualOrder(state.project) && stats.sourceColorBlocks !== undefined ? ` · layer order: ${stats.sourceColorBlocks} blocks` : ""} · Potential manual trims: ${fmt(state.cleanupReport.candidates.length)}`
     : "";
-  drawCommandTrack();
   const names = new Map(state.project.objects.map((o) => [o.id, o.name])),
     runs = [];
   ev.forEach((e, i) => {
@@ -1448,30 +1491,17 @@ function renderTimeline() {
       ?.querySelector("[data-sew-grip]")
       ?.focus({ preventScroll: true });
 }
-function drawCommandTrack() {
-  const canvas = $("command-track"),
-    width = canvas.clientWidth;
-  if (!width) return;
-  canvas.width = Math.round(width * (devicePixelRatio || 1));
-  canvas.height = 12 * (devicePixelRatio || 1);
-  const ctx = canvas.getContext("2d"),
-    events = state.plan?.events || [];
-  ctx.scale(devicePixelRatio || 1, devicePixelRatio || 1);
-  for (const cmd of ["jump", "trim", "color", "stop"]) {
-    ctx.fillStyle =
-      cmd === "jump" ? "#82aacf" : cmd === "trim" ? "#e7b784" : "#eff2df";
-    const h = cmd === "jump" ? 3 : cmd === "trim" ? 7 : 12;
-    events.forEach((e, i) => {
-      if (e.cmd === cmd)
-        ctx.fillRect((i / (events.length || 1)) * width, 12 - h, 1, h);
-    });
-  }
-}
-new ResizeObserver(drawCommandTrack).observe($("command-track"));
 function renderPlayback() {
   const ev = state.plan?.events || [];
   state.cursor = Math.max(0, Math.min(ev.length, Math.floor(state.cursor)));
   $("timeline").value = state.cursor;
+  sequenceTimeline.cursor(state.cursor);
+  if (
+    state.cleanupSelected !== null &&
+    state.cleanupReport?.candidates[state.cleanupSelected]?.endIndex + 1 !==
+      state.cursor
+  )
+    state.cleanupSelected = null;
   $("stitch-counter").textContent = `${fmt(state.cursor)} / ${fmt(ev.length)}`;
   const e = ev[state.cursor - 1];
   $("command-readout").textContent = e
@@ -1487,6 +1517,7 @@ function scrub(n) {
   pause();
   if (state.mode !== "preview") setMode("preview");
   state.cursor = n;
+  state.cleanupSelected = null;
   const e = state.plan?.events[n - 1];
   if (e?.objectId && !selectedLeaves(state).some((o) => o.id === e.objectId)) {
     state.selection = e.objectId;
@@ -1838,6 +1869,7 @@ async function exportDialog() {
     };
     state.cursor = result.events.length;
     machinePlan = true;
+    state.previewFormat = ext;
     state.previewSelection = false;
     state.activeOperationId = null;
     $("preview-selection").checked = false;
@@ -1923,6 +1955,7 @@ async function importFile(file) {
               type: "manual",
               commands: block,
               color,
+              machineSourceFormat: ext,
             }),
           );
           block = [];
@@ -2690,11 +2723,16 @@ $("navigation-mode").onchange = (e) => {
 for (const [id, key] of [
   ["show-stitches", "showStitches"],
   ["show-jumps", "showJumps"],
+  ["show-manual-trims", "showManualTrims"],
   ["show-underlay", "showUnderlay"],
   ["show-events", "showEvents"],
 ])
   $(id).onchange = (e) => {
     state[key] = e.target.checked;
+    if (key === "showManualTrims") {
+      state.cleanupSelected = null;
+      sequenceTimeline.paint();
+    }
     stage.render();
   };
 for (const [id, key] of [
@@ -2984,6 +3022,8 @@ window.studio = {
   getWorkspace: () => workspaceLayout.getState(),
   getProject: () => structuredClone(state.project),
   getPlan: () => structuredClone(state.plan),
+  getCleanup: () => structuredClone(state.cleanupReport),
+  getSequenceView: () => sequenceTimeline.getView(),
   getDrawing: () => ({
     tool: state.tool,
     active: !!stage.draftEditing,

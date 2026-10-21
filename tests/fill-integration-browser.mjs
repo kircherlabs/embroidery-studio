@@ -64,6 +64,12 @@ try {
   await page.locator("#sewing-presets").click();
   await page.locator("#sewing-preset").selectOption("fill");
   await page.locator("#dialog-submit").click();
+  // Native dialog close is asynchronous: the previous plan can remain ready
+  // until its close listener applies the preset and invalidates generation.
+  await page.waitForFunction(() => {
+    const p = window.studio.getProject();
+    return p.version === 1 && !p.objects[0].operations[0].fillSettings;
+  });
   await ready();
   assert.equal(
     (await project()).objects[0].operations[0].fillSettings,

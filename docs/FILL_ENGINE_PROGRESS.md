@@ -220,13 +220,19 @@ examples/fill-swatches/README.md. Proposed release v0.16.0.
 
 Implementation status: A–H complete in the approved A→B→C→D→F→E→G→H order.
 I source integration is committed as `ae51057`, with optional-field/Custom fixes
-in `9a8d6ec` and final preset/transfer hardening ready to commit. PR #27 is open
+in `9a8d6ec` and final preset/transfer hardening in `f1f83a1`. PR #27 is open
 and attached. Exact-head GitHub CI, merge, Pages
 and live verification remain outstanding. Nothing from this branch is deployed
 yet. Do not mark release complete before those checks pass.
 Order: A → B → C → D → F → E → G → H → I.
 
-Baseline commit: `787ef69`. Next: commit/push final hardening, wait for exact-head
+CI on `f1f83a1` passed Node/Python and preceding browser workflows, but the new
+integration browser asserted preset state before the native dialog close event
+applied it. The test now waits for the preset state before checking the regenerated
+plan; existing assertions remain intact. Edge reproduced a passing interaction
+before this timing correction. Exact-head CI must be rerun before release.
+
+Baseline commit: `787ef69`. Next: push the browser synchronization fix, wait for exact-head
 CI on PR #27, merge, wait for Pages and verify deployed source/version and isolated live
 fill workflows. Protected refs checked unchanged, including BACKUP-V0.15.0 at
 `6a0dcd2`, BACKUP-V0.14.1 at `8c6636b` and backup-before-creative-update at `99c0a78`.

@@ -1,7 +1,14 @@
 # Equipment and physical threads — resumable progress
 
 Starting point: stable main `34d6ab6` (v0.12.8, smart image import integrated).
-Protected backups `backup-before-creative-update` and `BACKUP-V0.12.6` must remain untouched.
+Protected backups `backup-before-creative-update`, `BACKUP-V0.12.6` and
+`BACKUP-V0.12.8` remain untouched.
+
+Release status: **v0.13.0 merged and live**. Stages A–F's software implementation,
+integration and publication are verified. Stage C's licensed preloaded manufacturer
+catalogs and documented conversion datasets remain **not completed**; personal catalog
+imports are available. No new physical hardware sew-out is claimed. Historical stage
+validation below records each milestone; see the publication checkpoint for final checks.
 
 ## Stage A — complete and verified (`5f99fd9`)
 
@@ -39,11 +46,11 @@ resolved without changing or weakening tests. Desktop/mobile screenshots are loc
 Additional files: `src/export-preferences.js` honors the custom profile's preferred
 format and keeps model-format uncertainty distinct from verified field data;
 `README.md`, `docs/MACHINE_PROFILES.md` explain controls, evidence and migration.
-CI now runs the equipment browser suite. No intermediate deployment has been made.
+CI now runs the equipment browser suite. No intermediate deployment was made during A.
 Remaining limitations: curated initial models/hoops only; unknown optional hoops,
 physical outer dimensions, machine movement limits and reposition support are not
 invented. Oval checks use the documented envelope with explicit template guidance.
-Personal settings transfer UI is deferred to Stage E (project snapshots already travel).
+Personal settings transfer UI was completed in Stage E (project snapshots also travel).
 
 ## Stage B — complete and verified (`fd985c1`)
 
@@ -124,13 +131,10 @@ personal product data from the MIT PEC machine palette. Catalogs use IndexedDB;
 project snapshots do not depend on installed catalogs. Nothing from ThreadResearch.zip
 was extracted or bundled. Public manufacturer color packs remain unapproved, NOT done.
 
-Remaining C limitations: no licensed preloaded brand palettes, user-imported values
-remain approximate/unverified; full personal settings backup follows E. Inventory
-and conversions are reserved empty arrays until D/E implement their workflows.
-Next exact step: implement and test D's CIELAB matching, explicit preview/alternatives,
-original-palette preservation, substitution labels and smart-import handoff. Audit
-all color-edit paths (image palette revisions/style transfer) for stale assignments.
-Commit D only after it passes. No intermediate deployment has been made.
+Remaining C limitations: no licensed preloaded brand palettes; user-imported values
+remain approximate/unverified. Personal settings backup and inventory were completed
+in E; reviewed CIELAB matching, substitution and smart-import handoff were completed
+in D. No official conversion dataset is bundled. No intermediate deployment was made.
 
 ## Stage D — reviewed perceptual matching complete and verified (`143b467`)
 
@@ -163,10 +167,10 @@ Mobile screenshot: `test-results/thread-matching-mobile.png`. CI includes the ne
 Docs: `docs/THREAD_LIBRARY.md`. No catalog/conversion dataset was redistributed.
 
 Limitations: physical matches need sew-outs; no official/third-party conversion tables
-are claimed or bundled without verified provenance/rights. Inventory population and
-shopping/backup UI follow E; the matching filter already handles an empty collection
-strictly rather than silently choosing unowned threads. Next: implement E, test and
-commit it, then run F's full regression/release checks. No intermediate deployment.
+are claimed or bundled without verified provenance/rights. Inventory, shopping and
+backup UI were completed in E; the matching filter handles an empty collection
+strictly rather than silently choosing unowned threads. F's release checks and
+publication are verified below. No intermediate deployment was made.
 
 ## Stage E — personal inventory and portable settings complete and verified (`282526d`)
 
@@ -205,11 +209,11 @@ Build passed. CI includes inventory browser tests. README and THREAD_LIBRARY upd
 
 Remaining limits: collection quantities/remaining metres are user estimates; no stock
 usage accounting, no manufacturer conversion dataset or licensed preloaded color packs.
-Personal preference edits are separate from project Undo. Next exact step: F full
-regression (34 browser suites + 294 JS + 10 native Python), release docs/version,
-merge/push and verify successful GitHub Pages deployment. Backups remain untouched.
+Personal preference edits are separate from project Undo. F completed full regression,
+release documentation/version, merge/push and GitHub Pages verification below.
+Backups remain untouched.
 
-## Stage F — local release validation complete; publication gate pending
+## Stage F — release validation and publication complete
 
 Release version: **0.13.0**. All 295 JavaScript tests, 10 native Python codec/format
 tests and all 34 browser suites pass, plus production build / public-asset policy
@@ -229,11 +233,10 @@ all controls stay within the dialog, with limited paged catalog DOM. CI runs all
 suites. No unrelated stitch-generation algorithm or machine writer was rewritten.
 The VP3 reader repair and export safety restrictions are documented separately.
 
-Exact next steps: push this release commit, open/attach the PR, wait for GitHub's
-full CI checks, merge it, wait for successful main Pages deployment, compare public
-runtime sources/version with the release, and run equipment/catalog/matching/inventory
-browser workflows on the public URL. Record the verified publication below after
-it actually succeeds. Do not label the live deployment verified before these checks.
+Production-build browser workflows passed for equipment, catalogs, matching and
+inventory. Additional Chrome production-build checks passed for equipment, smart
+import and inventory. GitHub's full PR and main checks and the public deployment
+were then verified as recorded below.
 
 Remaining product limitations (not hidden completed features): licensed preloaded
 manufacturer color packs and official conversion tables are NOT approved/bundled;
@@ -245,26 +248,38 @@ machine and export compatibility docs for exact model/format evidence and limits
 Protected backup branches remain unchanged, including newly observed BACKUP-V0.12.8
 at the original v0.12.8 main commit.
 
-### Publication checkpoint — PR #23
+### Publication checkpoint — verified v0.13.0
 
-Release commit `10cef2a` is in [PR #23](https://github.com/kircherlabs/embroidery-studio/pull/23).
-The production build independently passed equipment, catalogs, matching and inventory
-browser workflows. First PR CI passed all JS/native and new thread/export browsers,
-then exposed an equipment test timing race on Linux Chromium: immediately after a
-native dialog closes, its asynchronous handler has not necessarily committed the
-new hoop, so the test read the previous 203.2 mm plan instead of the new 100 mm field.
-`tests/equipment-browser.mjs` now waits for the actual project transaction before
-waiting for its new plan. All existing dimension, geometry, history and persistence
-assertions remain. Source and production-build equipment tests pass again. Await the
-updated PR CI before merging; no intermediate release has been deployed.
+- Release commit `10cef2a` and test lifecycle fixes `3814915` / `d52c96d` were merged
+  through [PR #23](https://github.com/kircherlabs/embroidery-studio/pull/23).
+- Final [PR CI run 39497840024](https://github.com/kircherlabs/embroidery-studio/actions/runs/39497840024)
+  passed all 295 JS tests, 10 native Python tests, 34 browser suites and the build.
+- Merge commit `b3fbbebbad09448ede8992064ddc95d310ff632e` passed the same full
+  [main workflow and Pages deployment](https://github.com/kircherlabs/embroidery-studio/actions/runs/39499380098).
+- [Public application](https://kircherlabs.github.io/embroidery-studio/) reports v0.13.0.
+  All 34 changed runtime-source/version checks match the merged release, after
+  normalizing line endings (`test-results/equipment-threads-live-sources.json`).
+- All four final browser suites passed against the public URL in fresh isolated
+  profiles: equipment, thread catalogs, matching and inventory. Logs are
+  `test-results/live-equipment.log`, `live-threads.log`, `live-thread-matching.log`
+  and `live-thread-inventory.log`. These include actual export/download and decoded
+  machine-command checks; they do not alter the user's open browser workspace.
 
-The updated PR CI passed equipment and all new thread/export suites on Linux. It
-then exposed a similar pre-existing image-test race when starting the next upload
-before the previous import's finally/input-reset completed. The smart-import browser
-test now explicitly waits for file processing to finish before another upload and
-after commit. Original PNG/JPEG, 12/24/32/64-color, background/merge/geometry, Undo,
-persistence and every-PES-needle assertions remain unchanged and pass locally again
-(`release-smart-import-completion.log`). Await the next full PR run; do not bypass CI.
+Linux CI exposed two browser-test lifecycle races: equipment tests read the prior
+plan before the asynchronous project transaction committed, and smart-import tests
+could start another upload before the previous handler reset its input. Tests now
+wait for those actual completion signals. All original geometry, dimensions,
+history, PNG/JPEG, 12/24/32/64-color, persistence and decoded-needle assertions remain.
+Both final CI runs passed; no runtime workaround or weakened assertion was used.
+
+Protected branch tips were checked after merge and remain:
+`backup-before-creative-update` = `99c0a78cd7ec7c026d32c44195ebea882f06c925`,
+`BACKUP-V0.12.6` = `c13460ed95fc18fa38714b8b0547b6ae4c89cec8`,
+`BACKUP-V0.12.8` = `34d6ab6e7225cc2ebe7d47e70c20d14f524051fb`.
+
+This publication record is a documentation-only follow-up to the validated runtime
+merge. Documentation is excluded from public build assets; no runtime, test or
+workflow change is included in this follow-up.
 
 ## Research and licensing boundary
 
@@ -277,8 +292,24 @@ code, not screen RGB or a shared numbering system. The existing MIT PEC palette 
 file-format data, never a physical thread catalog. Do not bundle the research archive,
 unlicensed chart images, raw catalogs, PANTONE references or conversion tables.
 
-## Resume rules
+## Exact next work and resume rules
 
-Read this file and inspect current branch/commit/status first. Stages A–E and F local release checks are validated; complete/check F publication from the latest release commit. Record each stage's actual checks and commit in this
-file. Never label later stages complete until implemented and tested. Keep source research
-outside `src`, `vendor`, `assets` (the directories copied into public builds).
+Read this file and inspect current branch/commit/status first. The A–F software
+implementation and v0.13.0 publication are complete; do not repeat those milestones.
+Outstanding work, in order of required evidence:
+
+1. Secure and record redistribution rights and manufacturer provenance before adding
+   preloaded physical thread catalogs or conversion datasets. Never copy the research
+   rows into production merely to fill a brand selector. Personal imports remain usable.
+2. Extend the exact-model/hoop catalog only with reliable model-specific specifications;
+   obtain primary format evidence for Jade 35. Do not infer compatibility by brand.
+3. Investigate and test JEF hoop header support before enabling designs reaching
+   200 mm; retain the existing guard. Keep VP3 standalone STOP exports blocked until
+   a writer capable of preserving them is implemented and decoded successfully.
+4. Perform documented physical sew-outs for additional model/format combinations and
+   thread matches before elevating hardware or color-accuracy verification claims.
+
+Record each future stage's files, checks, unresolved limitations and commit here.
+Keep source research outside `src`, `vendor`, `assets` (the directories copied into
+public builds). No unresolved critical software regression remains in this release;
+the licensing, source-evidence and physical-validation limits above remain explicit.

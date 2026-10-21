@@ -44,3 +44,18 @@ fixture. Four new tests and 37 related effects/manual-satin/path-text tests pass
 Stored artwork is source data, not generated stitch replacement.
 
 Next: C persistent records and backups. C–F are not implemented yet.
+
+## C — complete, locally verified
+
+Separate versioned IndexedDB artwork records persist outside projects. Validated
+backups preserve editable payloads; ID/name collisions create independent copies,
+repeat imports skip duplicates. Invalid records are isolated and kept in storage;
+raw recovery export and explicit invalid-entry cleanup are available to the UI.
+Writes/imports are atomic, preserving prior records on quota or validation failure.
+Limits: 1,000 entries / 64 MB library, 32 MB element, 72 MB import file.
+
+Files: artwork-records.js, artwork-store.js, record unit and storage browser tests.
+Tests pass backup round-trip, malformed entry isolation, duplicate/collision import,
+rename/delete, real IndexedDB persistence, quota failure rollback and recovery.
+Next: D companion interface/thumbnail rendering; then E workflow integration and F.
+B and C are now complete; earlier Next lists are historical milestone checkpoints.

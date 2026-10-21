@@ -53,6 +53,9 @@ try {
     ),
   });
   await page.locator("#dialog-submit").click();
+  await page.waitForFunction(
+    () => window.studio.getProject().objects[0]?.id === "reusable-fill",
+  );
   await ready();
   await page.locator('[data-select="reusable-fill"]').click();
   await page.locator("#fill-method").selectOption("contour");
@@ -107,6 +110,9 @@ try {
   assert.deepEqual(await project(), source);
   await page.locator("#new-project").click();
   await page.locator("#dialog-submit").click();
+  await page.waitForFunction(
+    () => window.studio.getProject().objects.length === 0,
+  );
   await ready();
   const empty = await project();
   await page.locator("#artwork-library").click();

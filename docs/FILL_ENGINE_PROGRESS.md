@@ -235,6 +235,12 @@ The next run caught the established thread UX test measuring a desktop grid
 immediately after resizing to mobile, before the workspace media event applied
 compact mode. It now waits for that mode before retaining the same overflow and
 header-layout assertions. No production equipment/layout changes were needed.
+The subsequent run reached the new cross-project integration test and exposed
+the same native-close race when capturing the empty New Project baseline. Undo
+correctly restored the empty project; the expected baseline had been read too
+early. All three native-confirmation transitions in the new test now wait for
+their intended project state, then await stitch generation. Remaining library
+and history handlers are synchronous or already have explicit completion waits.
 
 Baseline commit: `787ef69`. Next: push the browser synchronization fix, wait for exact-head
 CI on PR #27, merge, wait for Pages and verify deployed source/version and isolated live

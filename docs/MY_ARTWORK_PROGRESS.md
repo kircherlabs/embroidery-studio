@@ -27,4 +27,20 @@ D: Companion modal and thumbnails; My Artwork immediately before Threads.
 E: Context Save and one-Undo insertion integration.
 F: Full automated/browser/export regression, visual review, docs, PR and Pages.
 
-Only A is complete. B–F are not implemented yet.
+## B — complete, locally verified
+
+Source extraction uses existing hierarchy copying and project validation. External
+linked originals, SVG fill dependencies and construction artwork require explicit
+complete selection, with actionable feedback. Root parent scope is detached while
+inherited visibility/locks/pins are retained. Insertion uses fresh node/action/asset
+IDs, remaps internal references, preserves source/action settings and manual sewing
+order, and centers at physical size without changing destination equipment.
+Linked transforms are conjugated when both original and instance move, avoiding
+extra translation. Inserts are prepared/validated in a draft before committing.
+32 MB per element and bounded portable-data validation protect imports.
+
+Files: artwork-library.js, source-preservation unit suite and shared realistic
+fixture. Four new tests and 37 related effects/manual-satin/path-text tests pass.
+Stored artwork is source data, not generated stitch replacement.
+
+Next: C persistent records and backups. C–F are not implemented yet.

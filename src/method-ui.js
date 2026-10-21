@@ -2,7 +2,7 @@ import { OPERATION_TYPES } from "./operations.js";
 
 export const METHOD_CATEGORIES = {
   run: "Running Stitch",
-  fill: "Tatami Fill",
+  fill: "Fill",
   satin: "Satin Stitching",
 };
 export const REINFORCEMENTS = {
@@ -25,7 +25,7 @@ export const METHOD_HELP = {
   bean: "Repeats each stitch segment locally to create a stronger-looking line. This changes this action, not the number of sewing actions.",
   triple:
     "Sews the whole path forward, backward, and forward again. This changes this action, not the number of sewing actions.",
-  fill: "Fill an enclosed area with rows of stitching. Row spacing controls coverage density.",
+  fill: "Fill an enclosed area. Choose Tatami rows or a decorative fill construction; spacing controls coverage.",
   satin:
     "Sew a satin band along a drawn path. On closed artwork this follows each contour; it does not fill letter strokes.",
   border:

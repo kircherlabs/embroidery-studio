@@ -1,6 +1,7 @@
 import { uid, objectBounds } from "./model.js";
 import { fillPolygons } from "./geometry.js";
 import Clipper from "../vendor/clipper.js";
+import { FILL_METHODS } from "./fills/schema.js";
 
 export const OPERATION_TYPES = {
   fill: "Tatami fill",
@@ -19,6 +20,10 @@ export const OPERATION_TYPES = {
   trim: "Thread trim",
 };
 export const isSewing = (op) => !["stop", "trim"].includes(op.type);
+export const operationLabel = (op) =>
+  op.type === "fill" && op.fillSettings
+    ? FILL_METHODS[op.fillSettings.method] || "Fill"
+    : OPERATION_TYPES[op.type] || "Stitches";
 export const requiresClosed = (type) =>
   [
     "fill",
@@ -91,6 +96,7 @@ export function propertyApplies(type, key) {
   if (key === "spacing" || key === "compensation") return fill || satin;
   if (key === "underlay") return isSewing({ type }) && type !== "manual";
   if (key === "angle" || key === "pattern") return fill;
+  if (key === "fillSettings") return type === "fill";
   if (key === "width") return satin;
   if (key === "length") return fill || (path && !satin);
   if (key === "cornerControl" || key === "minCornerStitch")
@@ -119,6 +125,7 @@ const settings = [
   "offset",
   "startIndex",
   "pattern",
+  "fillSettings",
   "cornerControl",
   "minCornerStitch",
   "maxSatin",
@@ -132,11 +139,13 @@ const settings = [
 export function defaultOperation(o) {
   return {
     id: "base",
-    name: OPERATION_TYPES[o.type] || "Stitches",
+    name: operationLabel(o),
     closed: closedArtwork(o),
     enabled: true,
     ...Object.fromEntries(
-      settings.filter((k) => o[k] !== undefined).map((k) => [k, o[k]]),
+      settings
+        .filter((k) => o[k] !== undefined)
+        .map((k) => [k, k === "fillSettings" ? structuredClone(o[k]) : o[k]]),
     ),
   };
 }
@@ -154,13 +163,19 @@ export function threadColors(o) {
 }
 export function materialize(o) {
   if (!o.operations) o.operations = [{ ...defaultOperation(o), id: uid() }];
+  if (o.fillSettings) {
+    for (const op of o.operations)
+      if (op.type === "fill" && !op.fillSettings)
+        op.fillSettings = structuredClone(o.fillSettings);
+    delete o.fillSettings;
+  }
   return o.operations;
 }
 export function makeOperation(type, o) {
   const op = {
     ...defaultOperation(o),
     id: uid(),
-    name: OPERATION_TYPES[type],
+    name: operationLabel({ ...o, type }),
     type,
     enabled: true,
     offset: 0,
@@ -207,6 +222,7 @@ export function makeOperation(type, o) {
     op.spacing = 0.42;
     op.underlay = true;
   }
+  if (type !== "fill") delete op.fillSettings;
   return op;
 }
 export function applique(o) {
@@ -330,6 +346,8 @@ export function operationObject(o, op) {
     operationId: op.id,
     operationName: op.name,
     technique: op.type,
+    fillSettings:
+      op.type === "fill" ? (op.fillSettings ?? o.fillSettings) : undefined,
     runStyle:
       op.type === "bean" ? "bean" : op.type === "triple" ? "triple" : "single",
     operationWarning,

@@ -10,6 +10,7 @@ import {
   isSewing,
   OPERATION_TYPES,
 } from "./operations.js";
+import { makeFillSettings } from "./fills/context.js";
 
 const keys = [
   "color",
@@ -22,6 +23,7 @@ const keys = [
   "tieIn",
   "tieOff",
   "pattern",
+  "fillSettings",
   "cornerControl",
   "minCornerStitch",
   "maxSatin",
@@ -85,6 +87,15 @@ export function transferStyle(objects, style, mode, state = {}) {
           `${o.name}: manual satin style requires two editable source rails.`,
         );
       const next = { ...makeOperation(s.type, o), ...structuredClone(s) };
+      if (!s.fillSettings) delete next.fillSettings;
+      if (next.fillSettings?.anchor !== "global") {
+        if (next.fillSettings) {
+          const saved = next.fillSettings;
+          const fresh = makeFillSettings(saved.method, o);
+          next.fillSettings = { ...saved, frame: fresh.frame };
+        }
+      }
+      if (next.type !== "fill") delete next.fillSettings;
       // Guides and entry positions belong to geometry, not transferable style.
       delete next.satinGuides;
       next.startIndex = 0;
@@ -116,11 +127,28 @@ export function transferStyle(objects, style, mode, state = {}) {
       mode === "stack"
         ? style.actions.map((s) => build(s))
         : existing.map((op) => {
-            if (!selected.has(op.id)) return structuredClone(op);
+            if (!selected.has(op.id))
+              return {
+                ...structuredClone(op),
+                ...(op.type === "fill" && effectiveOperation(o, op).fillSettings
+                  ? {
+                      fillSettings: structuredClone(
+                        effectiveOperation(o, op).fillSettings,
+                      ),
+                    }
+                  : {}),
+              };
             if (mode === "color") {
               const next = {
                 ...structuredClone(op),
                 color: style.action.color,
+                ...(op.type === "fill" && effectiveOperation(o, op).fillSettings
+                  ? {
+                      fillSettings: structuredClone(
+                        effectiveOperation(o, op).fillSettings,
+                      ),
+                    }
+                  : {}),
               };
               delete next.physicalThread;
               return next;
@@ -138,6 +166,7 @@ export function transferStyle(objects, style, mode, state = {}) {
       ...op,
       id: op.id === "base" ? base : op.id,
     }));
+    delete o.fillSettings;
   }
   return pending.length;
 }

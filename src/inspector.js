@@ -13,6 +13,7 @@ import { actionCards, closingRings, moveAction } from "./sewing-actions.js";
 import { editOperations } from "./styles.js";
 import { chooseConstruction, chooseSewingPreset } from "./construction-ui.js";
 import { creativeInspector } from "./creative-ui.js";
+import { fillControls, bindFillControls } from "./fills/ui.js";
 import {
   nodeById,
   selectionIds,
@@ -187,6 +188,44 @@ export function renderInspector(api) {
     </div></section>
     `
     }`;
+  if (control.some((o) => o.type === "fill")) {
+    const wrapper = document.createElement("div");
+    wrapper.innerHTML = fillControls(control);
+    $("fill-pattern")?.closest("label").replaceWith(wrapper);
+    const family = $("fill-method-family");
+    if (family)
+      $("stitch-type")
+        ?.closest("label")
+        .insertAdjacentElement("afterend", family);
+    if (control.some((o) => o.type === "fill" && o.fillSettings))
+      $("angle")?.closest("label").setAttribute("hidden", "");
+    if (
+      control.every(
+        (o) =>
+          o.type === "fill" &&
+          o.fillSettings &&
+          !["tatami", "emboss"].includes(o.fillSettings.method),
+      )
+    ) {
+      $("compensation")?.closest("label").setAttribute("hidden", "");
+      $("underlay")?.closest("label").setAttribute("hidden", "");
+      const title = $("spacing")
+        ?.closest("label")
+        .querySelector(".field-title");
+      if (title)
+        title.textContent = control.every((o) =>
+          ["ripple", "spiral"].includes(o.fillSettings?.method),
+        )
+          ? "Minimum turn spacing"
+          : "Contour spacing";
+      if (
+        control.every((o) =>
+          ["cross", "meander"].includes(o.fillSettings?.method),
+        )
+      )
+        $("spacing")?.closest("label").setAttribute("hidden", "");
+    }
+  }
   const transformPanel = $("transform-settings");
   if (transformPanel) $("artwork-settings").append(transformPanel);
   const methodPanel = $("method-settings"),
@@ -329,7 +368,7 @@ export function renderInspector(api) {
   if ($("close-artwork"))
     $("close-artwork").onclick = () => changeMethod(pendingMethod, true);
 
-  if ($("fill-pattern")) {
+  if ($("fill-pattern") && !document.querySelector(".fill-controls")) {
     $("fill-pattern").value = common("pattern") || "";
     $("fill-pattern").onchange = (e) => apply("pattern", e.target.value);
   }
@@ -662,6 +701,7 @@ export function renderInspector(api) {
   }
   api.threads?.inspector(objects, !!leaf, state);
   creativeInspector(api, leaf, objects, targets);
+  bindFillControls(api, vectors, !!leaf);
   document
     .querySelectorAll("#properties details[data-section]")
     .forEach((el) => {

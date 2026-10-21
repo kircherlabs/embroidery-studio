@@ -1,0 +1,1164 @@
+{
+  "notice": "Software-checked reference files. Not physically sewn. Review settings, hoop fit and machine behavior before testing fabric/thread/stabilizer combinations.",
+  "machine": "Brother SE700 / 100 x 100 mm",
+  "designs": [
+    {
+      "name": "tatami-reference",
+      "width": 40.3,
+      "height": 30,
+      "stitches": 1580,
+      "jumps": 1,
+      "trims": 1,
+      "settings": [
+        {
+          "name": "Tatami",
+          "spacing": 0.42,
+          "length": 2.8,
+          "fillSettings": {
+            "version": 1,
+            "method": "tatami",
+            "anchor": "object",
+            "frame": [
+              1,
+              0,
+              0,
+              1,
+              0,
+              0
+            ],
+            "angle": 0,
+            "seed": 1,
+            "inset": 0,
+            "texture": "quarter",
+            "period": 8,
+            "variation": 0.1,
+            "amplitude": 0.5,
+            "step": 0.17,
+            "edgeOptimize": false,
+            "edgeMinimum": 0.6
+          }
+        }
+      ],
+      "issues": []
+    },
+    {
+      "name": "contour-reference",
+      "width": 39.6,
+      "height": 29.6,
+      "stitches": 1132,
+      "jumps": 1,
+      "trims": 1,
+      "settings": [
+        {
+          "name": "Contour Fill",
+          "spacing": 0.42,
+          "length": 2.8,
+          "fillSettings": {
+            "version": 1,
+            "method": "contour",
+            "anchor": "object",
+            "frame": [
+              1,
+              0,
+              0,
+              1,
+              0,
+              0
+            ],
+            "angle": 0,
+            "seed": 1,
+            "inset": 0,
+            "direction": "outside-in"
+          }
+        }
+      ],
+      "issues": [
+        {
+          "severity": "info",
+          "code": "contour-core",
+          "message": "Contour loops stop where the next inset collapses. Narrow tips and the central core can have less coverage than Tatami.",
+          "action": "Inspect the remaining core and thin details. Reduce spacing or use Tatami when uniform area coverage is required.",
+          "objectId": "swatch-contour-fill",
+          "objectName": "Contour Fill",
+          "operationId": "swatch-contour-fill-fill",
+          "operationName": "Tatami fill"
+        }
+      ]
+    },
+    {
+      "name": "meander-reference",
+      "width": 38.7,
+      "height": 29.200000000000003,
+      "stitches": 624,
+      "jumps": 1,
+      "trims": 1,
+      "settings": [
+        {
+          "name": "Stipple / Meander",
+          "spacing": 0.42,
+          "length": 2.8,
+          "fillSettings": {
+            "version": 1,
+            "method": "meander",
+            "anchor": "object",
+            "frame": [
+              1,
+              0,
+              0,
+              1,
+              0,
+              0
+            ],
+            "angle": 0,
+            "seed": 1,
+            "inset": 0,
+            "style": "organic",
+            "pitch": 3,
+            "lineSpacing": 1.2,
+            "curviness": 1,
+            "variation": 0.16
+          }
+        }
+      ],
+      "issues": [
+        {
+          "severity": "info",
+          "code": "meander-open-coverage",
+          "message": "Open running-stitch coverage: 1 curved paths. Tips narrower than the pattern scale may remain empty.",
+          "action": "Inspect spacing, narrow details and travel. Adjust scale/curviness or use Tatami for solid coverage. No dense-fill underlay is applied.",
+          "objectId": "swatch-stipple-meander",
+          "objectName": "Stipple / Meander",
+          "operationId": "swatch-stipple-meander-fill",
+          "operationName": "Tatami fill"
+        }
+      ]
+    },
+    {
+      "name": "cross-reference",
+      "width": 38,
+      "height": 28,
+      "stitches": 1068,
+      "jumps": 532,
+      "trims": 1,
+      "settings": [
+        {
+          "name": "Cross Stitch",
+          "spacing": 0.42,
+          "length": 2.8,
+          "fillSettings": {
+            "version": 1,
+            "method": "cross",
+            "anchor": "object",
+            "frame": [
+              1,
+              0,
+              0,
+              1,
+              0,
+              0
+            ],
+            "angle": 0,
+            "seed": 1,
+            "inset": 0,
+            "size": 2,
+            "pitch": 2
+          }
+        }
+      ],
+      "issues": [
+        {
+          "severity": "info",
+          "code": "cross-complete-cells",
+          "message": "266 complete crosses; partial edge cells are omitted (19 grid cells excluded around boundaries/counters). The same diagonal is sewn on top of every cross.",
+          "action": "Inspect the edge margin; change cell size, pitch or origin to adjust coverage. Travel between legs is not front-side stitching.",
+          "objectId": "swatch-cross-stitch",
+          "objectName": "Cross Stitch",
+          "operationId": "swatch-cross-stitch-fill",
+          "operationName": "Tatami fill"
+        }
+      ]
+    },
+    {
+      "name": "emboss-reference",
+      "width": 40.3,
+      "height": 30,
+      "stitches": 1870,
+      "jumps": 1,
+      "trims": 1,
+      "settings": [
+        {
+          "name": "Embossed Tatami",
+          "spacing": 0.42,
+          "length": 2.8,
+          "fillSettings": {
+            "version": 1,
+            "method": "emboss",
+            "anchor": "object",
+            "frame": [
+              1,
+              0,
+              0,
+              1,
+              0,
+              0
+            ],
+            "angle": 0,
+            "seed": 1,
+            "inset": 0,
+            "motif": "diamonds",
+            "scale": 4,
+            "repeat": 6,
+            "strength": 0.5,
+            "motifAngle": 0,
+            "phaseX": 0,
+            "phaseY": 0
+          }
+        }
+      ],
+      "issues": [
+        {
+          "severity": "warning",
+          "code": "emboss-reduced-detail",
+          "message": "22 close motif marks were not retained to avoid crowded penetrations. All fill rows and boundary endpoints remain sewn.",
+          "action": "Increase motif size/repeat, reduce emphasis or choose wider artwork. Fine motif detail may not be resolved at this stitch scale.",
+          "objectId": "swatch-embossed-tatami",
+          "objectName": "Embossed Tatami",
+          "operationId": "swatch-embossed-tatami-fill",
+          "operationName": "Tatami fill"
+        },
+        {
+          "severity": "info",
+          "code": "emboss-surface",
+          "message": "Embossed Tatami forms surface texture by concentrating needle penetrations along motif boundaries. It is not raised padding or a separate sewn overlay.",
+          "action": "Inspect needle buildup and test a swatch for the selected thread, fabric and stabilizer.",
+          "objectId": "swatch-embossed-tatami",
+          "objectName": "Embossed Tatami",
+          "operationId": "swatch-embossed-tatami-fill",
+          "operationName": "Tatami fill"
+        }
+      ]
+    },
+    {
+      "name": "ripple-reference",
+      "width": 39.8,
+      "height": 29.8,
+      "stitches": 2062,
+      "jumps": 9,
+      "trims": 5,
+      "settings": [
+        {
+          "name": "Ripple Fill",
+          "spacing": 0.42,
+          "length": 2.8,
+          "fillSettings": {
+            "version": 1,
+            "method": "ripple",
+            "anchor": "object",
+            "frame": [
+              1,
+              0,
+              0,
+              1,
+              0,
+              0
+            ],
+            "angle": 0,
+            "seed": 1,
+            "inset": 0,
+            "ratio": 1,
+            "centerX": 0,
+            "centerY": 0,
+            "clockwise": false
+          }
+        }
+      ],
+      "issues": [
+        {
+          "severity": "info",
+          "code": "radial-coverage",
+          "message": "Concentric rings/ellipses are clipped to the artwork. Safe nearby seams connect; other arcs use jumps.",
+          "action": "Inspect the center, edge margins and travel in Stitch preview. Elliptical spacing is the minimum turn spacing; other directions may be wider. A small central core and narrow tips may remain open. No dense underlay or pull compensation is applied.",
+          "objectId": "swatch-ripple-fill",
+          "objectName": "Ripple Fill",
+          "operationId": "swatch-ripple-fill-fill",
+          "operationName": "Tatami fill"
+        }
+      ]
+    },
+    {
+      "name": "spiral-reference",
+      "width": 39.8,
+      "height": 29.8,
+      "stitches": 2036,
+      "jumps": 72,
+      "trims": 4,
+      "settings": [
+        {
+          "name": "Spiral Fill",
+          "spacing": 0.42,
+          "length": 2.8,
+          "fillSettings": {
+            "version": 1,
+            "method": "spiral",
+            "anchor": "object",
+            "frame": [
+              1,
+              0,
+              0,
+              1,
+              0,
+              0
+            ],
+            "angle": 0,
+            "seed": 1,
+            "inset": 0,
+            "ratio": 1,
+            "centerX": 0,
+            "centerY": 0,
+            "clockwise": false
+          }
+        }
+      ],
+      "issues": [
+        {
+          "severity": "info",
+          "code": "radial-coverage",
+          "message": "A monotonic Archimedean spiral is clipped to the artwork. Holes and concavities can split it into separate arcs with jump travel.",
+          "action": "Inspect the center, edge margins and travel in Stitch preview. Elliptical spacing is the minimum turn spacing; other directions may be wider. A small central core and narrow tips may remain open. No dense underlay or pull compensation is applied.",
+          "objectId": "swatch-spiral-fill",
+          "objectName": "Spiral Fill",
+          "operationId": "swatch-spiral-fill-fill",
+          "operationName": "Tatami fill"
+        }
+      ]
+    },
+    {
+      "name": "tatami-textures",
+      "width": 81.30000000000001,
+      "height": 60,
+      "stitches": 5263,
+      "jumps": 11,
+      "trims": 10,
+      "settings": [
+        {
+          "name": "quarter",
+          "spacing": 0.42,
+          "length": 2.8,
+          "fillSettings": {
+            "version": 1,
+            "method": "tatami",
+            "anchor": "object",
+            "frame": [
+              1,
+              0,
+              0,
+              1,
+              -31.5,
+              -21
+            ],
+            "angle": 0,
+            "seed": 1,
+            "inset": 0,
+            "texture": "quarter",
+            "period": 8,
+            "variation": 0.1,
+            "amplitude": 0.5,
+            "step": 0.17,
+            "edgeOptimize": false,
+            "edgeMinimum": 0.6
+          }
+        },
+        {
+          "name": "half",
+          "spacing": 0.42,
+          "length": 2.8,
+          "fillSettings": {
+            "version": 1,
+            "method": "tatami",
+            "anchor": "object",
+            "frame": [
+              1,
+              0,
+              0,
+              1,
+              -10.5,
+              -21
+            ],
+            "angle": 0,
+            "seed": 1,
+            "inset": 0,
+            "texture": "half",
+            "period": 8,
+            "variation": 0.1,
+            "amplitude": 0.5,
+            "step": 0.17,
+            "edgeOptimize": false,
+            "edgeMinimum": 0.6
+          }
+        },
+        {
+          "name": "aligned",
+          "spacing": 0.42,
+          "length": 2.8,
+          "fillSettings": {
+            "version": 1,
+            "method": "tatami",
+            "anchor": "object",
+            "frame": [
+              1,
+              0,
+              0,
+              1,
+              10.5,
+              -21
+            ],
+            "angle": 0,
+            "seed": 1,
+            "inset": 0,
+            "texture": "aligned",
+            "period": 8,
+            "variation": 0.1,
+            "amplitude": 0.5,
+            "step": 0.17,
+            "edgeOptimize": false,
+            "edgeMinimum": 0.6
+          }
+        },
+        {
+          "name": "twill",
+          "spacing": 0.42,
+          "length": 2.8,
+          "fillSettings": {
+            "version": 1,
+            "method": "tatami",
+            "anchor": "object",
+            "frame": [
+              1,
+              0,
+              0,
+              1,
+              31.5,
+              -21
+            ],
+            "angle": 0,
+            "seed": 1,
+            "inset": 0,
+            "texture": "twill",
+            "period": 8,
+            "variation": 0.1,
+            "amplitude": 0.5,
+            "step": 0.17,
+            "edgeOptimize": false,
+            "edgeMinimum": 0.6
+          }
+        },
+        {
+          "name": "random",
+          "spacing": 0.42,
+          "length": 2.8,
+          "fillSettings": {
+            "version": 1,
+            "method": "tatami",
+            "anchor": "object",
+            "frame": [
+              1,
+              0,
+              0,
+              1,
+              -31.5,
+              0
+            ],
+            "angle": 0,
+            "seed": 1,
+            "inset": 0,
+            "texture": "random",
+            "period": 8,
+            "variation": 0.1,
+            "amplitude": 0.5,
+            "step": 0.17,
+            "edgeOptimize": false,
+            "edgeMinimum": 0.6
+          }
+        },
+        {
+          "name": "wave",
+          "spacing": 0.42,
+          "length": 2.8,
+          "fillSettings": {
+            "version": 1,
+            "method": "tatami",
+            "anchor": "object",
+            "frame": [
+              1,
+              0,
+              0,
+              1,
+              -10.5,
+              0
+            ],
+            "angle": 0,
+            "seed": 1,
+            "inset": 0,
+            "texture": "wave",
+            "period": 8,
+            "variation": 0.1,
+            "amplitude": 0.5,
+            "step": 0.17,
+            "edgeOptimize": false,
+            "edgeMinimum": 0.6
+          }
+        },
+        {
+          "name": "third",
+          "spacing": 0.42,
+          "length": 2.8,
+          "fillSettings": {
+            "version": 1,
+            "method": "tatami",
+            "anchor": "object",
+            "frame": [
+              1,
+              0,
+              0,
+              1,
+              10.5,
+              0
+            ],
+            "angle": 0,
+            "seed": 1,
+            "inset": 0,
+            "texture": "third",
+            "period": 8,
+            "variation": 0.1,
+            "amplitude": 0.5,
+            "step": 0.17,
+            "edgeOptimize": false,
+            "edgeMinimum": 0.6
+          }
+        },
+        {
+          "name": "fifth",
+          "spacing": 0.42,
+          "length": 2.8,
+          "fillSettings": {
+            "version": 1,
+            "method": "tatami",
+            "anchor": "object",
+            "frame": [
+              1,
+              0,
+              0,
+              1,
+              31.5,
+              0
+            ],
+            "angle": 0,
+            "seed": 1,
+            "inset": 0,
+            "texture": "fifth",
+            "period": 8,
+            "variation": 0.1,
+            "amplitude": 0.5,
+            "step": 0.17,
+            "edgeOptimize": false,
+            "edgeMinimum": 0.6
+          }
+        },
+        {
+          "name": "progressive",
+          "spacing": 0.42,
+          "length": 2.8,
+          "fillSettings": {
+            "version": 1,
+            "method": "tatami",
+            "anchor": "object",
+            "frame": [
+              1,
+              0,
+              0,
+              1,
+              -31.5,
+              21
+            ],
+            "angle": 0,
+            "seed": 1,
+            "inset": 0,
+            "texture": "progressive",
+            "period": 8,
+            "variation": 0.1,
+            "amplitude": 0.5,
+            "step": 0.17,
+            "edgeOptimize": false,
+            "edgeMinimum": 0.6
+          }
+        },
+        {
+          "name": "chevron",
+          "spacing": 0.42,
+          "length": 2.8,
+          "fillSettings": {
+            "version": 1,
+            "method": "tatami",
+            "anchor": "object",
+            "frame": [
+              1,
+              0,
+              0,
+              1,
+              -10.5,
+              21
+            ],
+            "angle": 0,
+            "seed": 1,
+            "inset": 0,
+            "texture": "chevron",
+            "period": 8,
+            "variation": 0.1,
+            "amplitude": 0.5,
+            "step": 0.17,
+            "edgeOptimize": false,
+            "edgeMinimum": 0.6
+          }
+        },
+        {
+          "name": "custom",
+          "spacing": 0.42,
+          "length": 2.8,
+          "fillSettings": {
+            "version": 1,
+            "method": "tatami",
+            "anchor": "object",
+            "frame": [
+              1,
+              0,
+              0,
+              1,
+              10.5,
+              21
+            ],
+            "angle": 0,
+            "seed": 1,
+            "inset": 0,
+            "texture": "custom",
+            "period": 8,
+            "variation": 0.1,
+            "amplitude": 0.5,
+            "step": 0.17,
+            "edgeOptimize": false,
+            "edgeMinimum": 0.6,
+            "sequence": [
+              0,
+              0.4,
+              0.1,
+              0.65
+            ]
+          }
+        }
+      ],
+      "issues": [
+        {
+          "severity": "warning",
+          "code": "fill-aligned-penetrations",
+          "message": "This texture aligns nearby needle penetrations; dense settings can build up thread or perforate delicate fabric.",
+          "action": "Review row spacing, thread weight and fabric; try Classic or Brick for a more distributed pattern and test a swatch.",
+          "objectId": "swatch-wave",
+          "objectName": "wave",
+          "operationId": "swatch-wave-fill",
+          "operationName": "Tatami fill"
+        },
+        {
+          "severity": "warning",
+          "code": "fill-aligned-penetrations",
+          "message": "This texture aligns nearby needle penetrations; dense settings can build up thread or perforate delicate fabric.",
+          "action": "Review row spacing, thread weight and fabric; try Classic or Brick for a more distributed pattern and test a swatch.",
+          "objectId": "swatch-aligned",
+          "objectName": "aligned",
+          "operationId": "swatch-aligned-fill",
+          "operationName": "Tatami fill"
+        },
+        {
+          "severity": "warning",
+          "code": "fill-aligned-penetrations",
+          "message": "This texture aligns nearby needle penetrations; dense settings can build up thread or perforate delicate fabric.",
+          "action": "Review row spacing, thread weight and fabric; try Classic or Brick for a more distributed pattern and test a swatch.",
+          "objectId": "swatch-chevron",
+          "objectName": "chevron",
+          "operationId": "swatch-chevron-fill",
+          "operationName": "Tatami fill"
+        }
+      ]
+    },
+    {
+      "name": "emboss-motifs",
+      "width": 80.30000000000001,
+      "height": 52,
+      "stitches": 6116,
+      "jumps": 6,
+      "trims": 6,
+      "settings": [
+        {
+          "name": "dots",
+          "spacing": 0.42,
+          "length": 2.8,
+          "fillSettings": {
+            "version": 1,
+            "method": "emboss",
+            "anchor": "object",
+            "frame": [
+              1,
+              0,
+              0,
+              1,
+              -28,
+              -14
+            ],
+            "angle": 0,
+            "seed": 1,
+            "inset": 0,
+            "motif": "dots",
+            "scale": 4,
+            "repeat": 6,
+            "strength": 0.75,
+            "motifAngle": 0,
+            "phaseX": 0,
+            "phaseY": 0
+          }
+        },
+        {
+          "name": "diamonds",
+          "spacing": 0.42,
+          "length": 2.8,
+          "fillSettings": {
+            "version": 1,
+            "method": "emboss",
+            "anchor": "object",
+            "frame": [
+              1,
+              0,
+              0,
+              1,
+              0,
+              -14
+            ],
+            "angle": 0,
+            "seed": 1,
+            "inset": 0,
+            "motif": "diamonds",
+            "scale": 4,
+            "repeat": 6,
+            "strength": 0.75,
+            "motifAngle": 0,
+            "phaseX": 0,
+            "phaseY": 0
+          }
+        },
+        {
+          "name": "checker",
+          "spacing": 0.42,
+          "length": 2.8,
+          "fillSettings": {
+            "version": 1,
+            "method": "emboss",
+            "anchor": "object",
+            "frame": [
+              1,
+              0,
+              0,
+              1,
+              28,
+              -14
+            ],
+            "angle": 0,
+            "seed": 1,
+            "inset": 0,
+            "motif": "checker",
+            "scale": 4,
+            "repeat": 6,
+            "strength": 0.75,
+            "motifAngle": 0,
+            "phaseX": 0,
+            "phaseY": 0
+          }
+        },
+        {
+          "name": "lattice",
+          "spacing": 0.42,
+          "length": 2.8,
+          "fillSettings": {
+            "version": 1,
+            "method": "emboss",
+            "anchor": "object",
+            "frame": [
+              1,
+              0,
+              0,
+              1,
+              -28,
+              14
+            ],
+            "angle": 0,
+            "seed": 1,
+            "inset": 0,
+            "motif": "lattice",
+            "scale": 4,
+            "repeat": 6,
+            "strength": 0.75,
+            "motifAngle": 0,
+            "phaseX": 0,
+            "phaseY": 0
+          }
+        },
+        {
+          "name": "diagonal",
+          "spacing": 0.42,
+          "length": 2.8,
+          "fillSettings": {
+            "version": 1,
+            "method": "emboss",
+            "anchor": "object",
+            "frame": [
+              1,
+              0,
+              0,
+              1,
+              0,
+              14
+            ],
+            "angle": 0,
+            "seed": 1,
+            "inset": 0,
+            "motif": "diagonal",
+            "scale": 4,
+            "repeat": 6,
+            "strength": 0.75,
+            "motifAngle": 0,
+            "phaseX": 0,
+            "phaseY": 0
+          }
+        },
+        {
+          "name": "waves",
+          "spacing": 0.42,
+          "length": 2.8,
+          "fillSettings": {
+            "version": 1,
+            "method": "emboss",
+            "anchor": "object",
+            "frame": [
+              1,
+              0,
+              0,
+              1,
+              28,
+              14
+            ],
+            "angle": 0,
+            "seed": 1,
+            "inset": 0,
+            "motif": "waves",
+            "scale": 4,
+            "repeat": 6,
+            "strength": 0.75,
+            "motifAngle": 0,
+            "phaseX": 0,
+            "phaseY": 0
+          }
+        }
+      ],
+      "issues": [
+        {
+          "severity": "warning",
+          "code": "emboss-reduced-detail",
+          "message": "23 close motif marks were not retained to avoid crowded penetrations. All fill rows and boundary endpoints remain sewn.",
+          "action": "Increase motif size/repeat, reduce emphasis or choose wider artwork. Fine motif detail may not be resolved at this stitch scale.",
+          "objectId": "swatch-diamonds",
+          "objectName": "diamonds",
+          "operationId": "swatch-diamonds-fill",
+          "operationName": "Tatami fill"
+        },
+        {
+          "severity": "warning",
+          "code": "emboss-reduced-detail",
+          "message": "11 close motif marks were not retained to avoid crowded penetrations. All fill rows and boundary endpoints remain sewn.",
+          "action": "Increase motif size/repeat, reduce emphasis or choose wider artwork. Fine motif detail may not be resolved at this stitch scale.",
+          "objectId": "swatch-diagonal",
+          "objectName": "diagonal",
+          "operationId": "swatch-diagonal-fill",
+          "operationName": "Tatami fill"
+        },
+        {
+          "severity": "warning",
+          "code": "emboss-reduced-detail",
+          "message": "51 close motif marks were not retained to avoid crowded penetrations. All fill rows and boundary endpoints remain sewn.",
+          "action": "Increase motif size/repeat, reduce emphasis or choose wider artwork. Fine motif detail may not be resolved at this stitch scale.",
+          "objectId": "swatch-lattice",
+          "objectName": "lattice",
+          "operationId": "swatch-lattice-fill",
+          "operationName": "Tatami fill"
+        },
+        {
+          "severity": "warning",
+          "code": "emboss-reduced-detail",
+          "message": "14 close motif marks were not retained to avoid crowded penetrations. All fill rows and boundary endpoints remain sewn.",
+          "action": "Increase motif size/repeat, reduce emphasis or choose wider artwork. Fine motif detail may not be resolved at this stitch scale.",
+          "objectId": "swatch-waves",
+          "objectName": "waves",
+          "operationId": "swatch-waves-fill",
+          "operationName": "Tatami fill"
+        },
+        {
+          "severity": "info",
+          "code": "emboss-surface",
+          "message": "Embossed Tatami forms surface texture by concentrating needle penetrations along motif boundaries. It is not raised padding or a separate sewn overlay.",
+          "action": "Inspect needle buildup and test a swatch for the selected thread, fabric and stabilizer.",
+          "objectId": "swatch-diamonds",
+          "objectName": "diamonds",
+          "operationId": "swatch-diamonds-fill",
+          "operationName": "Tatami fill"
+        },
+        {
+          "severity": "info",
+          "code": "emboss-surface",
+          "message": "Embossed Tatami forms surface texture by concentrating needle penetrations along motif boundaries. It is not raised padding or a separate sewn overlay.",
+          "action": "Inspect needle buildup and test a swatch for the selected thread, fabric and stabilizer.",
+          "objectId": "swatch-diagonal",
+          "objectName": "diagonal",
+          "operationId": "swatch-diagonal-fill",
+          "operationName": "Tatami fill"
+        },
+        {
+          "severity": "info",
+          "code": "emboss-surface",
+          "message": "Embossed Tatami forms surface texture by concentrating needle penetrations along motif boundaries. It is not raised padding or a separate sewn overlay.",
+          "action": "Inspect needle buildup and test a swatch for the selected thread, fabric and stabilizer.",
+          "objectId": "swatch-lattice",
+          "objectName": "lattice",
+          "operationId": "swatch-lattice-fill",
+          "operationName": "Tatami fill"
+        },
+        {
+          "severity": "info",
+          "code": "emboss-surface",
+          "message": "Embossed Tatami forms surface texture by concentrating needle penetrations along motif boundaries. It is not raised padding or a separate sewn overlay.",
+          "action": "Inspect needle buildup and test a swatch for the selected thread, fabric and stabilizer.",
+          "objectId": "swatch-dots",
+          "objectName": "dots",
+          "operationId": "swatch-dots-fill",
+          "operationName": "Tatami fill"
+        },
+        {
+          "severity": "info",
+          "code": "emboss-surface",
+          "message": "Embossed Tatami forms surface texture by concentrating needle penetrations along motif boundaries. It is not raised padding or a separate sewn overlay.",
+          "action": "Inspect needle buildup and test a swatch for the selected thread, fabric and stabilizer.",
+          "objectId": "swatch-checker",
+          "objectName": "checker",
+          "operationId": "swatch-checker-fill",
+          "operationName": "Tatami fill"
+        },
+        {
+          "severity": "info",
+          "code": "emboss-surface",
+          "message": "Embossed Tatami forms surface texture by concentrating needle penetrations along motif boundaries. It is not raised padding or a separate sewn overlay.",
+          "action": "Inspect needle buildup and test a swatch for the selected thread, fabric and stabilizer.",
+          "objectId": "swatch-waves",
+          "objectName": "waves",
+          "operationId": "swatch-waves-fill",
+          "operationName": "Tatami fill"
+        }
+      ]
+    },
+    {
+      "name": "meander-styles",
+      "width": 77.4,
+      "height": 51.3,
+      "stitches": 1556,
+      "jumps": 5,
+      "trims": 5,
+      "settings": [
+        {
+          "name": "classic",
+          "spacing": 0.42,
+          "length": 2.8,
+          "fillSettings": {
+            "version": 1,
+            "method": "meander",
+            "anchor": "object",
+            "frame": [
+              1,
+              0,
+              0,
+              1,
+              -28,
+              -14
+            ],
+            "angle": 0,
+            "seed": 1,
+            "inset": 0,
+            "style": "classic",
+            "pitch": 3,
+            "lineSpacing": 1.2,
+            "curviness": 0.7,
+            "variation": 0.12
+          }
+        },
+        {
+          "name": "fine",
+          "spacing": 0.42,
+          "length": 2.8,
+          "fillSettings": {
+            "version": 1,
+            "method": "meander",
+            "anchor": "object",
+            "frame": [
+              1,
+              0,
+              0,
+              1,
+              0,
+              -14
+            ],
+            "angle": 0,
+            "seed": 1,
+            "inset": 0,
+            "style": "fine",
+            "pitch": 1.8,
+            "lineSpacing": 0.7,
+            "curviness": 0.8,
+            "variation": 0.1
+          }
+        },
+        {
+          "name": "open",
+          "spacing": 0.42,
+          "length": 2.8,
+          "fillSettings": {
+            "version": 1,
+            "method": "meander",
+            "anchor": "object",
+            "frame": [
+              1,
+              0,
+              0,
+              1,
+              28,
+              -14
+            ],
+            "angle": 0,
+            "seed": 1,
+            "inset": 0,
+            "style": "open",
+            "pitch": 4.5,
+            "lineSpacing": 1.8,
+            "curviness": 0.7,
+            "variation": 0.12
+          }
+        },
+        {
+          "name": "organic",
+          "spacing": 0.42,
+          "length": 2.8,
+          "fillSettings": {
+            "version": 1,
+            "method": "meander",
+            "anchor": "object",
+            "frame": [
+              1,
+              0,
+              0,
+              1,
+              -28,
+              14
+            ],
+            "angle": 0,
+            "seed": 1,
+            "inset": 0,
+            "style": "organic",
+            "pitch": 3,
+            "lineSpacing": 1.2,
+            "curviness": 1,
+            "variation": 0.16
+          }
+        },
+        {
+          "name": "looping",
+          "spacing": 0.42,
+          "length": 2.8,
+          "fillSettings": {
+            "version": 1,
+            "method": "meander",
+            "anchor": "object",
+            "frame": [
+              1,
+              0,
+              0,
+              1,
+              0,
+              14
+            ],
+            "angle": 0,
+            "seed": 1,
+            "inset": 0,
+            "style": "looping",
+            "pitch": 4,
+            "lineSpacing": 1.4,
+            "curviness": 0.9,
+            "variation": 0.16
+          }
+        }
+      ],
+      "issues": [
+        {
+          "severity": "info",
+          "code": "meander-open-coverage",
+          "message": "Open running-stitch coverage: 1 curved paths. Tips narrower than the pattern scale may remain empty.",
+          "action": "Inspect spacing, narrow details and travel. Adjust scale/curviness or use Tatami for solid coverage. No dense-fill underlay is applied.",
+          "objectId": "swatch-fine",
+          "objectName": "fine",
+          "operationId": "swatch-fine-fill",
+          "operationName": "Tatami fill"
+        },
+        {
+          "severity": "info",
+          "code": "meander-open-coverage",
+          "message": "Open running-stitch coverage: 1 curved paths, 9 controlled loops. Tips narrower than the pattern scale may remain empty.",
+          "action": "Inspect spacing, narrow details and travel. Adjust scale/curviness or use Tatami for solid coverage. No dense-fill underlay is applied.",
+          "objectId": "swatch-looping",
+          "objectName": "looping",
+          "operationId": "swatch-looping-fill",
+          "operationName": "Tatami fill"
+        },
+        {
+          "severity": "info",
+          "code": "meander-open-coverage",
+          "message": "Open running-stitch coverage: 1 curved paths. Tips narrower than the pattern scale may remain empty.",
+          "action": "Inspect spacing, narrow details and travel. Adjust scale/curviness or use Tatami for solid coverage. No dense-fill underlay is applied.",
+          "objectId": "swatch-organic",
+          "objectName": "organic",
+          "operationId": "swatch-organic-fill",
+          "operationName": "Tatami fill"
+        },
+        {
+          "severity": "info",
+          "code": "meander-open-coverage",
+          "message": "Open running-stitch coverage: 1 curved paths. Tips narrower than the pattern scale may remain empty.",
+          "action": "Inspect spacing, narrow details and travel. Adjust scale/curviness or use Tatami for solid coverage. No dense-fill underlay is applied.",
+          "objectId": "swatch-classic",
+          "objectName": "classic",
+          "operationId": "swatch-classic-fill",
+          "operationName": "Tatami fill"
+        },
+        {
+          "severity": "info",
+          "code": "meander-open-coverage",
+          "message": "Open running-stitch coverage: 1 curved paths. Tips narrower than the pattern scale may remain empty.",
+          "action": "Inspect spacing, narrow details and travel. Adjust scale/curviness or use Tatami for solid coverage. No dense-fill underlay is applied.",
+          "objectId": "swatch-open",
+          "objectName": "open",
+          "operationId": "swatch-open-fill",
+          "operationName": "Tatami fill"
+        }
+      ]
+    }
+  ]
+}

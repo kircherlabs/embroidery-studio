@@ -10,6 +10,13 @@ import { inside, distance, safeConnector, simplifyPath } from "./geometry.js";
 import { preparePlan } from "./planning.js";
 import { routeFill } from "./fill-routing.js";
 import { duplicateArtwork } from "./artwork-diagnostics.js";
+import { generateFill } from "./fills/registry.js";
+import "./fills/tatami.js";
+import "./fills/contour.js";
+import "./fills/cross.js";
+import "./fills/meander.js";
+import "./fills/emboss.js";
+import "./fills/radial.js";
 export { inside, distance } from "./geometry.js";
 const rotate = (p, a) => ({
   x: p.x * Math.cos(a) - p.y * Math.sin(a),
@@ -104,14 +111,20 @@ export function fillRows(
   pattern = "quarter",
   maxSatin = null,
   counterClearance = maxSatin ? 0.08 : 0,
+  textureOptions = null,
 ) {
   if (!rings.length) return [];
   const a = (angle * Math.PI) / 180,
     rs = rings.map((r) => r.map((p) => rotate(p, -a))),
     b = bounds(rs.flat()),
     rows = [];
-  let row = 0;
-  for (let y = b.minY + spacing / 2; y < b.maxY; y += spacing, row++) {
+  const first = textureOptions?.fixed
+    ? Math.ceil((b.minY - spacing / 2) / spacing) * spacing + spacing / 2
+    : b.minY + spacing / 2;
+  let row = textureOptions?.fixed
+    ? Math.round((first - spacing / 2) / spacing)
+    : 0;
+  for (let y = first; y < b.maxY; y += spacing, row++) {
     const cuts = [];
     for (const r of rs)
       for (let i = 0, j = r.length - 1; i < r.length; j = i++) {
@@ -159,8 +172,9 @@ export function fillRows(
                     : Infinity,
                 )),
           pts = [{ x: x1, y }],
-          phase =
-            pattern === "aligned"
+          phase = textureOptions?.phase
+            ? textureOptions.phase(row) * length
+            : pattern === "aligned"
               ? 0
               : pattern === "half"
                 ? ((row % 2) * length) / 2
@@ -185,6 +199,10 @@ export function fillRows(
           for (let x = x1 + first; x < x2 - 0.1; x += split) pts.push({ x, y });
         }
         pts.push({ x: x2, y });
+        if (textureOptions?.adjust) {
+          const adjusted = textureOptions.adjust(pts, row);
+          pts.splice(0, pts.length, ...adjusted);
+        }
         const inset = Math.min(0.2, (c.x - start) / 4);
         pts.anchors = [
           { x: start + inset, y },
@@ -238,6 +256,21 @@ export function satin(
   return result;
 }
 function pathsFor(o, from, to) {
+  if (o.fillSettings && !o.satinColumn && o.type === "fill") {
+    try {
+      const result = generateFill(
+        o,
+        { resample, fillRows, routeFill },
+        from,
+        to,
+      );
+      o.fillAnalysis = result;
+      return result.paths;
+    } catch (e) {
+      o.fillError = e.message;
+      return [];
+    }
+  }
   if (o.satinColumn && o.columnMode === "rails") {
     try {
       const result = manualSatin(o);
@@ -573,6 +606,33 @@ export function generate(project) {
         );
     }
     const paths = o.type === "manual" ? null : pathsFor(o, last, to);
+    if (o.fillError)
+      (diagnostics.operationIssues ||= []).push({
+        severity: "error",
+        code: "fill-generation",
+        objectId: o.id,
+        objectName: o.name,
+        operationId: o.operationId,
+        operationName: o.operationName,
+        message: o.fillError,
+        action:
+          "Adjust the fill settings, simplify the region, or choose another fill method. No substitute stitches were generated.",
+      });
+    if (o.fillAnalysis) {
+      (diagnostics.fills ||= []).push({
+        objectId: o.id,
+        operationId: o.operationId,
+        ...o.fillAnalysis.stats,
+      });
+      for (const issue of o.fillAnalysis.issues || [])
+        (diagnostics.operationIssues ||= []).push({
+          ...issue,
+          objectId: o.id,
+          objectName: o.name,
+          operationId: o.operationId,
+          operationName: o.operationName,
+        });
+    }
     if (o.manualRailError)
       (diagnostics.operationIssues ||= []).push({
         severity: "error",
@@ -717,11 +777,12 @@ export function generate(project) {
       continue;
     }
     let first = true;
-    for (const { p, phase, continuous } of paths) {
+    for (const { p, phase, continuous, travel, noLock } of paths) {
       if (!p.length) continue;
       const d = distance(last, p[0]);
       // Only connect nearby rows when the complete connector lies inside the fill.
       const safe =
+        travel !== "jump" &&
         o.type === "fill" &&
         !first &&
         (continuous || d < 2.2) &&
@@ -737,12 +798,12 @@ export function generate(project) {
       if (first || !safe) {
         const trimmed = events.length && d > 3;
         if (trimmed) trimAndLock(o);
-        else if (d > 0.3) lockEnd(o);
+        else if (d > 0.3 && !noLock) lockEnd(o);
         emit("jump", p[0], o.color, o.id, phase);
         // Positioning is not a needle penetration. Anchor at the destination
         // before sewing away from it; otherwise a codec must invent this step.
         emit("stitch", p[0], o.color, o.id, "anchor");
-        if (o.tieIn !== false && (first || trimmed || d > 0.3))
+        if (o.tieIn !== false && (first || trimmed || (d > 0.3 && !noLock)))
           lock(p, o, "tie");
       } else sew(p[0], o, phase);
       for (let i = 1; i < p.length; i++) sew(p[i], o, phase);
@@ -777,6 +838,11 @@ export function generate(project) {
         (op) =>
           op.enabled !== false &&
           ["fill", "column", "satin", "border"].includes(op.type) &&
+          (op.type !== "fill" ||
+            !(op.fillSettings ?? o.fillSettings) ||
+            ["tatami", "emboss"].includes(
+              (op.fillSettings ?? o.fillSettings).method,
+            )) &&
           op.spacing < 0.25,
       ),
   );

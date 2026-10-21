@@ -1,0 +1,87 @@
+{
+  "version": 2,
+  "name": "Fill swatch: tatami-reference",
+  "machine": "se700",
+  "objects": [
+    {
+      "id": "swatch-tatami",
+      "name": "Tatami",
+      "rings": [
+        [
+          {
+            "x": -20,
+            "y": -15
+          },
+          {
+            "x": 20,
+            "y": -15
+          },
+          {
+            "x": 20,
+            "y": 15
+          },
+          {
+            "x": -20,
+            "y": 15
+          }
+        ]
+      ],
+      "color": "#303b53",
+      "type": "fill",
+      "spacing": 0.42,
+      "length": 2.8,
+      "angle": 0,
+      "width": 2.5,
+      "underlay": true,
+      "compensation": 0.15,
+      "visible": true,
+      "closed": true,
+      "operations": [
+        {
+          "id": "swatch-tatami-fill",
+          "name": "Tatami fill",
+          "closed": true,
+          "enabled": true,
+          "color": "#303b53",
+          "type": "fill",
+          "spacing": 0.42,
+          "length": 2.8,
+          "angle": 0,
+          "width": 2.5,
+          "underlay": true,
+          "compensation": 0.15,
+          "offset": 0,
+          "reverse": false,
+          "startIndex": 0,
+          "outerOnly": false,
+          "fillSettings": {
+            "version": 1,
+            "method": "tatami",
+            "anchor": "object",
+            "frame": [
+              1,
+              0,
+              0,
+              1,
+              0,
+              0
+            ],
+            "angle": 0,
+            "seed": 1,
+            "inset": 0,
+            "texture": "quarter",
+            "period": 8,
+            "variation": 0.1,
+            "amplitude": 0.5,
+            "step": 0.17,
+            "edgeOptimize": false,
+            "edgeMinimum": 0.6
+          }
+        }
+      ]
+    }
+  ],
+  "requires": [
+    "fills-1"
+  ]
+}

@@ -1620,3 +1620,36 @@
     font-size: 12px;
   }
 }
+.fill-controls {
+  margin-block: 0.6rem;
+}
+.fill-textures {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin-block: 0.5rem;
+}
+.fill-textures button {
+  min-width: 0;
+  padding: 0.45rem;
+  text-align: left;
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.75rem;
+}
+.fill-textures svg {
+  display: block;
+  width: 100%;
+  height: 48px;
+}
+.fill-textures button[aria-pressed="true"] {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+.fill-pattern-picker {
+  margin-block: 0.4rem;
+}
+.fill-pattern-picker summary {
+  cursor: pointer;
+  padding-block: 0.4rem;
+}

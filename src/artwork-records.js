@@ -1,5 +1,11 @@
 import { uid } from "./model.js";
 import { validateArtwork, portableJSON } from "./artwork-library.js";
+import {
+  hasAdvancedFills,
+  validateFillFeatures,
+  FILL_CAPABILITY,
+  unsupported,
+} from "./fills/schema.js";
 export const LIBRARY_KIND = "embroidery-studio-artwork-library";
 export const MAX_LIBRARY_ITEMS = 1000,
   MAX_LIBRARY_BYTES = 64 * 1024 * 1024,
@@ -12,9 +18,13 @@ export function artworkName(value) {
   return value.trim();
 }
 export function validateArtworkRecord(raw) {
+  if (raw?.version !== undefined && ![1, 2].includes(raw.version))
+    throw unsupported(
+      "This saved artwork needs a newer Studio version. Its data was retained.",
+    );
   if (
     !raw ||
-    raw.version !== 1 ||
+    ![1, 2].includes(raw.version) ||
     typeof raw.id !== "string" ||
     !raw.id ||
     raw.id.length > 120 ||
@@ -25,13 +35,19 @@ export function validateArtworkRecord(raw) {
   )
     throw Error("Invalid artwork record/version.");
   const r = {
-    version: 1,
+    version: raw.version,
+    ...(raw.requires ? { requires: structuredClone(raw.requires) } : {}),
     id: raw.id,
     name: artworkName(raw.name),
     createdAt: raw.createdAt,
     updatedAt: raw.updatedAt,
     artwork: validateArtwork(raw.artwork),
   };
+  validateFillFeatures({
+    ...r.artwork,
+    version: r.version,
+    requires: r.requires,
+  });
   if (raw.importId !== undefined) {
     if (
       typeof raw.importId !== "string" ||
@@ -47,7 +63,8 @@ export function validateArtworkRecord(raw) {
 export function createArtworkRecord(name, artwork) {
   const now = new Date().toISOString();
   return validateArtworkRecord({
-    version: 1,
+    version: hasAdvancedFills(artwork) ? 2 : 1,
+    ...(hasAdvancedFills(artwork) ? { requires: [FILL_CAPABILITY] } : {}),
     id: uid(),
     name,
     createdAt: now,
@@ -68,7 +85,10 @@ export function uniqueArtworkName(name, records) {
 export function artworkBackup(records) {
   return {
     kind: LIBRARY_KIND,
-    version: 1,
+    version: records.some((r) => r.version === 2) ? 2 : 1,
+    ...(records.some((r) => r.version === 2)
+      ? { requires: [FILL_CAPABILITY] }
+      : {}),
     exportedAt: new Date().toISOString(),
     items: records.map(validateArtworkRecord),
   };
@@ -80,15 +100,20 @@ export function parseArtworkBackup(input) {
   );
   if (
     data?.kind !== LIBRARY_KIND ||
-    data.version !== 1 ||
+    ![1, 2].includes(data.version) ||
     !Array.isArray(data.items) ||
     data.items.length > MAX_LIBRARY_ITEMS
   )
     throw Error(
-      "Choose a My Artwork library backup (version 1, up to 1,000 items).",
+      "Choose a My Artwork library backup (version 1 or 2, up to 1,000 items).",
     );
   const records = [],
     issues = [];
+  validateFillFeatures({
+    version: data.version,
+    requires: data.requires,
+    objects: [],
+  });
   for (const [i, raw] of data.items.entries())
     try {
       records.push(validateArtworkRecord(raw));

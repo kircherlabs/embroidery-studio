@@ -131,7 +131,8 @@ export const purgeInvalidArtwork = () =>
       try {
         const r = validateArtworkRecord(values[i]);
         if (r.id !== keys[i]) throw Error("Invalid identity");
-      } catch {
+      } catch (e) {
+        if (e.code === "UNSUPPORTED_FEATURE") continue;
         store.delete(keys[i]);
         removed++;
       }

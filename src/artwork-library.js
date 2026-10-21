@@ -9,6 +9,7 @@ import {
 import { sewingIds, isManualOrder } from "./sequencing.js";
 import { syncLinkedArtwork } from "./linked-artwork.js";
 import { compose } from "./smart-geometry.js";
+import { stampFillFeatures } from "./fills/schema.js";
 export const ARTWORK_VERSION = 1;
 export const MAX_ARTWORK_BYTES = 32 * 1024 * 1024;
 export function portableJSON(value, limit = MAX_ARTWORK_BYTES) {
@@ -37,7 +38,8 @@ export function portableJSON(value, limit = MAX_ARTWORK_BYTES) {
   return out;
 }
 const payloadProject = (a) => ({
-  version: 1,
+  version: a.version || 1,
+  ...(a.requires ? { requires: a.requires } : {}),
   name: "Reusable artwork",
   machine: "se700",
   objects: a.objects,
@@ -119,6 +121,7 @@ export function extractArtwork(project, ids) {
   if (isManualOrder(p))
     a.order = sewingIds(p).filter((id) => a.objects.some((o) => o.id === id));
   checkLinks(a, p);
+  stampFillFeatures(a);
   return validateArtwork(a);
 }
 export function artworkBounds(a) {
@@ -197,6 +200,7 @@ export function insertArtwork(project, raw, center = { x: 0, y: 0 }) {
       order: [...order, ...insertedOrder],
     };
   syncLinkedArtwork(draft);
+  stampFillFeatures(draft);
   validateProject(draft);
   Object.assign(project, draft);
   return {

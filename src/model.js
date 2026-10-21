@@ -2,6 +2,7 @@ import { validateAssignment } from "./thread-records.js";
 import { validateEquipment } from "./equipment.js";
 import { validateReferences } from "./references.js";
 import { sourceTransform } from "./smart-geometry.js";
+import { validateFillFeatures } from "./fills/schema.js";
 export const VERSION = 1;
 export const PALETTE = [
   "#e6ab43",
@@ -196,11 +197,12 @@ export function demo() {
 export function validateProject(p) {
   if (
     !p ||
-    p.version !== VERSION ||
+    ![VERSION, 2].includes(p.version) ||
     !Array.isArray(p.objects) ||
     p.objects.length > 1000
   )
     throw Error("Unsupported or invalid studio project.");
+  validateFillFeatures(p);
   validateEquipment(p);
   if (typeof p.name !== "string" || p.name.length > 200)
     throw Error("Invalid project name.");

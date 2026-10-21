@@ -1,0 +1,87 @@
+{
+  "version": 2,
+  "name": "Fill swatch: emboss-reference",
+  "machine": "se700",
+  "objects": [
+    {
+      "id": "swatch-embossed-tatami",
+      "name": "Embossed Tatami",
+      "rings": [
+        [
+          {
+            "x": -20,
+            "y": -15
+          },
+          {
+            "x": 20,
+            "y": -15
+          },
+          {
+            "x": 20,
+            "y": 15
+          },
+          {
+            "x": -20,
+            "y": 15
+          }
+        ]
+      ],
+      "color": "#303b53",
+      "type": "fill",
+      "spacing": 0.42,
+      "length": 2.8,
+      "angle": 0,
+      "width": 2.5,
+      "underlay": true,
+      "compensation": 0.15,
+      "visible": true,
+      "closed": true,
+      "operations": [
+        {
+          "id": "swatch-embossed-tatami-fill",
+          "name": "Tatami fill",
+          "closed": true,
+          "enabled": true,
+          "color": "#303b53",
+          "type": "fill",
+          "spacing": 0.42,
+          "length": 2.8,
+          "angle": 0,
+          "width": 2.5,
+          "underlay": true,
+          "compensation": 0.15,
+          "offset": 0,
+          "reverse": false,
+          "startIndex": 0,
+          "outerOnly": false,
+          "fillSettings": {
+            "version": 1,
+            "method": "emboss",
+            "anchor": "object",
+            "frame": [
+              1,
+              0,
+              0,
+              1,
+              0,
+              0
+            ],
+            "angle": 0,
+            "seed": 1,
+            "inset": 0,
+            "motif": "diamonds",
+            "scale": 4,
+            "repeat": 6,
+            "strength": 0.5,
+            "motifAngle": 0,
+            "phaseX": 0,
+            "phaseY": 0
+          }
+        }
+      ]
+    }
+  ],
+  "requires": [
+    "fills-1"
+  ]
+}

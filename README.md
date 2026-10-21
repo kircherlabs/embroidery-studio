@@ -13,6 +13,14 @@ software has been tested in browsers and through independent file decoding.
 The PES origin repair matches a file verified by the owner on a physical SE700;
 new exports and sew-out quality still need machine testing.
 
+**Decorative fills:** Properties → Embroidery → Fill offers expanded Tatami
+textures, Contour, five Meander styles, complete Cross Stitch, six Emboss motifs,
+Ripple and true Spiral construction. Generated samples, contextual settings and
+Design Issues guide editing; legacy Tatami output stays exact until opting in.
+See the [fill guide](docs/DECORATIVE_FILLS.md), [measured validation](docs/FILL_BENCHMARKS.md)
+and [editable reference projects/PES samples](examples/fill-swatches/README.md).
+New fill projects require the version 2 capability; physical sew-outs remain necessary.
+
 **Drawing style** sets the stitching for newly drawn closed shapes. To change
 existing artwork, select its objects or SVG group, choose a style, and click
 **Apply to selected artwork** in the same popup. Multi-step replacement requires

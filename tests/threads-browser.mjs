@@ -109,7 +109,10 @@ try {
   await page.locator("#thread-management").evaluate((el) => (el.open = true));
   await page.locator("#thread-prefer").click();
   await page.locator(".thread-result").click();
-  await page.locator("#thread-detail summary").click();
+  await page
+    .locator("#thread-detail summary")
+    .filter({ hasText: "Source & accuracy" })
+    .click();
   assert.match(
     await page.locator("#thread-detail").innerText(),
     /user-imported/,

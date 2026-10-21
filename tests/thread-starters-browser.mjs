@@ -40,7 +40,10 @@ try {
     await page.locator("#thread-detail").innerText(),
     /Prussian Blue/,
   );
-  await page.locator("#thread-detail summary").click();
+  await page
+    .locator("#thread-detail summary")
+    .filter({ hasText: "Source & accuracy" })
+    .click();
   assert.match(
     await page.locator("#thread-detail").innerText(),
     /studio-approximation/,
@@ -48,12 +51,15 @@ try {
   const id = await page.locator(".thread-result").getAttribute("data-thread");
   assert.equal(
     await page.locator("#thread-owned-add").innerText(),
-    "Mark selected owned",
+    "Add to My Collection",
   );
   await page.locator("#thread-owned-add").click();
   await page.waitForFunction(() =>
     document.querySelector("#thread-results").textContent.includes("Owned ×1"),
   );
+  await page
+    .locator(".thread-entry-management")
+    .evaluate((el) => (el.open = true));
   await page.locator("#thread-edit").click();
   await page.locator("#manual-thread-hex").fill("#153975");
   await page.locator("#manual-thread-save").click();
@@ -73,6 +79,7 @@ try {
   );
   await page.locator("#thread-brand").selectOption("newbrothread");
   await page.locator(".thread-result").click();
+  await page.locator(`[data-collection-check="${id}"]`).check();
   await page.locator("#thread-owned-add").click();
   await page.waitForFunction(() =>
     document.querySelector("#thread-results").textContent.includes("Owned ×1"),

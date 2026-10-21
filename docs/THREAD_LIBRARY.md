@@ -156,3 +156,25 @@ unknown line is explicitly Unspecified product line. Use HEX, RGB or the color p
 or copy an existing catalog approximation. Personal entries can be corrected or removed.
 Library management contains import, backup/restore, defaults and starter browsing.
 Original HEX-only design/export workflows remain available without an inventory.
+
+## Browse and personal collection (v0.14.1)
+
+The default **Browse Threads** view shows built-in and personal catalog colors in
+an adjustable-width swatch grid. Search brand, color name or text spool number;
+Brand and Product line filters remain available. **My Collection** uses the same
+library, restricted to spools with positive owned quantities. Search and filters
+remain when switching views.
+
+Select a swatch for its complete spool identity and source/accuracy information.
+**Assign selected thread** changes only the selected sewing action(s), not stock.
+**Add to My Collection / Remove from My Collection** changes ownership, not the
+catalog or project. Removal sets quantity to zero while keeping notes, favorites,
+spool size and remaining estimates. Add again records one spool; use **Collection
+details** to adjust quantities and optional inventory information. Checked batch
+Add preserves existing positive quantities.
+
+**Edit catalog record** contains color corrections and the distinct personal
+catalog deletion action. **Library management** contains imports, backup/restore,
+line deletion, defaults and built-in catalog visibility. Matching and project
+requirements remain available below the results. Ordinary HEX colors, embroidery
+and exports continue to work without physical thread assignments or inventory.

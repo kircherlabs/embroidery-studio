@@ -137,12 +137,15 @@ try {
       .quantity,
     2,
   );
+  await page.locator("#thread-more-filters").evaluate((el) => (el.open = true));
   await page.locator("#thread-collection").selectOption("owned");
   assert.equal(await page.locator(".thread-result").count(), 2);
   await page.locator("#thread-management").evaluate((el) => (el.open = true));
   await page.locator("#thread-prefer").click();
+  await page.locator("#thread-more-filters").evaluate((el) => (el.open = true));
   await page.locator("#thread-collection").selectOption("favorites");
   assert.equal(await page.locator(".thread-result").count(), 1);
+  await page.locator("#thread-more-filters").evaluate((el) => (el.open = true));
   await page.locator("#thread-collection").selectOption("missing");
   assert.equal(await page.locator(".thread-result").count(), 2);
   console.log("Inventory CRUD and filters passed");
@@ -189,6 +192,7 @@ try {
   await pesDownload;
   assert.deepEqual((await library()).inventory, ownedBefore.inventory);
   await page.locator("#thread-library").click();
+  await page.locator("#thread-more-filters").evaluate((el) => (el.open = true));
   await page.locator("#thread-collection").selectOption("owned");
   assert.equal(await page.locator(".thread-result").count(), 2);
   // Removing a catalog retains personally owned spool snapshots.
@@ -199,6 +203,7 @@ try {
   await page.locator("#thread-management").evaluate((el) => (el.open = true));
   await page.locator("#thread-remove-line").click();
   await page.locator("#thread-remove-confirm").click();
+  await page.locator("#thread-more-filters").evaluate((el) => (el.open = true));
   await page.locator("#thread-collection").selectOption("owned");
   assert.match(await page.locator("#thread-results").innerText(), /001/);
   console.log(
@@ -400,12 +405,14 @@ try {
   await page.locator("#inventory-quantity").fill("1");
   await page.locator("#inventory-save").click();
   await page.locator("#thread-search").waitFor();
+  await page.locator("#thread-more-filters").evaluate((el) => (el.open = true));
   await page.locator("#thread-collection").selectOption("owned");
   assert.equal(await page.locator(".thread-result").count(), 1);
   await page.locator(".thread-result").click();
   await page.locator("#thread-collection-edit").click();
   await page.locator("#inventory-delete").click();
   await page.locator("#thread-search").waitFor();
+  await page.locator("#thread-more-filters").evaluate((el) => (el.open = true));
   await page.locator("#thread-collection").selectOption("owned");
   assert.equal(await page.locator(".thread-result").count(), 0);
   assert.deepEqual(errors, []);

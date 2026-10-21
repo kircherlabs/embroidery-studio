@@ -27,6 +27,10 @@ try {
     await saveThreads(d);
   });
   await page.locator("#thread-library").click();
+  assert.match(
+    await page.locator(".thread-empty").innerText(),
+    /Your thread library is empty/,
+  );
   await page.locator("#thread-manual").click();
   await page.locator("#manual-thread-save").click();
   assert.match(await page.locator("#manual-thread-error").innerText(), /brand/);
@@ -55,6 +59,7 @@ try {
   assert.match(await page.locator("#thread-results").innerText(), /Owned ×2/);
   // Preferences and collection filters cannot hide a successfully added new spool.
   await page.locator("#thread-brand").selectOption("newbrothread");
+  await page.locator("#thread-more-filters").evaluate((el) => (el.open = true));
   await page.locator("#thread-collection").selectOption("owned");
   await page.locator("#thread-management summary").click();
   await page.locator("#thread-prefer").click();
@@ -101,6 +106,7 @@ try {
   await page.waitForFunction(() => window.studio?.getPlan());
   await page.locator("#thread-library").click();
   await page.locator("#thread-brand").selectOption("");
+  await page.locator("#thread-more-filters").evaluate((el) => (el.open = true));
   await page.locator("#thread-collection").selectOption("all");
   assert.equal(await page.locator(".thread-result").count(), 3);
   await page
@@ -110,6 +116,9 @@ try {
   const ownedId = await page
     .locator(".thread-result.selected")
     .getAttribute("data-thread");
+  await page
+    .locator(".thread-entry-management")
+    .evaluate((el) => (el.open = true));
   await page.locator("#thread-edit").click();
   assert.equal(await page.locator("#manual-thread-number").inputValue(), "007");
   assert.ok(
@@ -168,6 +177,9 @@ try {
   );
   await page.locator("#manual-thread-save").click();
   await page.locator("#thread-search").waitFor();
+  await page
+    .locator(".thread-entry-management")
+    .evaluate((el) => (el.open = true));
   await page.locator("#thread-delete").click();
   await page.locator("#thread-delete-confirm").click();
   await page.locator("#thread-search").waitFor();

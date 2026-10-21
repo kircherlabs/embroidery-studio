@@ -38,6 +38,7 @@ try {
     };
   const importCatalog = async (name, body) => {
     const chooser = page.waitForEvent("filechooser");
+    await page.locator("#thread-management").evaluate((el) => (el.open = true));
     await page.locator("#thread-import").click();
     await (
       await chooser
@@ -97,6 +98,7 @@ try {
   await page
     .locator("#thread-line")
     .selectOption("newbrothread|personal-fixture");
+  await page.locator("#thread-management").evaluate((el) => (el.open = true));
   await page.locator("#thread-prefer").click();
   await page.locator(".thread-result").click();
   await page.locator("#thread-detail summary").click();
@@ -178,6 +180,7 @@ try {
     await page.locator("#thread-line").inputValue(),
     "newbrothread|personal-fixture",
   );
+  await page.locator("#thread-management").evaluate((el) => (el.open = true));
   await page.locator("#thread-remove-line").click();
   await page.locator("#thread-remove-confirm").click();
   await page.locator("#thread-search").waitFor();

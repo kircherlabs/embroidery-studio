@@ -1223,3 +1223,23 @@
   height: 22px;
   margin: 0;
 }
+
+/* Thread discovery stays primary; administration and specialist filters are optional. */
+#thread-management,
+#thread-more-filters {
+  margin: 0.75rem 0;
+}
+#thread-management summary,
+#thread-more-filters summary {
+  cursor: pointer;
+  padding: 0.5rem 0;
+}
+.thread-empty {
+  padding: 1rem;
+  border: 1px dashed var(--line);
+  border-radius: 0.5rem;
+}
+#manual-thread-error:not(:empty) {
+  border-left: 3px solid var(--accent);
+  padding: 0.65rem;
+}

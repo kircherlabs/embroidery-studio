@@ -7,6 +7,7 @@ import { isVisible, isLocked } from "./hierarchy.js";
 import { matchingUI } from "./thread-matching-ui.js";
 import {
   THREAD_BRANDS,
+  normalizeThread,
   mergeCatalog,
   libraryThreads,
   inventoryEntry,
@@ -60,18 +61,17 @@ export function installThreads(api) {
     }
     if (e.key !== "Enter" || e.target.matches("button,select,textarea")) return;
     e.preventDefault();
-    const action =
-      $("personal-apply") ||
-      $("inventory-save") ||
-      ($("thread-match-apply") && !$("thread-match-apply").disabled)
-        ? $("thread-match-apply")
-        : $("catalog-apply") && !$("catalog-apply").disabled
-          ? $("catalog-apply")
-          : $("catalog-preview-button") ||
-            $("manual-thread-save") ||
-            ($("thread-use") && !$("thread-use").disabled
-              ? $("thread-use")
-              : null);
+    const action = [
+      "personal-apply",
+      "inventory-save",
+      "thread-match-apply",
+      "catalog-apply",
+      "catalog-preview-button",
+      "manual-thread-save",
+      "thread-use",
+    ]
+      .map($)
+      .find((el) => el && !el.disabled);
     action?.click();
   });
   dialog.addEventListener("close", () =>
@@ -90,6 +90,7 @@ export function installThreads(api) {
   const end = (footer) =>
     `<div class="dialog-actions">${footer || '<button value="cancel" formnovalidate>Close</button>'}</div></form>`;
   async function persist(next) {
+    const feedback = $("manual-thread-error") || $("library-status");
     if (saving) return false;
     saving = true;
     try {
@@ -97,10 +98,11 @@ export function installThreads(api) {
       library = next;
       return true;
     } catch (e) {
-      api.toast(
+      const message =
         "Could not save thread library. Existing data was retained. " +
-          e.message,
-      );
+        e.message;
+      if (feedback?.isConnected) feedback.textContent = message;
+      api.toast(message);
       return false;
     } finally {
       saving = false;
@@ -174,7 +176,7 @@ export function installThreads(api) {
             `<div class="thread-library-row"><button type="button" class="thread-result ${chosen === r.id ? "selected" : ""}" data-thread="${esc(r.id)}" aria-pressed="${chosen === r.id}">${dot(r)}<span><strong>${esc(r.number || "Unnumbered swatch")} · ${esc(r.colorName || "Name unavailable")}</strong><small>${esc(r.brandName)} · ${esc(r.lineName)}${r.material ? " · " + esc(r.material) : ""}${r.weight ? " · " + esc(r.weight) : ""}${inventory.get(r.id)?.quantity > 0 ? " · Owned ×" + inventory.get(r.id).quantity : " · Not owned"}${inventory.get(r.id)?.favorite ? " · Favorite" : ""}</small></span></button><label class="collection-mark"><input type="checkbox" data-collection-check="${esc(r.id)}" aria-label="Select ${esc(r.number || r.colorName || "spool")} for collection" ${collectionChecks.has(r.id) ? "checked" : ""}></label></div>`,
         )
         .join("") ||
-      '<p class="property-note">No catalog colors match. Import a personal catalog or add a thread manually. No third-party color catalog is bundled.</p>';
+      '<div class="thread-empty"><strong>Your thread library</strong><p>No colors match these filters. Add a spool or use Library management to import a catalog. Clear search and filters to browse all threads.</p><p>Physical threads and inventory are optional; ordinary design colors still export normally.</p></div>';
     $("thread-result-count").textContent =
       `${rows.length.toLocaleString()} entries · page ${pageIndex + 1} of ${count}`;
     $("thread-prev").disabled = pageIndex === 0;
@@ -195,11 +197,11 @@ export function installThreads(api) {
     pageIndex = 0;
     dialog.innerHTML =
       head("Thread library") +
-      `<p class="property-note">Personal catalogs stay on this device. Import does not grant redistribution rights. PEC machine colors are separate from physical thread products.</p><div class="thread-top-actions">${button("thread-match", "Match design colors…")}${button("thread-requirements", "Project threads…")}${button("thread-collection-edit", "Collection details…")}${button("thread-owned-add", "Mark checked owned")}${button("thread-personal", "Backup / restore…")}${button("thread-import", "Import catalog…")}${button("thread-manual", "Add thread…")}${button("thread-prefer", "Use brand / line as default")}${button("thread-remove-line", "Remove selected line…")}</div><div class="thread-filters"><label>Brand<select id="thread-brand">${option("", "All brands")}${family()
+      `<p class="property-note">Find a spool to assign or optionally mark as owned. Your collection stays on this device; ordinary design colors work without it.</p><div class="thread-top-actions">${button("thread-manual", "Add thread…")}${button("thread-owned-add", "Mark checked owned")}${button("thread-collection-edit", "Collection details…")}${button("thread-match", "Match design colors…")}${button("thread-requirements", "Project threads…")}</div><details id="thread-management"><summary>Library management</summary><div class="thread-top-actions">${button("thread-import", "Import catalog…")}${button("thread-personal", "Backup / restore…")}${button("thread-prefer", "Use brand / line as default")}${button("thread-remove-line", "Remove selected line…")}</div><p class="property-note">Personal imports stay local. Import does not grant redistribution rights. PEC machine colors are separate from physical thread products.</p></details><p id="library-status" role="status"></p><div class="thread-filters"><label>Brand<select id="thread-brand">${option("", "All brands")}${family()
         .map(([id, n]) => option(id, n))
         .join(
           "",
-        )}</select></label><label>Product line<select id="thread-line"></select></label><label>Search spool number or name<input id="thread-search" type="search" autocomplete="off"></label><label>Material<select id="thread-material">${option("", "All materials")}${[
+        )}</select></label><label>Product line<select id="thread-line"></select></label><label>Search spool number or name<input id="thread-search" type="search" autocomplete="off"></label><label>Collection<select id="thread-collection">${option("all", "All threads")}${option("owned", "Owned threads")}${option("missing", "Not owned")}${option("favorites", "Favorites")}</select></label></div><details id="thread-more-filters"><summary>More filters &amp; sorting</summary><div class="thread-filters"><label>Material<select id="thread-material">${option("", "All materials")}${[
         ...new Set(
           libraryThreads(library)
             .map((r) => r.material)
@@ -221,7 +223,7 @@ export function installThreads(api) {
         .map((m) => option(m, m))
         .join(
           "",
-        )}</select></label><label>Sort<select id="thread-sort">${option("number", "Spool number")}${option("color", "Digital color")}</select></label><label>Collection<select id="thread-collection">${option("all", "All threads")}${option("owned", "Owned threads")}${option("missing", "Not owned")}${option("favorites", "Favorites")}</select></label></div><div class="thread-browse"><div><p id="thread-result-count" role="status"></p><div id="thread-results"></div><div class="thread-pagination">${button("thread-prev", "Previous")}${button("thread-next", "Next")}</div></div><aside id="thread-detail"></aside></div><p class="property-note">${targets.length ? `Assign to ${targets.length} selected sewing action${targets.length === 1 ? "" : "s"}. Other actions, geometry and original design colors are retained.` : "Select artwork or a sewing action in Properties to assign physical thread. Browsing and custom HEX colors remain optional."}</p>` +
+        )}</select></label><label>Sort<select id="thread-sort">${option("number", "Spool number")}${option("color", "Digital color")}</select></label></div></details><div class="thread-browse"><div><p id="thread-result-count" role="status"></p><div id="thread-results"></div><div class="thread-pagination">${button("thread-prev", "Previous")}${button("thread-next", "Next")}</div></div><aside id="thread-detail"></aside></div><p class="property-note">${targets.length ? `Assign to ${targets.length} selected sewing action${targets.length === 1 ? "" : "s"}. Other actions, geometry and original design colors are retained.` : "Select artwork or a sewing action in Properties to assign physical thread. Browsing and custom HEX colors remain optional."}</p>` +
       end(
         '<button value="cancel" formnovalidate>Close</button>' +
           button("thread-use", "Assign selected thread"),
@@ -512,18 +514,37 @@ export function installThreads(api) {
   function manual() {
     dialog.innerHTML =
       head("Add a personal thread") +
-      `<p class="property-note">Enter the spool label. Leave unknown material, weight or digital color empty; no manufacturer color is inferred.</p><div class="thread-filters"><label>Brand<input id="manual-thread-brand" required></label><label>Product line<input id="manual-thread-line" required></label><label>Spool number (text)<input id="manual-thread-number" maxlength="80"></label><label>Color name<input id="manual-thread-name"></label><label>HEX approximation (optional)<input id="manual-thread-hex" placeholder="#123456"></label><label>Material<input id="manual-thread-material"></label><label>Weight<input id="manual-thread-weight"></label></div><p id="manual-thread-error" role="status"></p>` +
+      `<p class="property-note">Copy the spool label. Only brand and spool number are required. Leave product line blank if unknown; it will be listed as Unspecified product line.</p><div class="thread-filters"><label>Brand<input id="manual-thread-brand" required maxlength="160" autocomplete="off" aria-describedby="manual-thread-error"></label><label>Product line (optional)<input id="manual-thread-line" maxlength="160"></label><label>Spool number<input id="manual-thread-number" required maxlength="80" aria-describedby="manual-thread-error"></label><label>Color name (optional)<input id="manual-thread-name" maxlength="160"></label><label>HEX approximation (optional)<input id="manual-thread-hex" placeholder="#123456" maxlength="7" aria-describedby="manual-thread-error"></label></div><details><summary>Optional spool details</summary><div class="thread-filters"><label>Material<input id="manual-thread-material" maxlength="160"></label><label>Weight<input id="manual-thread-weight" maxlength="160"></label></div></details><p id="manual-thread-error" role="alert"></p>` +
       end(
         button("manual-thread-back", "Back") +
           button("manual-thread-save", "Save thread"),
       );
     $("manual-thread-back").onclick = picker;
+    $("manual-thread-brand").focus();
+    $("manual-thread-save").className = "primary";
     $("manual-thread-save").onclick = async () => {
+      if (saving) return;
+      const error = $("manual-thread-error"),
+        save = $("manual-thread-save");
+      for (const [id, message] of [
+        ["brand", "Enter the brand shown on your spool."],
+        ["number", "Enter a spool number, keeping leading zeros and letters."],
+      ]) {
+        const input = $("manual-thread-" + id);
+        input.removeAttribute("aria-invalid");
+        if (!input.value.trim()) {
+          error.textContent = message;
+          input.setAttribute("aria-invalid", "true");
+          input.focus();
+          return;
+        }
+      }
+      save.disabled = true;
       try {
-        const { normalizeThread } = await import("./thread-records.js");
         const r = normalizeThread({
           brandName: $("manual-thread-brand").value,
-          lineName: $("manual-thread-line").value,
+          lineName:
+            $("manual-thread-line").value.trim() || "Unspecified product line",
           number: $("manual-thread-number").value,
           colorName: $("manual-thread-name").value,
           hex: $("manual-thread-hex").value,
@@ -535,15 +556,28 @@ export function installThreads(api) {
           },
         });
         r.source.verification = "user-entered";
+        if (libraryThreads(library).some((t) => t.id === r.id))
+          throw Error(
+            "This brand, product line and spool number already exist. Select the existing thread rather than adding a duplicate.",
+          );
         const next = structuredClone(library);
-        next.records = mergeCatalog(next.records, [r], true).records;
+        next.records = mergeCatalog(next.records, [r]).records;
         if (await persist(next)) {
+          if (!dialog.open || !save.isConnected) return;
           picker();
+          $("thread-brand").value = "";
+          $("thread-brand").dispatchEvent(new Event("change"));
+          $("thread-collection").value = "all";
           chosen = r.id;
+          $("thread-search").value = r.number;
           renderList();
+          $("library-status").textContent = "Saved " + display(r) + ".";
+          dialog.querySelector(`[data-thread="${CSS.escape(r.id)}"]`)?.focus();
         }
       } catch (e) {
-        $("manual-thread-error").textContent = e.message;
+        if (error.isConnected) error.textContent = e.message;
+      } finally {
+        if (save.isConnected) save.disabled = false;
       }
     };
   }

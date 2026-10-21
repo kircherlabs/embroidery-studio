@@ -87,20 +87,18 @@ try {
     threadTargets([o], { activeOperationId: o.operations[1].id }, true),
     data.records[1],
   );
-  await page
-    .locator("#file-input")
-    .setInputFiles({
-      name: "inventory.embstudio",
-      mimeType: "application/json",
-      buffer: Buffer.from(
-        JSON.stringify({
-          version: 1,
-          name: "Inventory fixture",
-          machine: "se700",
-          objects: [o],
-        }),
-      ),
-    });
+  await page.locator("#file-input").setInputFiles({
+    name: "inventory.embstudio",
+    mimeType: "application/json",
+    buffer: Buffer.from(
+      JSON.stringify({
+        version: 1,
+        name: "Inventory fixture",
+        machine: "se700",
+        objects: [o],
+      }),
+    ),
+  });
   await page.locator("#dialog-submit").click();
   await page.waitForFunction(
     () => window.studio.getProject().name === "Inventory fixture",
@@ -133,6 +131,7 @@ try {
   );
   await page.locator("#thread-collection").selectOption("owned");
   assert.equal(await page.locator(".thread-result").count(), 2);
+  await page.locator("#thread-management").evaluate((el) => (el.open = true));
   await page.locator("#thread-prefer").click();
   await page.locator("#thread-collection").selectOption("favorites");
   assert.equal(await page.locator(".thread-result").count(), 1);
@@ -189,6 +188,7 @@ try {
   await page
     .locator("#thread-line")
     .selectOption("newbrothread|personal-inventory-fixture");
+  await page.locator("#thread-management").evaluate((el) => (el.open = true));
   await page.locator("#thread-remove-line").click();
   await page.locator("#thread-remove-confirm").click();
   await page.locator("#thread-collection").selectOption("owned");
@@ -237,6 +237,7 @@ try {
       JSON.stringify({ se700: "pes", [m.id]: "dst" }),
     );
   }, custom);
+  await page.locator("#thread-management").evaluate((el) => (el.open = true));
   await page.locator("#thread-personal").click();
   const backupDownload = page.waitForEvent("download");
   await page.locator("#personal-export").click();
@@ -257,6 +258,7 @@ try {
   await ready();
   const retainedProject = await project();
   await page.locator("#thread-library").click();
+  await page.locator("#thread-management").evaluate((el) => (el.open = true));
   await page.locator("#thread-personal").click();
   const chooseBackup = async (value) => {
     const chooser = page.waitForEvent("filechooser");
@@ -297,6 +299,7 @@ try {
   });
   assert.deepEqual(restored, backup);
   // Reimport is idempotent, not additive.
+  await page.locator("#thread-management").evaluate((el) => (el.open = true));
   await page.locator("#thread-personal").click();
   await chooseBackup(backup);
   await page.locator("#personal-apply").click();

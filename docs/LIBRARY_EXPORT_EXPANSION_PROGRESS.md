@@ -56,7 +56,20 @@ the system Python alias is unavailable; rerun with the bundled interpreter passe
 No tests were weakened. Full manufacturer coverage and measured/licensed RGB remain
 future data work, not claimed complete.
 
-D: expand exact-model/hoop evidence and searchable selection; preserve export guards.
+D — complete and verified (C commit `2db86a6`).
+Expanded from 7 to 42 documented brand/model profiles across seven brands, including
+common discontinued Brother models, Janome MC400E/550E, Baby Lock Verve/Vesta/Meridian,
+generation-qualified BERNINA B570/B590, Pfaff ambition 640, Viking Topaz 65 and Singer
+SE9185. Model search works across brands without changing geometry. Included/optional
+hoops are labeled only where established; custom profiles and all prior IDs survive.
+Sources are recorded in equipment.js and the expansion coverage document. Exact input
+format evidence is still pending for the new Pfaff, Viking and Singer profiles; their
+formats remain empty rather than inferred by brand. Existing JEF/VP3 restrictions remain.
+Files: equipment.js, equipment-ui.js, index.html, equipment unit/browser tests and docs.
+Validation: 13 equipment/export unit tests; existing equipment and actual six-format
+export-safety browser suites pass, including search, field changes, old/custom projects,
+no automatic artwork changes, history, mobile and unsafe-export blocking. The old
+SE700 single-hoop assertion now checks the exact two documented 100 mm hoop IDs.
 E: locally packaged validated format bytes, review omissions, README/thread chart,
 archive extraction and standalone-byte comparisons, browser download.
 F: full regression/build/mobile QA, docs/version, PR/CI/merge/Pages and live verification.

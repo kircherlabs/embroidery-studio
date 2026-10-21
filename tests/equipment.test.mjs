@@ -161,3 +161,38 @@ test("equipment metadata rejects foreign versions and forged catalog entries", (
   for (const machine of ["__proto__", "constructor", "not-a-machine"])
     assert.throws(() => validateProject({ ...demo(), machine }));
 });
+
+test("expanded exact-model catalog retains sourced hoops, conservative format evidence and generation variants", () => {
+  const models = Object.values(MACHINE_CATALOG).filter(
+    (m) => m.brand !== "generic",
+  );
+  assert.equal(models.length, 42);
+  for (const brand of Object.keys(BRANDS).filter((b) => b !== "generic"))
+    assert.ok(models.filter((m) => m.brand === brand).length >= 2);
+  for (const m of models) {
+    const p = {
+      version: 1,
+      machine: "se700",
+      name: "Field fixture",
+      objects: [],
+    };
+    for (const id of m.hoops) {
+      selectEquipment(p, m.id, id);
+      validateProject(p);
+      assert.equal(getMachine(p).width, HOOPS[id].width);
+    }
+  }
+  assert.equal(MACHINE_CATALOG["brother-se2000"].maxField.width, 130);
+  assert.equal(HOOPS["brother-mag180"].width, 100);
+  assert.equal(
+    MACHINE_CATALOG["janome-mc400e"].hoops.includes("janome-re36b"),
+    false,
+  );
+  assert.equal(MACHINE_CATALOG["janome-mc550e"].maxField.height, 360);
+  assert.equal(MACHINE_CATALOG["bernina-b570-2017"].maxField.height, 150);
+  assert.match(MACHINE_CATALOG["bernina-b570-2017"].notes, /module required/i);
+  for (const id of ["pfaff-ambition640", "viking-topaz65", "singer-se9185"]) {
+    assert.deepEqual(MACHINE_CATALOG[id].formats, []);
+    assert.equal(MACHINE_CATALOG[id].preferred, null);
+  }
+});

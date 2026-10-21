@@ -225,6 +225,17 @@
             ><span id="fit-status"></span>
           </summary>
           <div class="machine-settings" aria-label="Equipment selection">
+            <label
+              >Find a model<input
+                id="machine-search"
+                type="search"
+                list="machine-search-options"
+                placeholder="Search any brand or model"
+                autocomplete="off" /><datalist
+                id="machine-search-options"
+              ></datalist
+              ><span id="machine-search-status" role="status"></span
+            ></label>
             <label>Brand<select id="machine-brand"></select></label>
             <label>Model<select id="machine"></select></label>
             <label

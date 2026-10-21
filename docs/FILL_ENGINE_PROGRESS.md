@@ -200,22 +200,29 @@ PES needle to the current plan. All seven families round-trip through PES, PEC,
 DST, EXP, JEF and VP3; PES coordinates are independently decoded. No writer was
 rewritten and existing safety restrictions remain.
 
-Local verification so far: 342 Node tests + 4 codec / 6 format-safety Python tests
-pass. Fill integration browser covers keyboard samples, method/thread layout,
+Local verification: 343 Node tests + 4 codec / 6 format-safety Python tests
+pass. All 45 established/new browser suites pass locally in Edge. Fill integration
+browser covers keyboard samples, method/thread layout,
 My Artwork save/new-project/insert, independent IDs/history/reload, seven mobile
-methods and actual obsolete-worker termination. Full established browser suite
-is currently running. Documentation: DECORATIVE_FILLS.md, FILL_BENCHMARKS.md,
+methods and actual obsolete-worker termination. All three fill workflows also pass
+against the built production artifact in Chrome. Final compatibility review added
+safe normalization of optional fields and direct first-use Custom sequences;
+their regressions and all three production fill workflows pass after the fixes.
+The initial local runner needed the explicit bundled PYTHON executable; a sample
+count assertion was scoped to the eleven texture buttons, independently of the
+seven method buttons. No existing behavioral test was weakened.
+Documentation: DECORATIVE_FILLS.md, FILL_BENCHMARKS.md,
 examples/fill-swatches/README.md. Proposed release v0.16.0.
 
 Implementation status: A–H complete in the approved A→B→C→D→F→E→G→H order.
-I source integration is implemented; full browser completion, final review,
-commit/PR/CI/merge/Pages/live verification remain outstanding. Nothing from this
-branch is deployed yet. Do not mark release complete before those checks pass.
+I source integration is committed as `ae51057`, with final compatibility hardening
+ready to commit. PR #27 is open and attached. Exact-head GitHub CI, merge, Pages
+and live verification remain outstanding. Nothing from this branch is deployed
+yet. Do not mark release complete before those checks pass.
 Order: A → B → C → D → F → E → G → H → I.
 
-Baseline commit: `787ef69`. Next: finish/review the full browser run, fix any
-regressions, commit I, push this feature branch, attach its PR, wait for exact-head
-CI, merge, wait for Pages and verify the deployed source/version and isolated live
+Baseline commit: `787ef69`. Next: commit/push final hardening, wait for exact-head
+CI on PR #27, merge, wait for Pages and verify deployed source/version and isolated live
 fill workflows. Protected refs checked unchanged, including BACKUP-V0.15.0 at
 `6a0dcd2`, BACKUP-V0.14.1 at `8c6636b` and backup-before-creative-update at `99c0a78`.
 Preserve every protected backup ref. Do not regenerate legacy expectations to

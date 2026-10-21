@@ -29,6 +29,9 @@ export const FILL_DEFAULTS = {
   spiral: { ratio: 1, centerX: 0, centerY: 0, clockwise: false },
 };
 export function makeFillSettings(method, o, changes = {}) {
+  changes = Object.fromEntries(
+    Object.entries(changes).filter(([, v]) => v !== undefined),
+  );
   const b = bounds(o.rings.flat()),
     [x, y] = localAxis(o),
     axis = (Math.atan2(y, x) * 180) / Math.PI;
@@ -44,6 +47,9 @@ export function makeFillSettings(method, o, changes = {}) {
     ...(method === "meander" && changes.style
       ? MEANDER_PRESETS[changes.style]
       : {}),
+    ...(method === "tatami" && changes.texture === "custom"
+      ? { sequence: [0, 0.4, 0.1, 0.65] }
+      : {}),
     ...changes,
   };
   if (s.anchor === "global") {
@@ -52,6 +58,18 @@ export function makeFillSettings(method, o, changes = {}) {
   }
   s.frame = s.frame.map((n) => (Object.is(n, -0) ? 0 : n));
   return validateFillSettings(s);
+}
+export function normalizedFillSettings(s) {
+  validateFillSettings(s);
+  return {
+    ...FILL_DEFAULTS[s.method],
+    angle: 0,
+    seed: 1,
+    inset: 0,
+    anchor: "object",
+    frame: [1, 0, 0, 1, 0, 0],
+    ...s,
+  };
 }
 export function fillCoordinates(settings) {
   const m = settings.frame || [1, 0, 0, 1, 0, 0],
@@ -100,15 +118,7 @@ export function fillBudget({ steps = 5000000, points = 200000 } = {}) {
   };
 }
 export function fillContext(o, helpers = {}, budget = fillBudget()) {
-  const s = validateFillSettings(o.fillSettings),
-    cfg = {
-      ...FILL_DEFAULTS[s.method],
-      angle: 0,
-      seed: 1,
-      inset: 0,
-      anchor: "object",
-      ...s,
-    },
+  const cfg = normalizedFillSettings(o.fillSettings),
     coordinates = fillCoordinates(cfg),
     source =
       cfg.inset > 0

@@ -183,3 +183,27 @@ test("shared clipping partitions entire segments at narrow counters and budgets 
   budget.add();
   assert.throws(() => budget.add(), /budget/);
 });
+test("optional fill fields normalize consistently before editing or switching methods", () => {
+  const o = shape();
+  o.fillSettings = { version: 1, method: "tatami" };
+  const ctx = fillContext(o);
+  assert.deepEqual(ctx.cfg.frame, [1, 0, 0, 1, 0, 0]);
+  assert.equal(ctx.cfg.angle, 0);
+  assert.equal(ctx.cfg.texture, "quarter");
+  const s = makeFillSettings("contour", o, {
+    frame: undefined,
+    angle: undefined,
+    anchor: undefined,
+    seed: undefined,
+  });
+  validateFillSettings(s);
+  assert(s.frame.every(Number.isFinite));
+  assert.equal(s.anchor, "object");
+  const custom = makeFillSettings("tatami", o, { texture: "custom" });
+  assert.deepEqual(custom.sequence, [0, 0.4, 0.1, 0.65]);
+  custom.sequence[0] = 0.9;
+  assert.equal(
+    makeFillSettings("tatami", o, { texture: "custom" }).sequence[0],
+    0,
+  );
+});

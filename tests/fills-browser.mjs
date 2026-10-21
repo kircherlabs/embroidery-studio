@@ -75,6 +75,16 @@ try {
     legacy = needles(await plan());
   assert.equal(await page.locator("#fill-pattern:visible").count(), 1);
   assert.equal(await page.locator("#fill-method").inputValue(), "tatami");
+  await page.locator("#fill-pattern").selectOption("custom");
+  await ready();
+  assert.deepEqual(
+    (await project()).objects[0].operations[0].fillSettings.sequence,
+    [0, 0.4, 0.1, 0.65],
+  );
+  await reveal(page.locator("#fill-reset"));
+  await page.locator("#fill-reset").click();
+  await ready();
+  assert.deepEqual(needles(await plan()), legacy);
   await page.locator("#fill-pattern").selectOption("twill");
   await ready();
   let p = await project(),

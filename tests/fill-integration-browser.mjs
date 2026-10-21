@@ -37,23 +37,30 @@ try {
       angle: 0,
       underlay: false,
     });
-  await page
-    .locator("#file-input")
-    .setInputFiles({
-      name: "Fill.embstudio",
-      mimeType: "application/json",
-      buffer: Buffer.from(
-        JSON.stringify({
+  o.fillSettings = { version: 1, method: "tatami" };
+  await page.locator("#file-input").setInputFiles({
+    name: "Fill.embstudio",
+    mimeType: "application/json",
+    buffer: Buffer.from(
+      JSON.stringify(
+        stampFillFeatures({
           version: 1,
           name: "Fill library source",
           machine: "se700",
           objects: [o],
         }),
       ),
-    });
+    ),
+  });
   await page.locator("#dialog-submit").click();
   await ready();
   await page.locator('[data-select="reusable-fill"]').click();
+  await page.locator("#fill-method").selectOption("contour");
+  await ready();
+  assert.equal(
+    (await project()).objects[0].operations[0].fillSettings.method,
+    "contour",
+  );
   await page.locator(".fill-method-picker > summary").click();
   assert.equal(await page.locator("[data-fill-method]").count(), 7);
   await page.locator('[data-fill-method="meander"]').focus();
@@ -176,7 +183,12 @@ try {
         machine: "se700",
         objects: [expensive],
       }),
-      small: { version: 1, name: "Latest", machine: "se700", objects: [o] },
+      small: stampFillFeatures({
+        version: 1,
+        name: "Latest",
+        machine: "se700",
+        objects: [o],
+      }),
     },
   );
   assert.deepEqual(latest.delivered, [2]);

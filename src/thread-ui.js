@@ -160,10 +160,7 @@ export function installThreads(api) {
       el.setAttribute(
         "aria-pressed",
         String(
-          el.dataset.libraryView ===
-            (collection === "owned" || collection === "favorites"
-              ? "owned"
-              : "all"),
+          el.dataset.libraryView === (collection === "owned" ? "owned" : "all"),
         ),
       );
   }

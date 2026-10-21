@@ -116,6 +116,16 @@ try {
     "only quantity changes; notes, favorite, lengths and identity survive removal",
   );
   assert.equal(unowned.quantity, 0);
+  await page.locator("#thread-more-filters").evaluate((e) => (e.open = true));
+  await page.locator("#thread-collection").selectOption("favorites");
+  assert.equal(
+    await view("all").getAttribute("aria-pressed"),
+    "true",
+    "unowned favorites belong to filtered browsing, not My Collection",
+  );
+  assert.equal(await page.locator(".thread-result").count(), 1);
+  await view("owned").click();
+  assert.equal(await page.locator(".thread-result").count(), 0);
   assert.match(
     await page.locator("#thread-owned-add").innerText(),
     /Add to My Collection/,

@@ -59,3 +59,21 @@ Tests pass backup round-trip, malformed entry isolation, duplicate/collision imp
 rename/delete, real IndexedDB persistence, quota failure rollback and recovery.
 Next: D companion interface/thumbnail rendering; then E workflow integration and F.
 B and C are now complete; earlier Next lists are historical milestone checkpoints.
+
+## D — complete, locally verified
+
+My Artwork is immediately before Threads in the main header. The companion modal
+reuses thread-library controls/theme/card styling and a single scrolling content
+area with a fixed Insert footer. Source-only SVG previews preserve aspect ratio,
+holes and assigned colors with contrast outlines; no stitch generation is used.
+Search, 40-card pagination, selection, name editing, deletion confirmation,
+backup preview/import and recovery management are wired to C's real store.
+Gallery supports 500-record browser test without rendering every record at once.
+Shared app integration supplies real selection/history APIs; context Save and
+complete cross-project/history/export acceptance remain milestone E.
+
+Files: artwork-ui.js, artwork-thumbnail.js, app/index/workspace CSS, new gallery
+browser and thumbnail unit tests, extended exact-header-order regression.
+Tests pass previews/counters/colors, empty/disabled states, gallery management,
+real backup duplicate handling, escaping, keyboard focus, desktop/tablet/mobile.
+Next: E context menu and full cross-project insertion verification. F remains.

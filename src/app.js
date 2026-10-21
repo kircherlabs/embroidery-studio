@@ -5,6 +5,7 @@ import {
   packageName,
 } from "./export-package.js";
 import { installThreads } from "./thread-ui.js";
+import { installArtworkLibrary } from "./artwork-ui.js";
 import { threadTargets } from "./thread-assignment.js";
 import { exportPreflight, checkRoundTrip } from "./export-safety.js";
 import { installEquipment } from "./equipment-ui.js";
@@ -176,7 +177,7 @@ let history = [],
 const pendingFormats = new Map();
 let clipboard = null;
 let sewingStyleClipboard = null;
-let workspaceLayout, arrangeMenu, equipmentUI, threadUI;
+let workspaceLayout, arrangeMenu, equipmentUI, threadUI, artworkUI;
 const worker = new Worker(new URL("./digitize-worker.js", import.meta.url), {
   type: "module",
 });
@@ -2892,6 +2893,24 @@ document.addEventListener("drop", async (e) => {
   e.preventDefault();
   for (const file of e.dataTransfer.files) await importFile(file);
 });
+artworkUI = installArtworkLibrary({
+  state,
+  mutate,
+  toast,
+  selection: () => (selectedLeaves(state).length ? selectionIds(state) : []),
+  canInsert: () => !stage.draftEditing,
+  selectInserted: (ids) => {
+    state.isolation = null;
+    state.selectionIds = ids;
+    state.selection = ids[0] || null;
+    state.activeOperationId = null;
+  },
+  reveal: () => {
+    setTool("select");
+    stage.fitSelection();
+  },
+});
+$("artwork-library").onclick = () => artworkUI.open();
 threadUI = installThreads({
   state,
   mutate,

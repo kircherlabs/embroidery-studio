@@ -1,3 +1,4 @@
+import { ownershipSelection, setOwnership } from "./thread-ownership.js";
 import {
   collectionUI,
   requirementsUI,
@@ -56,7 +57,7 @@ export function installThreads(api) {
     invoker = null,
     ownershipActions = null;
   const editCollection = () => ownershipActions?.editCollection();
-  const changeOwnership = () => ownershipActions?.changeOwnership();
+  const changeOwnership = (owned) => ownershipActions?.changeOwnership(owned);
   dialog.addEventListener("keydown", (e) => {
     if (e.key === "Escape") {
       e.preventDefault();
@@ -140,17 +141,29 @@ export function installThreads(api) {
         (i) => i.thread.id === chosen && i.quantity > 0,
       ),
       add = $("thread-owned-add");
+    const batch = ownershipSelection(library, collectionChecks);
     add.textContent = collectionChecks.size
-      ? `Add checked to My Collection (${collectionChecks.size})`
+      ? batch.unowned.length
+        ? `Add ${batch.owned.length ? "Unowned" : "Selected"} to My Collection (${batch.unowned.length})`
+        : `Remove Selected from My Collection (${batch.owned.length})`
       : owned
         ? "Remove from My Collection"
         : "Add to My Collection";
     add.disabled = !collectionChecks.size && !selected;
     add.dataset.help = collectionChecks.size
-      ? "Mark checked spools as owned; existing quantities are retained."
+      ? "Changes ownership only. Existing catalog records, spool details and design assignments are retained."
       : owned
         ? "Set owned quantity to zero. Catalog, notes and design assignments are retained."
         : "Record this spool as owned without assigning it to your design.";
+    $("thread-owned-remove").hidden = !(
+      batch.owned.length && batch.unowned.length
+    );
+    $("thread-owned-remove").textContent =
+      `Remove Owned from My Collection (${batch.owned.length})`;
+    $("thread-checked-count").textContent =
+      `${collectionChecks.size} checked for collection`;
+    $("thread-checked-count").hidden = !collectionChecks.size;
+    $("thread-clear-checked").hidden = !collectionChecks.size;
     add.setAttribute("aria-description", add.dataset.help);
     dialog
       .querySelector(".thread-browse")
@@ -245,7 +258,7 @@ export function installThreads(api) {
       : '<p class="property-note">Select a swatch to see its full spool details. Screen colors are approximate.</p>';
     $("thread-detail").insertAdjacentHTML(
       "beforeend",
-      `<div class="thread-detail-actions">${button("thread-owned-add", "Add to My Collection")}${button("thread-collection-edit", "Collection details…")}</div>`,
+      `<div class="thread-detail-actions"><span id="thread-checked-count" role="status"></span>${button("thread-owned-add", "Add to My Collection")}${button("thread-owned-remove", "Remove Owned from My Collection")}${button("thread-clear-checked", "Clear selection")}${button("thread-collection-edit", "Collection details…")}</div>`,
     );
     if (selected) {
       $("thread-detail").insertAdjacentHTML(
@@ -272,7 +285,12 @@ export function installThreads(api) {
     }
     $("thread-use").disabled = !selected || !targets.length;
     $("thread-collection-edit").disabled = !selected;
-    $("thread-owned-add").onclick = changeOwnership;
+    $("thread-owned-add").onclick = () => changeOwnership();
+    $("thread-owned-remove").onclick = () => changeOwnership(false);
+    $("thread-clear-checked").onclick = () => {
+      collectionChecks.clear();
+      renderList();
+    };
     $("thread-collection-edit").onclick = editCollection;
     updateOwnedButton();
     const restore = focusThread
@@ -348,6 +366,7 @@ export function installThreads(api) {
     $("thread-brand").onchange = () => {
       pageIndex = 0;
       updateLines();
+      collectionChecks.clear();
       renderList();
     };
     for (const id of [
@@ -358,6 +377,7 @@ export function installThreads(api) {
       "thread-sort",
     ])
       $(id).onchange = () => {
+        collectionChecks.clear();
         pageIndex = 0;
         renderList();
       };
@@ -365,6 +385,7 @@ export function installThreads(api) {
     $("thread-search").oninput = () => {
       clearTimeout(timer);
       timer = setTimeout(() => {
+        collectionChecks.clear();
         pageIndex = 0;
         renderList();
       }, 100);
@@ -505,22 +526,13 @@ export function installThreads(api) {
       const thread = libraryThreads(library).find((r) => r.id === chosen);
       if (thread) collectionUI({ ...common(), thread });
     }
-    async function changeOwnership() {
+    async function changeOwnership(owned) {
       if (saving) return;
-      const next = structuredClone(library),
-        selectedIds = collectionChecks.size
-          ? new Set(collectionChecks)
-          : new Set([chosen]),
+      const ids = collectionChecks.size ? [...collectionChecks] : [chosen],
+        batch = ownershipSelection(library, ids),
         remove =
-          !collectionChecks.size &&
-          next.inventory.some((i) => i.thread.id === chosen && i.quantity > 0);
-      for (const thread of libraryThreads(library).filter((r) =>
-        selectedIds.has(r.id),
-      )) {
-        const entry = next.inventory.find((i) => i.thread.id === thread.id);
-        if (entry) entry.quantity = remove ? 0 : Math.max(1, entry.quantity);
-        else if (!remove) next.inventory.push(inventoryEntry(thread));
-      }
+          owned === false || (owned === undefined && !batch.unowned.length),
+        next = setOwnership(library, ids, !remove);
       if (await persist(next)) {
         collectionChecks.clear();
         if ($("thread-search")) {

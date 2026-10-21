@@ -1512,6 +1512,96 @@
   position: static;
 }
 
+/* My Artwork shares the thread library's header, controls, cards and single scroller. */
+.artwork-dialog:has(#artwork-results) {
+  height: min(850px, calc(100dvh - 24px));
+  overflow: hidden;
+}
+.artwork-dialog:has(#artwork-results) > form {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+.artwork-dialog .dialog-heading {
+  margin-bottom: 12px;
+}
+.artwork-dialog .thread-toolbar > button {
+  margin-left: 0;
+}
+.artwork-dialog .dialog-actions {
+  margin-top: 12px;
+  align-items: center;
+}
+.artwork-dialog .dialog-actions button {
+  min-height: 40px;
+}
+.artwork-search-label {
+  display: grid;
+  gap: 5px;
+  margin-block: 10px;
+}
+.artwork-search-label input {
+  width: 100%;
+  min-height: 40px;
+}
+#artwork-results {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(175px, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+.artwork-thumbnail {
+  width: 100%;
+  height: 130px;
+  border: 1px solid #aebba8;
+  border-radius: 5px;
+  background: repeating-conic-gradient(#eef1e7 0% 25%, #d4ddcf 0% 50%) 50% /
+    16px 16px;
+}
+.artwork-card .thread-card-label small {
+  white-space: normal;
+}
+#artwork-selected {
+  margin-right: auto;
+  color: var(--muted);
+  font-size: 11px;
+  max-width: 65%;
+}
+#artwork-management {
+  max-width: 100%;
+}
+#artwork-management summary {
+  cursor: pointer;
+  padding: 10px 0;
+}
+#artwork-count {
+  font-size: 12px;
+  color: var(--muted);
+}
+#artwork-status:not(:empty) {
+  margin-block: 8px;
+  line-height: 1.5;
+}
+@media (max-width: 700px) {
+  #artwork-results {
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  }
+  .artwork-thumbnail {
+    height: 105px;
+  }
+  .artwork-dialog .dialog-actions {
+    flex-wrap: wrap;
+  }
+  #artwork-selected {
+    flex-basis: 100%;
+    max-width: 100%;
+  }
+  .artwork-dialog .dialog-actions button {
+    min-height: 44px;
+  }
+}
+
 .thread-disclosures {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

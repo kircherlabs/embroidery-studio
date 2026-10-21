@@ -42,6 +42,7 @@ try {
   await ready();
   const initialProject = await project();
   const headerOrder = [
+    "artwork-library",
     "thread-library",
     "new-project",
     "open-file",
@@ -54,7 +55,7 @@ try {
       .evaluateAll((es) => es.map((e) => e.id)),
     headerOrder,
   );
-  await page.locator("#thread-library").focus();
+  await page.locator("#artwork-library").focus();
   for (const id of headerOrder.slice(1)) {
     await page.keyboard.press("Tab");
     assert.equal(

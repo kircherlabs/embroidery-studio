@@ -80,7 +80,11 @@ try {
   await page.locator("#thread-brand").selectOption("newbrothread");
   await page.locator(".thread-result").click();
   await page.locator(`[data-collection-check="${id}"]`).check();
-  await page.locator("#thread-owned-add").click();
+  assert.match(
+    await page.locator("#thread-owned-add").innerText(),
+    /Remove Selected/,
+  );
+  await page.locator(`[data-collection-check="${id}"]`).uncheck();
   await page.waitForFunction(() =>
     document.querySelector("#thread-results").textContent.includes("Owned ×1"),
   );

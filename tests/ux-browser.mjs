@@ -395,6 +395,9 @@ try {
   await mobile.locator("#toggle-sequence").tap();
   const sewing = (id) =>
     mobile.locator(`.sewing-object[data-reorder-id="${id}"]`);
+  // The readable command track now precedes object order. Raw CDP touch
+  // coordinates require the existing order row to be scrolled into view.
+  await mobile.locator("#sewing-order").scrollIntoViewIfNeeded();
   const from = await sewing(m2).locator("[data-sew-grip]").boundingBox(),
     toFirst = await sewing(m3).boundingBox();
   await touch.send("Input.dispatchTouchEvent", {

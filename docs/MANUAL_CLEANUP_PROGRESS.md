@@ -40,6 +40,11 @@ Full 46-suite browser regression is running. Before release: finish validation,
 review final changes, build, commit/push, PR + exact-head CI, merge, Pages deploy,
 live asset/browser verification. No deployment of this feature yet. Protected
 backup branches, including the existing BACKUP-V0.16.0, must remain unchanged.
+The established mobile order test now scrolls the unchanged sewing-order row
+into view before injecting raw CDP touch coordinates, since the improved command
+track appears above that row. Its drag/order assertions remain unchanged.
+One dense SVG regeneration timed out under concurrent local load and passed
+unchanged in isolation; no assertion or timeout was weakened.
 
 Remaining limitations: estimates cannot determine physical trimming, future stitch
 coverage, actual fabric visibility, or hidden travel intent in decoded stitches.

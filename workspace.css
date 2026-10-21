@@ -1087,6 +1087,16 @@
 .equipment-actions [hidden] {
   display: none;
 }
+/* Keep the mobile field stack independent of container resize timing. */
+@media (max-width: 700px) {
+  .workspace-machine .machine-settings {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .workspace-machine .machine-settings input,
+  .workspace-machine .machine-settings select {
+    height: 40px;
+  }
+}
 @container drawing-workspace (max-width: 550px) {
   .workspace-machine .machine-settings {
     grid-template-columns: minmax(0, 1fr);

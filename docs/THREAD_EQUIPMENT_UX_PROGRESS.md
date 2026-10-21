@@ -29,6 +29,10 @@ Protected backup branches are untouched.
 - The header now reads **Threads · New · Import / Open · Save project · Export**.
   Threads sits left of the file actions; Save and Export remain adjacent. DOM,
   keyboard and responsive visual order agree, with all five controls visible on mobile.
+- CI caught a mobile equipment overflow assertion after a desktop-to-mobile
+  resize. Added a viewport media fallback alongside the workspace container query
+  so the mobile stack does not depend on container resize timing. The overflow
+  assertion remains intact and now reports measured widths/columns on failure.
 - Equipment search uses a full-width first row, followed by aligned Brand, Model
   and Hoop fields of equal height. Compact secondary actions and collapsible
   sources remain; narrow workspace widths stack fields cleanly.

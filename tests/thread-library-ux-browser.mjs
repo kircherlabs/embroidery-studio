@@ -363,10 +363,17 @@ try {
     ),
     "mobile visual order follows Threads, New, Import, Save, Export",
   );
+  const equipmentLayout = await page
+    .locator(".machine-settings")
+    .evaluate((e) => ({
+      scrollWidth: e.scrollWidth,
+      clientWidth: e.clientWidth,
+      columns: getComputedStyle(e).gridTemplateColumns,
+      viewportWidth: innerWidth,
+    }));
   assert.ok(
-    await page
-      .locator(".machine-settings")
-      .evaluate((e) => e.scrollWidth <= e.clientWidth + 2),
+    equipmentLayout.scrollWidth <= equipmentLayout.clientWidth + 2,
+    `Mobile equipment must not overflow: ${JSON.stringify(equipmentLayout)}`,
   );
   await page.screenshot({ path: "test-results/ux-after-equipment-mobile.png" });
   const touch = await browser.newPage({

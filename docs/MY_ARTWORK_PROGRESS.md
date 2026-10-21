@@ -19,7 +19,7 @@ New unit/browser suites accompany each module; shared realistic fixture contains
 nested groups, holes, Smart Shapes, cubic handles, rails/rungs, live lettering on
 a baseline, linked effects, construction steps and manual stitches.
 
-## F — locally verified; CI/publication pending
+## F — complete, merged and live
 
 310 automated tests and all 10 native codec/format safety tests pass. Expanded
 gallery recovery checks and existing Thread Library UX/header keyboard/mobile
@@ -31,10 +31,27 @@ CI includes all 38 previous browser suites plus bulk ownership, artwork storage,
 gallery and cross-project suites (42 total). Release v0.15.0.
 User guide: `docs/MY_ARTWORK.md`.
 
-Next: commit F, push and open PR.
-Merge only after CI passes; wait for Pages and verify public runtime assets and
-isolated live workflows. Record publication evidence here. No intermediate
-milestone has been deployed.
+Release milestone: `3540008`; asynchronous gallery reload test correction:
+`957eb5c`. All 310 automated, 10 native safety and 42 browser suites passed in
+[PR CI](https://github.com/kircherlabs/embroidery-studio/actions/runs/39566011276).
+[PR #26](https://github.com/kircherlabs/embroidery-studio/pull/26) merged at
+`5b5c11d06c1c37c0bd2484c27e3886867e6850d8`.
+
+[Main CI and Pages deployment](https://github.com/kircherlabs/embroidery-studio/actions/runs/39567649507)
+passed all tests and deployed v0.15.0. On October 21, 2026, all 11 changed public
+runtime files were compared with merged source and matched (normalized line
+endings). The version footer reports v0.15.0.
+
+Isolated live Edge/Chrome workflows passed bulk ownership, storage/backup/quota
+recovery, the 500-entry desktop/mobile gallery, cross-project insertion, source
+independence, touch, Undo/Redo, live fonts, saved projects, oversize warnings and
+actual decoded PES needles/stops/extents/origin. Local gallery screenshots are
+in ignored `test-results/my-artwork-{desktop,mobile}.png`.
+
+All milestones A–F are complete. No intermediate milestone was deployed. All
+protected backup references were checked unchanged, including BACKUP-V0.14.1
+at `8c6636b` and backup-before-creative-update at `99c0a78`. No required follow-up
+implementation remains for this assignment; future changes can start from main.
 
 ## Boundaries
 

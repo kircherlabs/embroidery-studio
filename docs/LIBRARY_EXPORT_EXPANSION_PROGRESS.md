@@ -88,7 +88,7 @@ reference images or personal inventory. Existing single-file export stays intact
 Files: export-package.js, app.js, vendor/fflate.js + MIT license, new package unit and
 browser tests, CI and documentation. fflate 0.8.3 is pinned locally, SHA256
 B7CA4450B19559A1D50EB381ADCEE94B82449674BE4CD17789D9BEBA7E6122A1.
-Three unit cases validate actual six-format commands/bytes, archive extraction and
+Four unit cases validate actual six-format commands/bytes, archive extraction and
 independent ZIP CRC checks, geometry with holes, names, failures and JEF/VP3 omissions.
 Browser download passes every-entry byte comparison to observed unmodified writer
 output, separate standalone PES equivalence, dimensions, colors/stops, review/cancel,
@@ -96,8 +96,8 @@ project preservation and mobile. Final unit rerun and production build passed be
 
 ## F — release validation in progress
 
-Release target: v0.14.0. All 301 JS tests and 10 native codec/format tests passed.
-The full 37-suite browser run is in progress. The final production build separately
+Release target: v0.14.0. All 302 JS tests and 10 native codec/format tests passed.
+All 37 local browser suites passed. The final production build separately
 passed starter, entry, equipment and actual ZIP workflows in Chrome, including mobile.
 Mark selected owned now works directly without a separate checkbox; checkboxes still
 select multiple spools, and repeated marking never increments stock. Selected ownership,
@@ -109,8 +109,11 @@ Files: package/footer version, README, thread/machine/previous-progress docs, th
 provenance retention and its browser assertion. Logs: test-results/expansion-F-_.log,
 expansion-dist-_.log; screenshots: thread-starters-_, library-entry-_, export-package-\*.
 
-Exact next steps: finish all 37 local browser suites, commit the release preparation,
-push and open/attach a PR; require full CI success before merging. Wait for the main
+Exact next steps: require full CI success on the latest commit of PR #24 before merging.
+The final added ZIP regression verifies actual six-format thread-change pauses and
+ordered CSV spool numbers for distinct physical products sharing the same HEX. It
+passes, as does the complete 302-test rerun. No runtime changed in that test follow-up.
+Release preparation `33cd19c` and selected-ownership polish `5de8b2d` are pushed. Wait for the main
 Pages deployment, compare published runtime sources and v0.14.0 footer, and run the
 new thread-entry/starter/equipment/ZIP browser workflows on the public URL. Only then
 record publication as verified. Do not bypass failed checks.

@@ -1,3 +1,5 @@
+import { normalizeThread } from "../src/thread-records.js";
+import { assignThread, threadTargets } from "../src/thread-assignment.js";
 import { makeOperation } from "../src/operations.js";
 import test from "node:test";
 import assert from "node:assert/strict";
@@ -196,4 +198,28 @@ test("per-format failures, unsafe STOP and large JEF omissions are explicit and 
       .reasons.join()
       .includes("200 mm"),
   );
+});
+
+test("ZIP thread chart and all six machine files preserve distinct physical spools sharing a screen color", async () => {
+  const p = fixture();
+  for (const [i, o] of p.objects.entries()) {
+    const r = normalizeThread({
+      brandName: i ? "Another brand" : "Personal brand",
+      lineName: "Synthetic test line",
+      number: i ? "001" : "007",
+      colorName: i ? "Second spool" : "First spool",
+      hex: "#123456",
+    });
+    assignThread(threadTargets([o], { bulkOperations: "all" }, false), r);
+  }
+  const plan = generate(p),
+    result = await preparePackage(p, plan, native);
+  assert.equal(plan.stats.changes, 1);
+  assert.equal(result.files.length, 6, JSON.stringify(result.omitted));
+  const entries = unzipSync(packageArchive(p, plan, result)),
+    csv = strFromU8(entries["THREAD-SEQUENCE.csv"]);
+  assert.match(csv, /"Personal brand".*"007".*"First spool"/);
+  assert.match(csv, /"Another brand".*"001".*"Second spool"/);
+  assert.ok(csv.indexOf('"007"') < csv.indexOf('"001"'));
+  assert.match(strFromU8(entries["README.txt"]), /repeated-color/);
 });

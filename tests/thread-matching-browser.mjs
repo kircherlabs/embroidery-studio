@@ -34,6 +34,14 @@ try {
       p.name,
     );
     await ready();
+    await page.evaluate(async () => {
+      const { loadThreads, saveThreads } = await import(
+        "./src/thread-store.js"
+      );
+      const d = await loadThreads();
+      d.preferences.includeBuiltins = false;
+      await saveThreads(d);
+    });
   };
   await page.goto(process.env.STUDIO_URL || "http://127.0.0.1:5173/");
   await ready();
@@ -58,6 +66,7 @@ try {
       objects: [o],
     },
     library = emptyThreads();
+  library.preferences.includeBuiltins = false;
   library.records = [
     normalizeThread({
       brandName: "New brothread",

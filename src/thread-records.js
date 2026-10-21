@@ -1,3 +1,4 @@
+import { STARTER_PACKS, STARTER_VERSION } from "./thread-starters.js";
 // Physical identity is independent of a digital approximation or PEC palette index.
 export const THREAD_BRANDS = {
   newbrothread: "New brothread",
@@ -128,7 +129,9 @@ export function validateThread(r) {
   const s = r.source;
   if (
     !s ||
-    !["user-imported", "user-entered"].includes(s.verification) ||
+    !["user-imported", "user-entered", "published-identifiers"].includes(
+      s.verification,
+    ) ||
     ![
       "digital-approximation",
       "unknown",
@@ -137,6 +140,7 @@ export function validateThread(r) {
       "chart-approximation",
       "third-party-approximation",
       "manufacturer-digital",
+      "studio-approximation",
     ].includes(s.colorAccuracy)
   )
     throw Error("Invalid thread provenance.");
@@ -226,6 +230,11 @@ export function validateThreadLibrary(d) {
     typeof d.preferences.ownedOnly !== "boolean"
   )
     throw Error("Invalid owned collection preference.");
+  if (
+    d.preferences.includeBuiltins !== undefined &&
+    typeof d.preferences.includeBuiltins !== "boolean"
+  )
+    throw Error("Invalid built-in catalog preference.");
   if (d.inventory.length > 50000)
     throw Error("Thread collection exceeds 50,000 spools.");
   const owned = new Set();
@@ -277,9 +286,48 @@ export const inventoryEntry = (thread, quantity = 1) =>
     notes: "",
     favorite: false,
   });
+let starters;
+export function builtinThreads() {
+  if (!starters)
+    starters = Object.freeze(
+      STARTER_PACKS.flatMap((pack) =>
+        pack.rows.map(([number, colorName, hex]) => {
+          const r = normalizeThread({
+            brandId: pack.brandId,
+            brandName: THREAD_BRANDS[pack.brandId],
+            lineId: pack.lineId,
+            lineName: pack.lineName,
+            number,
+            colorName,
+            hex: "#" + hex,
+            material: pack.material,
+            weight: pack.weight,
+            source: {
+              name: pack.evidence,
+              url: pack.url,
+              catalogVersion: STARTER_VERSION,
+              license:
+                "Factual identifiers and original Studio screen estimates. No chart artwork or manufacturer RGB license is claimed.",
+              attribution:
+                "Brand names identify products; no endorsement. Starter subset only.",
+            },
+          });
+          r.source.verification = "published-identifiers";
+          r.source.colorAccuracy = "studio-approximation";
+          validateThread(r);
+          Object.freeze(r.source);
+          Object.freeze(r.spoolSizes);
+          return Object.freeze(r);
+        }),
+      ),
+    );
+  return starters;
+}
 export function libraryThreads(library) {
-  // Removed catalogs do not erase personally recorded spool identities.
+  // Saved ownership is a fallback, never a second copy of the installed catalog.
   const map = new Map(library.inventory.map((i) => [i.thread.id, i.thread]));
-  for (const r of library.records) map.set(r.id, r);
+  if (library.preferences.includeBuiltins !== false)
+    for (const r of builtinThreads()) map.set(r.id, r);
+  for (const r of library.records) map.set(r.id, r); // explicit personal corrections win
   return [...map.values()];
 }

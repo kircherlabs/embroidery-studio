@@ -23,8 +23,19 @@ uploading a chart does not grant the app redistribution rights.
 Example schema only (synthetic, not a manufacturer catalog):
 
 ```json
-{"records":[{"brandName":"My Brand","lineName":"My line","number":"001",
-"colorName":"My blue approximation","hex":"#123456","material":null,"weight":null}]}
+{
+  "records": [
+    {
+      "brandName": "My Brand",
+      "lineName": "My line",
+      "number": "001",
+      "colorName": "My blue approximation",
+      "hex": "#123456",
+      "material": null,
+      "weight": null
+    }
+  ]
+}
 ```
 
 Every entry keeps stable identity, brand/line names and IDs, text spool number,
@@ -134,3 +145,13 @@ not share transactions, both old stores are retained and rolled back on a write
 failure, with explicit feedback if even rollback fails. Keep a backup outside browser
 storage. Backups remain personal data and do not establish catalog redistribution rights.
 The importer validates a versioned schema and accepts backup files up to 64 MB.
+
+## Starter catalogs and easier entry (next release)
+
+Built-in starter subsets are available immediately; coverage and source/accuracy review
+are in [THREAD_STARTERS.md](THREAD_STARTERS.md). Studio-estimated screen swatches are
+editable and approximate. Add thread requires only brand and text spool number; an
+unknown line is explicitly Unspecified product line. Use HEX, RGB or the color picker,
+or copy an existing catalog approximation. Personal entries can be corrected or removed.
+Library management contains import, backup/restore, defaults and starter browsing.
+Original HEX-only design/export workflows remain available without an inventory.

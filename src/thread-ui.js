@@ -8,6 +8,7 @@ import { matchingUI } from "./thread-matching-ui.js";
 import {
   THREAD_BRANDS,
   normalizeThread,
+  builtinThreads,
   mergeCatalog,
   libraryThreads,
   inventoryEntry,
@@ -176,7 +177,7 @@ export function installThreads(api) {
             `<div class="thread-library-row"><button type="button" class="thread-result ${chosen === r.id ? "selected" : ""}" data-thread="${esc(r.id)}" aria-pressed="${chosen === r.id}">${dot(r)}<span><strong>${esc(r.number || "Unnumbered swatch")} · ${esc(r.colorName || "Name unavailable")}</strong><small>${esc(r.brandName)} · ${esc(r.lineName)}${r.material ? " · " + esc(r.material) : ""}${r.weight ? " · " + esc(r.weight) : ""}${inventory.get(r.id)?.quantity > 0 ? " · Owned ×" + inventory.get(r.id).quantity : " · Not owned"}${inventory.get(r.id)?.favorite ? " · Favorite" : ""}</small></span></button><label class="collection-mark"><input type="checkbox" data-collection-check="${esc(r.id)}" aria-label="Select ${esc(r.number || r.colorName || "spool")} for collection" ${collectionChecks.has(r.id) ? "checked" : ""}></label></div>`,
         )
         .join("") ||
-      '<div class="thread-empty"><strong>Your thread library</strong><p>No colors match these filters. Add a spool or use Library management to import a catalog. Clear search and filters to browse all threads.</p><p>Physical threads and inventory are optional; ordinary design colors still export normally.</p></div>';
+      '<div class="thread-empty"><strong>Your thread library</strong><p>No colors match these filters. Clear filters, enable built-in starter catalogs, add a spool or import a catalog through Library management. Clear search and filters to browse all threads.</p><p>Physical threads and inventory are optional; ordinary design colors still export normally.</p></div>';
     $("thread-result-count").textContent =
       `${rows.length.toLocaleString()} entries · page ${pageIndex + 1} of ${count}`;
     $("thread-prev").disabled = pageIndex === 0;
@@ -185,27 +186,28 @@ export function installThreads(api) {
     $("thread-detail").innerHTML = selected
       ? `${dot(selected)}<strong>${esc(display(selected))}</strong><p>${selected.hex ? esc(selected.hex) + " · digital approximation" : "No HEX reference; assignment retains the design color."}</p><p>${esc(selected.material || "Material unknown")} · ${esc(selected.weight || "Weight unknown")}${selected.spoolSizes.length ? " · " + esc(selected.spoolSizes.join(", ")) : ""}</p><details><summary>Source &amp; accuracy</summary><p>${esc(selected.source.name || "Source not provided")} · ${esc(selected.source.catalogVersion || "Version unknown")}<br>${esc(selected.source.verification)} · ${esc(selected.source.colorAccuracy)}</p><p>${esc(selected.source.url || "")}</p><p>${esc(selected.source.license || "Redistribution rights not established")}<br>${esc(selected.source.attribution || "")}</p></details>`
       : '<p class="property-note">Choose a color to view its spool identity and source. Screen approximations do not reproduce physical thread exactly.</p>';
-    if (selected && library.records.some((r) => r.id === selected.id)) {
+    if (selected) {
       $("thread-detail").insertAdjacentHTML(
         "beforeend",
-        `<div class="thread-top-actions">${button("thread-edit", "Edit thread…")}${button("thread-delete", "Remove personal entry…")}</div>`,
+        `<div class="thread-top-actions">${button("thread-edit", "Edit approximate color…")}${library.records.some((r) => r.id === selected.id) ? button("thread-delete", "Remove personal entry…") : ""}</div>`,
       );
       $("thread-edit").onclick = () => manual(selected);
-      $("thread-delete").onclick = () => {
-        dialog.innerHTML =
-          head("Remove personal entry?") +
-          `<p>Remove ${esc(display(selected))} from your local catalog? Owned-spool records and saved project assignments keep their snapshots. Remove stock separately through Collection details.</p>` +
-          end(
-            button("thread-delete-back", "Keep entry") +
-              button("thread-delete-confirm", "Remove entry"),
-          );
-        $("thread-delete-back").onclick = picker;
-        $("thread-delete-confirm").onclick = async () => {
-          const next = structuredClone(library);
-          next.records = next.records.filter((r) => r.id !== selected.id);
-          if (await persist(next)) picker();
+      if ($("thread-delete"))
+        $("thread-delete").onclick = () => {
+          dialog.innerHTML =
+            head("Remove personal entry?") +
+            `<p>Remove ${esc(display(selected))} from your local catalog? Owned-spool records and saved project assignments keep their snapshots. Remove stock separately through Collection details.</p>` +
+            end(
+              button("thread-delete-back", "Keep entry") +
+                button("thread-delete-confirm", "Remove entry"),
+            );
+          $("thread-delete-back").onclick = picker;
+          $("thread-delete-confirm").onclick = async () => {
+            const next = structuredClone(library);
+            next.records = next.records.filter((r) => r.id !== selected.id);
+            if (await persist(next)) picker();
+          };
         };
-      };
     }
     $("thread-use").disabled = !selected || !targets.length;
     $("thread-collection-edit").disabled = !selected;
@@ -219,7 +221,7 @@ export function installThreads(api) {
     pageIndex = 0;
     dialog.innerHTML =
       head("Thread library") +
-      `<p class="property-note">Find a spool to assign or optionally mark as owned. Your collection stays on this device; ordinary design colors work without it.</p><div class="thread-top-actions">${button("thread-manual", "Add thread…")}${button("thread-owned-add", "Mark checked owned")}${button("thread-collection-edit", "Collection details…")}${button("thread-match", "Match design colors…")}${button("thread-requirements", "Project threads…")}</div><details id="thread-management"><summary>Library management</summary><div class="thread-top-actions">${button("thread-import", "Import catalog…")}${button("thread-personal", "Backup / restore…")}${button("thread-prefer", "Use brand / line as default")}${button("thread-remove-line", "Remove selected line…")}</div><p class="property-note">Personal imports stay local. Import does not grant redistribution rights. PEC machine colors are separate from physical thread products.</p></details><p id="library-status" role="status"></p><div class="thread-filters"><label>Brand<select id="thread-brand">${option("", "All brands")}${family()
+      `<p class="property-note">Find a spool to assign or optionally mark as owned. Your collection stays on this device; ordinary design colors work without it.</p><div class="thread-top-actions">${button("thread-manual", "Add thread…")}${button("thread-owned-add", "Mark checked owned")}${button("thread-collection-edit", "Collection details…")}${button("thread-match", "Match design colors…")}${button("thread-requirements", "Project threads…")}</div><details id="thread-management"><summary>Library management</summary><div class="thread-top-actions">${button("thread-import", "Import catalog…")}${button("thread-personal", "Backup / restore…")}${button("thread-prefer", "Use brand / line as default")}${button("thread-remove-line", "Remove selected line…")}</div><p class="property-note">Personal imports stay local. Built-in catalogs are partial factual starter subsets with Studio-estimated screen colors; verify against your spool. PEC machine colors are separate from physical thread products.</p><label class="check"><input id="thread-builtins" type="checkbox" ${library.preferences.includeBuiltins !== false ? "checked" : ""}>Browse built-in starter catalogs</label></details><p id="library-status" role="status"></p><div class="thread-filters"><label>Brand<select id="thread-brand">${option("", "All brands")}${family()
         .map(([id, n]) => option(id, n))
         .join(
           "",
@@ -250,6 +252,11 @@ export function installThreads(api) {
         '<button value="cancel" formnovalidate>Close</button>' +
           button("thread-use", "Assign selected thread"),
       );
+    $("thread-builtins").onchange = async () => {
+      const next = structuredClone(library);
+      next.preferences.includeBuiltins = $("thread-builtins").checked;
+      if (await persist(next)) picker();
+    };
     $("thread-collection").value = library.preferences.ownedOnly
       ? "owned"
       : "all";
@@ -319,6 +326,7 @@ export function installThreads(api) {
       const next = structuredClone(library),
         line = $("thread-line").value.split("|");
       next.preferences = {
+        includeBuiltins: library.preferences.includeBuiltins !== false,
         ownedOnly: $("thread-collection").value === "owned",
       };
       if ($("thread-brand").value)
@@ -354,6 +362,12 @@ export function installThreads(api) {
       const count = library.records.filter(
         (r) => r.brandId + "|" + r.lineId === line,
       ).length;
+      if (!count) {
+        api.toast(
+          "This is a built-in starter line. Turn off built-in catalogs to browse personal entries only; owned spools and project assignments are retained.",
+        );
+        return;
+      }
       dialog.innerHTML =
         head("Remove local catalog line?") +
         `<p>Remove ${count} local entries? Saved projects keep their physical thread snapshots and visual fallbacks. Source files are untouched.</p>` +
@@ -535,7 +549,7 @@ export function installThreads(api) {
   }
   function manual(existing = null) {
     dialog.innerHTML =
-      head(existing ? "Edit personal thread" : "Add a personal thread") +
+      head(existing ? "Edit thread approximation" : "Add a personal thread") +
       `<p class="property-note">Copy the spool label. Only brand and spool number are required. Leave product line blank if unknown; it will be listed as Unspecified product line.</p><div class="thread-filters"><label>Brand<input id="manual-thread-brand" required maxlength="160" autocomplete="off" aria-describedby="manual-thread-error"></label><label>Product line (optional)<input id="manual-thread-line" maxlength="160"></label><label>Spool number<input id="manual-thread-number" required maxlength="80" aria-describedby="manual-thread-error"></label><label>Color name (optional)<input id="manual-thread-name" maxlength="160"></label><label>HEX approximation (optional)<input id="manual-thread-hex" placeholder="#123456" maxlength="7" aria-describedby="manual-thread-error"></label></div><div class="thread-color-editor"><output id="manual-color-preview" aria-live="polite"></output><label>Visual color picker<input type="color" id="manual-color-picker" value="#4079b0"></label>${button("manual-color-use", "Use picker color")}<div class="thread-rgb">${["R", "G", "B"].map((c) => `<label>${c}<input id="manual-color-${c}" type="number" min="0" max="255" step="1" aria-label="${c} color channel"></label>`).join("")}</div></div><p class="property-note">Screen colors are approximate. Choose a color to enable visual matching, or leave HEX empty for a label-only spool. Corrections keep the same spool identity; saved project snapshots change only when reassigned.</p><details><summary>Use an existing catalog color</summary><label>Search color or spool number<input id="manual-color-search" type="search"></label><label>Copy an approximate color<select id="manual-color-source"></select></label></details><details><summary>Optional spool details</summary><div class="thread-filters"><label>Material<input id="manual-thread-material" maxlength="160"></label><label>Weight<input id="manual-thread-weight" maxlength="160"></label></div></details><p id="manual-thread-error" role="alert"></p>` +
       end(
         button("manual-thread-back", "Back") +
@@ -637,7 +651,10 @@ export function installThreads(api) {
       ]) {
         const input = $("manual-thread-" + id);
         input.removeAttribute("aria-invalid");
-        if (!input.value.trim()) {
+        if (
+          !input.value.trim() &&
+          !(existing && id === "number" && existing.number === null)
+        ) {
           error.textContent = message;
           input.setAttribute("aria-invalid", "true");
           input.focus();

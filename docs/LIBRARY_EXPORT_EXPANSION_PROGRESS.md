@@ -37,9 +37,25 @@ Catalog records override fallback inventory snapshots during browsing.
 All 19 relevant unit tests and entry/catalog/inventory/matching browser suites pass,
 including real exports, edit/remove, exact identity, corrected owned preview and reload.
 
-C: sourced real starter catalogs with reviewed factual identifiers and explicitly classified
-approximations; separate immutable built-ins from personal overrides/inventory. Do not
-copy the research dataset or chart graphics without review. Coverage must be honest.
+C — starter catalogs complete and verified (B commit `09d5ecd`).
+171 reviewed starter records across seven brands: New brothread 70, Brother 12,
+Simthread 23, Madeira 12, Sulky 12, Robison-Anton 12, Isacord 30. Explicit subsets,
+not complete catalogs; Floriani remains unpopulated. Sources and rights/data review
+are in THREAD_STARTERS.md. Original Studio RGB estimates are explicitly approximate;
+no research palette RGBs, chart graphics or conversion table is bundled.
+Files: thread-starters.js, thread-records.js, thread-ui.js, new starter unit/browser
+tests, fixture-scoping updates to existing thread browser suites and CI.
+Built-ins stay separate from personal data. Stable IDs, personal corrections,
+inventory fallback and project snapshots survive catalog updates. Optional built-in
+browsing preference is saved and backed up. Legacy personal-catalog tests explicitly
+isolate their synthetic fixtures; the new suite tests default populated browsing.
+Validation: all 297 JS tests pass with bundled PYTHON, plus starter/entry/catalog/
+inventory/matching browser suites, desktop/mobile screenshots and actual exports.
+An initial full-test attempt omitted PYTHON and failed 19 native-export calls because
+the system Python alias is unavailable; rerun with the bundled interpreter passed.
+No tests were weakened. Full manufacturer coverage and measured/licensed RGB remain
+future data work, not claimed complete.
+
 D: expand exact-model/hoop evidence and searchable selection; preserve export guards.
 E: locally packaged validated format bytes, review omissions, README/thread chart,
 archive extraction and standalone-byte comparisons, browser download.

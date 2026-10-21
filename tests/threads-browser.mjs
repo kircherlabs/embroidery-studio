@@ -35,6 +35,14 @@ try {
         p.name,
       );
       await ready();
+      await page.evaluate(async () => {
+        const { loadThreads, saveThreads } = await import(
+          "./src/thread-store.js"
+        );
+        const d = await loadThreads();
+        d.preferences.includeBuiltins = false;
+        await saveThreads(d);
+      });
     };
   const importCatalog = async (name, body) => {
     const chooser = page.waitForEvent("filechooser");

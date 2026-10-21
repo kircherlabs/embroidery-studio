@@ -19,6 +19,13 @@ try {
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto(process.env.STUDIO_URL || "http://127.0.0.1:5173/");
   await page.waitForFunction(() => window.studio?.getPlan());
+
+  await page.evaluate(async () => {
+    const { loadThreads, saveThreads } = await import("./src/thread-store.js");
+    const d = await loadThreads();
+    d.preferences.includeBuiltins = false;
+    await saveThreads(d);
+  });
   await page.locator("#thread-library").click();
   await page.locator("#thread-manual").click();
   await page.locator("#manual-thread-save").click();

@@ -71,3 +71,10 @@ identical colors between brands. The existing MIT PEC palette is machine-format 
 not a physical Brother/New brothread/Simthread product catalog. Local user import does
 not grant redistribution rights. Build policy blocks known research files and physical
 catalog assets until an explicit redistribution review is completed.
+
+## Physical thread starter references
+
+The independently assembled factual starter subsets and original approximate Studio
+swatches are documented in [THREAD_STARTERS.md](docs/THREAD_STARTERS.md). They do not
+include manufacturer chart graphics, copied palette RGB datasets or official conversion
+tables. All brand names identify their respective products; no endorsement is implied.

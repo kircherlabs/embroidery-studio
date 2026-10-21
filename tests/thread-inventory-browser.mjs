@@ -30,7 +30,15 @@ try {
       });
   await page.goto(process.env.STUDIO_URL || "http://127.0.0.1:5173/");
   await ready();
+  await page.evaluate(async () => {
+    const { loadThreads, saveThreads } = await import("./src/thread-store.js");
+    const d = await loadThreads();
+    d.preferences.includeBuiltins = false;
+    await saveThreads(d);
+  });
+
   const data = emptyThreads();
+  data.preferences.includeBuiltins = false;
   data.records = [
     normalizeThread({
       brandName: "New brothread",
@@ -349,6 +357,7 @@ try {
       { saveThreads } = await import("./src/thread-store.js"),
       { matchIndex } = await import("./src/thread-matching.js"),
       d = emptyThreads();
+    d.preferences.includeBuiltins = false;
     d.records = Array.from({ length: 5000 }, (_, i) =>
       normalizeThread({
         brandName: "Synthetic performance",

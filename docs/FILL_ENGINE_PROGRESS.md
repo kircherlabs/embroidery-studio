@@ -231,6 +231,10 @@ integration browser asserted preset state before the native dialog close event
 applied it. The test now waits for the preset state before checking the regenerated
 plan; existing assertions remain intact. Edge reproduced a passing interaction
 before this timing correction. Exact-head CI must be rerun before release.
+The next run caught the established thread UX test measuring a desktop grid
+immediately after resizing to mobile, before the workspace media event applied
+compact mode. It now waits for that mode before retaining the same overflow and
+header-layout assertions. No production equipment/layout changes were needed.
 
 Baseline commit: `787ef69`. Next: push the browser synchronization fix, wait for exact-head
 CI on PR #27, merge, wait for Pages and verify deployed source/version and isolated live

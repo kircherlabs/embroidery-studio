@@ -341,6 +341,11 @@ try {
     path: "test-results/ux-after-equipment-desktop.png",
   });
   await page.setViewportSize({ width: 390, height: 844 });
+  // Viewport media events/ResizeObserver apply the compact grid asynchronously.
+  // Measure the mobile layout only after that workspace transition has run.
+  await page.waitForFunction(() =>
+    document.querySelector(".compact-workspace"),
+  );
   const headerBoxes = await page
     .locator(".file-actions > button")
     .evaluateAll((es) =>

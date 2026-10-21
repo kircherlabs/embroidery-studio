@@ -53,13 +53,13 @@ The table measures individual raw fill-row segments, with 3 mm stitch length,
 0.42 mm row spacing, zero compensation and no underlay. These are not total
 machine-command counts: final plans also include routing, anchors and ties.
 
-| Geometry | Angle | Row segments | Below 0.3 mm | Below 0.5 mm | Shortest |
-| --- | ---: | ---: | ---: | ---: | ---: |
-| Rectangle 30 × 20 mm | 35° | 551 | 10 | 24 | 0.088 mm |
-| Circle, radius 12 mm | 0° | 414 | 8 | 18 | 0.082 mm |
-| Five-point star | 0° | 266 | 14 | 29 | 0.080 mm |
-| Letter-like B with counters | 35° | 344 | 16 | 30 | 0.081 mm |
-| Image-traced contour with hole, 123 vertices | 35° | 1,405 | 30 | 51 | 0.067 mm |
+| Geometry                                     | Angle | Row segments | Below 0.3 mm | Below 0.5 mm | Shortest |
+| -------------------------------------------- | ----: | -----------: | -----------: | -----------: | -------: |
+| Rectangle 30 × 20 mm                         |   35° |          551 |           10 |           24 | 0.088 mm |
+| Circle, radius 12 mm                         |    0° |          414 |            8 |           18 | 0.082 mm |
+| Five-point star                              |    0° |          266 |           14 |           29 | 0.080 mm |
+| Letter-like B with counters                  |   35° |          344 |           16 |           30 | 0.081 mm |
+| Image-traced contour with hole, 123 vertices |   35° |        1,405 |           30 |           51 | 0.067 mm |
 
 The first four measurements reproduce the corresponding research numbers.
 Adjacent 10 mm rectangles reproduce the 0.34 mm seam gap rather than 0.42 mm.
@@ -127,15 +127,15 @@ by object-level legacy adapters and sewing operations.
 
 Suggested modules under `src/fills/`:
 
-| Module | Responsibility |
-| --- | --- |
-| schema.js | Pure metadata, bounded validation/defaults, feature detection; no engine imports |
-| registry.js | Generator dispatch and contextual method capabilities |
-| context.js / region.js | Explicit polygons, holes, bounds, coordinate frame, cost budgets |
-| textures.js | General phase sequences, deterministic random variation and optional edge handling |
-| paths.js / travel.js | Open-path clipping, length/quantization checks, safe component connections |
-| diagnostics.js | Method-specific spacing, clustering, travel, topology and count metrics |
-| contour.js, meander.js, cross.js, emboss.js, ripple.js, spiral.js | Independent stitch generators |
+| Module                                                            | Responsibility                                                                     |
+| ----------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| schema.js                                                         | Pure metadata, bounded validation/defaults, feature detection; no engine imports   |
+| registry.js                                                       | Generator dispatch and contextual method capabilities                              |
+| context.js / region.js                                            | Explicit polygons, holes, bounds, coordinate frame, cost budgets                   |
+| textures.js                                                       | General phase sequences, deterministic random variation and optional edge handling |
+| paths.js / travel.js                                              | Open-path clipping, length/quantization checks, safe component connections         |
+| diagnostics.js                                                    | Method-specific spacing, clustering, travel, topology and count metrics            |
+| contour.js, meander.js, cross.js, emboss.js, ripple.js, spiral.js | Independent stitch generators                                                      |
 
 Generators return paths plus structured issues and metrics, not machine files.
 Adapt to the engine's existing `{p, phase, connect}` path flow, then use the same
@@ -195,17 +195,17 @@ Extend these existing integration points:
 
 ## Proposed milestones and acceptance gates
 
-| Order | Milestone | Required result before commit |
-| --- | --- | --- |
-| 1 | A — Baselines and architecture | Commit fixed-ID legacy fixtures/hashes first; add settings/version guards, frame contract, path adapter and bounded worker plumbing without changing legacy events. |
-| 2 | B — Tatami presets | Real quarter/brick/aligned/twill/random/wave/third/fifth/progressive/chevron needle placements, deterministic generation, contextual picker previews. |
-| 3 | C — Advanced Tatami | Custom sequences, seed/repeat/anchor/reset, opt-in edge improvement; measured short-stitch changes within coverage/length constraints. |
-| 4 | D — Contour | Original-region offset levels and topology-aware loops; complete connector containment, holes/islands, collapse diagnostics and actual export. |
-| 5 | F — Cross Stitch | Complete X cells, consistent top diagonal, safe row tours, translated/rotated grid, edge omission feedback and export. |
-| 6 | E — Stipple/Meander | Classic, Fine, Open, Organic and Looping; collision/clearance/containment tests plus visual review. Prototype experiments are not a completed preset. |
-| 7 | G — Embossed Tatami | Six requested original motif families expressed in real penetrations; bounded count/short-stitch growth and honest surface-texture terminology. |
-| 8 | H — Ripple and Spiral | Circular/elliptical clipped arcs with adjustable center; one reliable noncrossing spiral with explicit suitability checks. Preserve every hole. |
-| 9 | I — Integration/release | Full UI/mobile/performance/persistence/My Artwork/export regression, documentation and SE700-sized reference sew-out files; CI before publication. |
+| Order | Milestone                      | Required result before commit                                                                                                                                       |
+| ----- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1     | A — Baselines and architecture | Commit fixed-ID legacy fixtures/hashes first; add settings/version guards, frame contract, path adapter and bounded worker plumbing without changing legacy events. |
+| 2     | B — Tatami presets             | Real quarter/brick/aligned/twill/random/wave/third/fifth/progressive/chevron needle placements, deterministic generation, contextual picker previews.               |
+| 3     | C — Advanced Tatami            | Custom sequences, seed/repeat/anchor/reset, opt-in edge improvement; measured short-stitch changes within coverage/length constraints.                              |
+| 4     | D — Contour                    | Original-region offset levels and topology-aware loops; complete connector containment, holes/islands, collapse diagnostics and actual export.                      |
+| 5     | F — Cross Stitch               | Complete X cells, consistent top diagonal, safe row tours, translated/rotated grid, edge omission feedback and export.                                              |
+| 6     | E — Stipple/Meander            | Classic, Fine, Open, Organic and Looping; collision/clearance/containment tests plus visual review. Prototype experiments are not a completed preset.               |
+| 7     | G — Embossed Tatami            | Six requested original motif families expressed in real penetrations; bounded count/short-stitch growth and honest surface-texture terminology.                     |
+| 8     | H — Ripple and Spiral          | Circular/elliptical clipped arcs with adjustable center; one reliable noncrossing spiral with explicit suitability checks. Preserve every hole.                     |
+| 9     | I — Integration/release        | Full UI/mobile/performance/persistence/My Artwork/export regression, documentation and SE700-sized reference sew-out files; CI before publication.                  |
 
 Cross is moved ahead of Meander to validate shared grid/segment/travel machinery
 before the highest visual-quality risk. All requested families and presets remain

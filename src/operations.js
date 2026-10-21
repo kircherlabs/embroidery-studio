@@ -91,6 +91,7 @@ export function propertyApplies(type, key) {
   if (key === "spacing" || key === "compensation") return fill || satin;
   if (key === "underlay") return isSewing({ type }) && type !== "manual";
   if (key === "angle" || key === "pattern") return fill;
+  if (key === "fillSettings") return type === "fill";
   if (key === "width") return satin;
   if (key === "length") return fill || (path && !satin);
   if (key === "cornerControl" || key === "minCornerStitch")
@@ -119,6 +120,7 @@ const settings = [
   "offset",
   "startIndex",
   "pattern",
+  "fillSettings",
   "cornerControl",
   "minCornerStitch",
   "maxSatin",
@@ -136,7 +138,9 @@ export function defaultOperation(o) {
     closed: closedArtwork(o),
     enabled: true,
     ...Object.fromEntries(
-      settings.filter((k) => o[k] !== undefined).map((k) => [k, o[k]]),
+      settings
+        .filter((k) => o[k] !== undefined)
+        .map((k) => [k, k === "fillSettings" ? structuredClone(o[k]) : o[k]]),
     ),
   };
 }
@@ -207,6 +211,7 @@ export function makeOperation(type, o) {
     op.spacing = 0.42;
     op.underlay = true;
   }
+  if (type !== "fill") delete op.fillSettings;
   return op;
 }
 export function applique(o) {
@@ -330,6 +335,8 @@ export function operationObject(o, op) {
     operationId: op.id,
     operationName: op.name,
     technique: op.type,
+    fillSettings:
+      op.type === "fill" ? (op.fillSettings ?? o.fillSettings) : undefined,
     runStyle:
       op.type === "bean" ? "bean" : op.type === "triple" ? "triple" : "single",
     operationWarning,

@@ -130,10 +130,11 @@ export function editOperations(objects, state, single, key, value) {
         )
           op.underlay = false;
         op.closed = closedArtwork(o);
+        if (value !== "fill") delete op.fillSettings;
         if (single) state.activeOperationId = op.id;
       } else {
         if (key === "color") delete op.physicalThread;
-        op[key] = value;
+        op[key] = key === "fillSettings" ? structuredClone(value) : value;
       }
       changed++;
     }

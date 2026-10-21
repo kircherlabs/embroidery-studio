@@ -10,6 +10,7 @@ import {
   isSewing,
   OPERATION_TYPES,
 } from "./operations.js";
+import { makeFillSettings } from "./fills/context.js";
 
 const keys = [
   "color",
@@ -22,6 +23,7 @@ const keys = [
   "tieIn",
   "tieOff",
   "pattern",
+  "fillSettings",
   "cornerControl",
   "minCornerStitch",
   "maxSatin",
@@ -85,6 +87,14 @@ export function transferStyle(objects, style, mode, state = {}) {
           `${o.name}: manual satin style requires two editable source rails.`,
         );
       const next = { ...makeOperation(s.type, o), ...structuredClone(s) };
+      if (next.fillSettings?.anchor !== "global") {
+        if (next.fillSettings) {
+          const saved = next.fillSettings;
+          const fresh = makeFillSettings(saved.method, o);
+          next.fillSettings = { ...saved, frame: fresh.frame };
+        }
+      }
+      if (next.type !== "fill") delete next.fillSettings;
       // Guides and entry positions belong to geometry, not transferable style.
       delete next.satinGuides;
       next.startIndex = 0;

@@ -17,6 +17,12 @@ export function compose(a, b) {
 }
 export function sourceTransform(o, m) {
   updateLocalAxis(o, m);
+  for (const action of [o, ...(o.operations || [])])
+    if (action.fillSettings?.anchor !== "global" && action.fillSettings)
+      action.fillSettings.frame = compose(
+        m,
+        action.fillSettings.frame || identity(),
+      );
   if (o.linkedGeometry)
     o.linkedGeometry.frame = compose(m, o.linkedGeometry.frame);
   if (o.effects) o.effects.frame = compose(m, o.effects.frame);

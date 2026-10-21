@@ -10,6 +10,7 @@ import { inside, distance, safeConnector, simplifyPath } from "./geometry.js";
 import { preparePlan } from "./planning.js";
 import { routeFill } from "./fill-routing.js";
 import { duplicateArtwork } from "./artwork-diagnostics.js";
+import { generateFill } from "./fills/registry.js";
 export { inside, distance } from "./geometry.js";
 const rotate = (p, a) => ({
   x: p.x * Math.cos(a) - p.y * Math.sin(a),
@@ -238,6 +239,21 @@ export function satin(
   return result;
 }
 function pathsFor(o, from, to) {
+  if (o.fillSettings && !o.satinColumn && o.type === "fill") {
+    try {
+      const result = generateFill(
+        o,
+        { resample, fillRows, routeFill },
+        from,
+        to,
+      );
+      o.fillAnalysis = result;
+      return result.paths;
+    } catch (e) {
+      o.fillError = e.message;
+      return [];
+    }
+  }
   if (o.satinColumn && o.columnMode === "rails") {
     try {
       const result = manualSatin(o);
@@ -573,6 +589,33 @@ export function generate(project) {
         );
     }
     const paths = o.type === "manual" ? null : pathsFor(o, last, to);
+    if (o.fillError)
+      (diagnostics.operationIssues ||= []).push({
+        severity: "error",
+        code: "fill-generation",
+        objectId: o.id,
+        objectName: o.name,
+        operationId: o.operationId,
+        operationName: o.operationName,
+        message: o.fillError,
+        action:
+          "Adjust the fill settings, simplify the region, or choose another fill method. No substitute stitches were generated.",
+      });
+    if (o.fillAnalysis) {
+      (diagnostics.fills ||= []).push({
+        objectId: o.id,
+        operationId: o.operationId,
+        ...o.fillAnalysis.stats,
+      });
+      for (const issue of o.fillAnalysis.issues || [])
+        (diagnostics.operationIssues ||= []).push({
+          ...issue,
+          objectId: o.id,
+          objectName: o.name,
+          operationId: o.operationId,
+          operationName: o.operationName,
+        });
+    }
     if (o.manualRailError)
       (diagnostics.operationIssues ||= []).push({
         severity: "error",

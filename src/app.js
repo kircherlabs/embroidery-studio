@@ -6,6 +6,8 @@ import {
 } from "./export-package.js";
 import { installThreads } from "./thread-ui.js";
 import { installArtworkLibrary } from "./artwork-ui.js";
+import { stampFillFeatures } from "./fills/schema.js";
+import { LatestGenerationWorker } from "./generation-worker.js";
 import { threadTargets } from "./thread-assignment.js";
 import { exportPreflight, checkRoundTrip } from "./export-safety.js";
 import { installEquipment } from "./equipment-ui.js";
@@ -178,9 +180,12 @@ const pendingFormats = new Map();
 let clipboard = null;
 let sewingStyleClipboard = null;
 let workspaceLayout, arrangeMenu, equipmentUI, threadUI, artworkUI;
-const worker = new Worker(new URL("./digitize-worker.js", import.meta.url), {
-  type: "module",
-});
+const worker = new LatestGenerationWorker(
+  () =>
+    new Worker(new URL("./digitize-worker.js", import.meta.url), {
+      type: "module",
+    }),
+);
 const stage = new Stage($("stage"), state, {
   refresh: renderPanels,
   select,
@@ -205,6 +210,7 @@ function selected() {
   return state.project.objects.find((o) => o.id === state.selection);
 }
 function record(before) {
+  stampFillFeatures(state.project);
   try {
     const detached = syncLinkedArtwork(state.project);
     if (detached)

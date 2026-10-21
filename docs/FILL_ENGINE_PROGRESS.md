@@ -32,13 +32,29 @@ streams plus 14 compensation/underlay/winding/stack cases, including a dense
 transformed SVG-like traced region. Both regression tests pass. These fixtures
 are recorded before any production fill changes. Architecture work remains.
 
-Implementation status: A baselines recorded, architecture in progress;
+Milestone A architecture: implemented data-only fill schema and v1/v2 capability
+guards, object/global physical-mm pattern frames, shared exact interval clipping,
+bounded generation work, a generator registry/path adapter, structured Design
+Issues and a latest-request worker wrapper that terminates obsolete synchronous
+work. New settings survive My Artwork backups/insertion and style transfer;
+unsupported future library records are retained during invalid-record cleanup.
+Satin operations/fallbacks are explicitly excluded. No unimplemented method is
+exposed in the UI, and a missing generator produces an error, never substitute
+Tatami stitches.
+
+Verification: all 317 automated tests pass (including original event hashes).
+Existing action-card, library storage and full artwork workflow browser suites
+pass in Chrome/Edge, covering touch, nested source, history, live fonts and decoded
+PES needle/stops/dimensions/origin. A is ready to commit after final build/check.
+
+Implementation status: A complete locally;
 B/C Tatami expansion, D Contour, E Meander, F Cross, G Emboss, H Ripple/Spiral,
 I release integration all not started. Proposed order: A → B → C → D → F → E → G → H → I.
 
-Next: commit this baseline checkpoint, then add guarded settings/version plumbing,
-shared segment geometry and bounded worker integration. Preserve every protected
-backup ref. Do not regenerate legacy expectations to accommodate changed output.
+Baseline commit: `787ef69`. Next: commit verified A infrastructure, then B real
+Tatami texture generators and contextual picker. C adds custom/edge controls.
+Preserve every protected backup ref. Do not regenerate legacy expectations to
+accommodate changed output. No public release until validated working milestones.
 
 The matching attachment is assessed separately: existing Delta E76 should not be
 silently replaced during fill development; see assessment appendix for a future

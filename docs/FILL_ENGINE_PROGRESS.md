@@ -64,12 +64,31 @@ desktop/mobile overflow and independently decoded PES coordinates/dimensions.
 Screenshots: ignored test-results/fill-textures-{desktop,mobile}.png. Static build
 and diff check pass. No physical sew-out performed.
 
-Implementation status: A and B complete; C custom/edge controls in progress next.
+Milestone B committed: `b0a6572`. Existing sewing-action Chrome regression also
+passes (construction, independent colors, bulk scopes, decoded PES and mobile).
+
+Milestone C: editable validated 1–32-entry fractional sequences, explicit
+object-attached/shared-canvas anchoring, origin coordinates, inset and opt-in
+short-edge interval redistribution. Boundary endpoints and every row are retained;
+the constrained solution respects maximum length and minimum interval whenever
+feasible. Impossible narrow spans remain sewn and receive an informational issue.
+Legacy output stays exact when these settings are unused. Pattern frames use
+canonical zero values so JSON reload is identical.
+
+C verification: 324 Node tests pass; the 120-vertex circle has 23 raw top-row
+intervals below 0.5 mm before correction and 0 after, with all 86 rows and their
+endpoints unchanged. Tests check feasible length bounds over 999 spans, local
+phase preservation and explicit narrow-span guidance. Expanded Edge browser
+passes custom edits/validation, anchors/origin, edge settings, Undo/Redo,
+save/reload, mobile, legacy Reset and independently decoded PES coordinates.
+Build and diff check pass. These are software measurements, not sew-out results.
+
+Implementation status: A, B and C complete.
 D Contour, E Meander, F Cross, G Emboss, H Ripple/Spiral and I release integration
 remain unimplemented. Order: A → B → C → D → F → E → G → H → I.
 
-Baseline commit: `787ef69`. Next: commit B, then implement C custom sequences,
-explicit pattern anchoring and constrained edge-spacing optimization.
+Baseline commit: `787ef69`. Next: commit C, then D Contour Fill with topology-aware
+offset levels, safe routing, contextual controls and export/browser verification.
 Preserve every protected backup ref. Do not regenerate legacy expectations to
 accommodate changed output. No public release until validated working milestones.
 

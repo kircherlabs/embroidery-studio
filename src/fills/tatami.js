@@ -1,4 +1,5 @@
 import { registerFill } from "./registry.js";
+import { redistributeRow } from "./edges.js";
 export const fraction = (n) => n - Math.floor(n);
 export function hash01(seed, index) {
   let h = (seed ^ Math.imul(index, 0x9e3779b1)) >>> 0;
@@ -80,6 +81,7 @@ export function mapRows(rows, world) {
 }
 export function tatamiFill(ctx, from, to) {
   const { o, cfg, box, budget } = ctx;
+  let limited = 0;
   budget.step(
     Math.ceil(box.height / o.spacing + 2) * ctx.localRings.flat().length,
   );
@@ -93,7 +95,19 @@ export function tatamiFill(ctx, from, to) {
     o.pattern,
     null,
     0,
-    { fixed: true, phase: (r) => texturePhase(cfg, r) },
+    {
+      fixed: true,
+      phase: (r) => texturePhase(cfg, r),
+      ...(cfg.edgeOptimize
+        ? {
+            adjust: (row) => {
+              const result = redistributeRow(row, cfg.edgeMinimum, o.length);
+              if (result.limited) limited++;
+              return result.points;
+            },
+          }
+        : {}),
+    },
   );
   budget.add(rows.reduce((n, r) => n + r.length, 0));
   const paths = denseUnderlay(ctx, from),
@@ -113,6 +127,14 @@ export function tatamiFill(ctx, from, to) {
     ),
   );
   const issues = [];
+  if (limited)
+    issues.push({
+      severity: "info",
+      code: "fill-short-edge-spans",
+      message: `${limited} narrow row spans cannot meet the requested minimum penetration interval without losing coverage. Their boundary stitches are retained.`,
+      action:
+        "Reduce the minimum interval or enlarge narrow details; inspect a test sew-out.",
+    });
   let nearest = Infinity;
   for (
     let row = 0;
@@ -144,6 +166,7 @@ export function tatamiFill(ctx, from, to) {
       texture: cfg.texture,
       points: budget.count,
       nearestRowPenetration: nearest,
+      limitedEdgeSpans: limited,
     },
   };
 }

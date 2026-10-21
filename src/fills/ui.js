@@ -17,9 +17,7 @@ const esc = (s) =>
       ],
   );
 const legacy = ["quarter", "half", "aligned"];
-const textures = Object.fromEntries(
-  Object.entries(TEXTURES).filter(([id]) => id !== "custom"),
-);
+const textures = TEXTURES;
 const common = (values) =>
   values.length && values.every((v) => v === values[0]) ? values[0] : "";
 const options = (values, value) =>
@@ -34,7 +32,12 @@ const options = (values, value) =>
 const num = (label, key, value, min, max, step = 0.1) =>
   `<label class="field"><span class="field-title">${label}</span><input id="fill-${key}" data-fill-param="${key}" type="number" value="${value ?? ""}" min="${min}" max="${max}" step="${step}" placeholder="Mixed"></label>`;
 export function texturePreview(kind) {
-  const s = { ...FILL_DEFAULTS.tatami, texture: kind, seed: 1 },
+  const s = {
+      ...FILL_DEFAULTS.tatami,
+      texture: kind,
+      seed: 1,
+      sequence: [0, 0.4, 0.1, 0.65],
+    },
     ring = [
       { x: 0, y: 0 },
       { x: 48, y: 0 },
@@ -55,7 +58,6 @@ export function fillControls(control) {
       fills.map((o) => o.fillSettings?.texture || o.pattern || "quarter"),
     ),
     advanced = fills.some((o) => o.fillSettings),
-    cfg = fills[0].fillSettings,
     methods = availableFillMethods();
   const field = (label, key, min, max, step) =>
     num(
@@ -79,9 +81,9 @@ export function fillControls(control) {
           )
           .join(
             "",
-          )}</div></details>${advanced ? num("Direction in artwork · degrees", "angle", common(fills.map((o) => o.fillSettings?.angle ?? o.angle)), -360, 360, 1) : ""}<div class="two-col">${["twill", "chevron", "wave"].includes(texture) ? field(texture === "wave" ? "Wave period · rows" : "Repeat · rows", "period", 2, 128, 1) : ""}${texture === "wave" ? field("Wave amplitude", "amplitude", 0, 1, 0.05) : ""}${texture === "progressive" ? field("Offset per row · fraction", "step", -1, 1, 0.01) : ""}${texture === "random" ? num("Random seed", "seed", common(fills.map((o) => o.fillSettings?.seed ?? 1)), 0, 2147483647, 1) + field("Random variation", "variation", 0, 0.15, 0.01) : ""}</div>`
+          )}</div></details>${advanced ? num("Pattern direction · degrees", "angle", common(fills.map((o) => o.fillSettings?.angle ?? o.angle)), -360, 360, 1) : ""}<div class="two-col">${["twill", "chevron", "wave"].includes(texture) ? field(texture === "wave" ? "Wave period · rows" : "Repeat · rows", "period", 2, 128, 1) : ""}${texture === "wave" ? field("Wave amplitude", "amplitude", 0, 1, 0.05) : ""}${texture === "progressive" ? field("Offset per row · fraction", "step", -1, 1, 0.01) : ""}${texture === "random" ? num("Random seed", "seed", common(fills.map((o) => o.fillSettings?.seed ?? 1)), 0, 2147483647, 1) + field("Random variation", "variation", 0, 0.15, 0.01) : ""}</div>${texture === "custom" ? `<label class="field">Row offsets · fractions<input id="fill-sequence" value="${esc(common(fills.map((o) => (o.fillSettings?.sequence || []).join(", "))))}" placeholder="0, 0.4, 0.1, 0.65" data-help="One offset per row, repeating. Enter 1–32 comma-separated fractions from 0 up to, but not including, 1; each is a fraction of the maximum segment length."></label>` : ""}<details class="fill-advanced"><summary>Pattern placement &amp; edge quality</summary><label class="field">Pattern anchor<select id="fill-anchor">${options({ object: "Follow artwork", global: "Shared canvas grid" }, common(fills.map((o) => o.fillSettings?.anchor || "object")))}</select></label><p class="property-note">Follow artwork carries the pattern through moves and turns. Shared canvas grid stays fixed, allowing adjacent regions to share a lattice. Sizes remain in millimeters.</p><div class="two-col">${num("Origin X · mm", "originX", common(fills.map((o) => o.fillSettings?.frame?.[4] ?? makeFillSettings("tatami", o).frame[4])), -10000, 10000)}${num("Origin Y · mm", "originY", common(fills.map((o) => o.fillSettings?.frame?.[5] ?? makeFillSettings("tatami", o).frame[5])), -10000, 10000)}${field("Boundary inset · mm", "inset", 0, 10, 0.1)}</div><label class="check"><input id="fill-edge" type="checkbox" ${fills.every((o) => o.fillSettings?.edgeOptimize) ? "checked" : ""} ${fills.some((o) => o.fillSettings?.edgeOptimize) && !fills.every((o) => o.fillSettings?.edgeOptimize) ? 'data-mixed="true"' : ""}>Redistribute short edge intervals</label><p class="property-note">Repositions needle penetrations while preserving row endpoints and maximum segment length. Narrow spans retain coverage and may remain short. This does not change row density.</p>${field("Minimum interval · mm", "edgeMinimum", 0, 1, 0.05)}</details>`
       : `<p class="property-note">${esc(FILL_METHODS[method] || "Mixed fill methods")}</p>`
-  }<p class="property-note">${advanced ? "Pattern placement follows the artwork; spacing and length stay in millimeters." : "Classic, Brick and Aligned retain the original Tatami behavior. Expanded textures use an artwork-attached grid."}</p><button id="fill-reset" type="button">Reset fill to Classic</button><p id="fill-input-error" role="status" class="property-note"></p></section>`;
+  }<p class="property-note">${advanced ? "Expanded fill settings are active; spacing and length stay in millimeters." : "Classic, Brick and Aligned retain the original Tatami behavior until expanded settings are used."}</p><button id="fill-reset" type="button">Reset fill to Classic</button><p id="fill-input-error" role="status" class="property-note"></p></section>`;
 }
 export function bindFillControls(api, objects, single) {
   const targets = objects.flatMap((o) =>
@@ -90,6 +92,13 @@ export function bindFillControls(api, objects, single) {
       .map((op) => ({ o, op })),
   );
   if (!targets.length) return;
+  const ensure = (op, o) =>
+    op.fillSettings ||
+    makeFillSettings(
+      "tatami",
+      { ...o, ...op },
+      { texture: op.pattern || "quarter" },
+    );
   const change = (fn) => {
     try {
       const next = targets.map(({ o, op }) => {
@@ -123,6 +132,8 @@ export function bindFillControls(api, objects, single) {
       op.fillSettings = op.fillSettings
         ? { ...op.fillSettings, texture: kind }
         : makeFillSettings("tatami", { ...o, ...op }, { texture: kind });
+      if (kind === "custom" && !op.fillSettings.sequence)
+        op.fillSettings.sequence = [0, 0.4, 0.1, 0.65];
       if (legacy.includes(kind)) op.pattern = kind;
     });
   const pattern = document.getElementById("fill-pattern");
@@ -140,16 +151,54 @@ export function bindFillControls(api, objects, single) {
           return;
         }
         change((op, o) => {
-          op.fillSettings = op.fillSettings
-            ? { ...op.fillSettings, [el.dataset.fillParam]: value }
-            : makeFillSettings(
-                "tatami",
-                { ...o, ...op },
-                { [el.dataset.fillParam]: value },
-              );
+          const cfg = ensure(op, o),
+            key = el.dataset.fillParam;
+          if (key === "originX" || key === "originY") {
+            cfg.frame = [...cfg.frame];
+            cfg.frame[key === "originX" ? 4 : 5] = value;
+          } else cfg[key] = value;
+          op.fillSettings = cfg;
         });
       }),
   );
+  const sequence = document.getElementById("fill-sequence");
+  if (sequence)
+    sequence.onchange = () =>
+      change((op, o) => {
+        const parts = sequence.value.split(",").map((v) => v.trim());
+        if (parts.some((v) => !v))
+          throw Error("Enter comma-separated row offset fractions.");
+        op.fillSettings = {
+          ...ensure(op, o),
+          texture: "custom",
+          sequence: parts.map(Number),
+        };
+      });
+  const anchor = document.getElementById("fill-anchor");
+  if (anchor)
+    anchor.onchange = () =>
+      change((op, o) => {
+        const current = ensure(op, o),
+          fresh = makeFillSettings(
+            "tatami",
+            { ...o, ...op },
+            { anchor: anchor.value },
+          );
+        op.fillSettings = {
+          ...current,
+          anchor: fresh.anchor,
+          frame: fresh.frame,
+          angle: fresh.angle,
+        };
+      });
+  const edge = document.getElementById("fill-edge");
+  if (edge) {
+    edge.indeterminate = edge.dataset.mixed === "true";
+    edge.onchange = () =>
+      change((op, o) => {
+        op.fillSettings = { ...ensure(op, o), edgeOptimize: edge.checked };
+      });
+  }
   const reset = document.getElementById("fill-reset");
   if (reset)
     reset.onclick = () =>

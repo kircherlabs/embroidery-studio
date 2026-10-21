@@ -194,6 +194,10 @@ export function fillRows(
           for (let x = x1 + first; x < x2 - 0.1; x += split) pts.push({ x, y });
         }
         pts.push({ x: x2, y });
+        if (textureOptions?.adjust) {
+          const adjusted = textureOptions.adjust(pts, row);
+          pts.splice(0, pts.length, ...adjusted);
+        }
         const inset = Math.min(0.2, (c.x - start) / 4);
         pts.anchors = [
           { x: start + inset, y },

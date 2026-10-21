@@ -37,13 +37,11 @@ try {
     await ready();
   };
   const open = async (p) => {
-    await page
-      .locator("#file-input")
-      .setInputFiles({
-        name: "textures.embstudio",
-        mimeType: "application/json",
-        buffer: Buffer.from(JSON.stringify(p)),
-      });
+    await page.locator("#file-input").setInputFiles({
+      name: "textures.embstudio",
+      mimeType: "application/json",
+      buffer: Buffer.from(JSON.stringify(p)),
+    });
     await page.locator("#dialog-submit").click();
     await page.waitForFunction(
       (n) => window.studio.getProject().name === n && window.studio.getPlan(),
@@ -101,7 +99,7 @@ try {
     5,
   );
   await page.locator(".fill-pattern-picker > summary").click();
-  assert.equal(await page.locator(".fill-textures button").count(), 10);
+  assert.equal(await page.locator(".fill-textures button").count(), 11);
   assert(
     (await page.locator(".fill-textures svg circle").count()) > 100,
     "samples contain real generated needle coordinates",
@@ -116,6 +114,48 @@ try {
   assert.deepEqual(needles(await plan()), seeded);
   await page.locator("#redo").click();
   await ready();
+  await pick();
+  await page.locator("#fill-pattern").selectOption("custom");
+  await ready();
+  await field("fill-sequence", "0, 0.45, 0.1, 0.7");
+  assert.deepEqual(
+    (await project()).objects[0].operations[0].fillSettings.sequence,
+    [0, 0.45, 0.1, 0.7],
+  );
+  const custom = needles(await plan());
+  await field("fill-sequence", "0, , 0.7");
+  assert.match(
+    await page.locator("#fill-input-error").innerText(),
+    /comma-separated/,
+  );
+  assert.deepEqual(needles(await plan()), custom);
+  await reveal(page.locator("#fill-edge"));
+  await page.locator("#fill-edge").check();
+  await ready();
+  assert.equal(
+    (await project()).objects[0].operations[0].fillSettings.edgeOptimize,
+    true,
+  );
+  await field("fill-edgeMinimum", 0.7);
+  await reveal(page.locator("#fill-anchor"));
+  await page.locator("#fill-anchor").selectOption("global");
+  await ready();
+  assert.deepEqual(
+    (await project()).objects[0].operations[0].fillSettings.frame,
+    [1, 0, 0, 1, 0, 0],
+  );
+  await field("fill-originX", 2);
+  assert.equal(
+    (await project()).objects[0].operations[0].fillSettings.frame[4],
+    2,
+  );
+  await reveal(page.locator("#fill-anchor"));
+  await page.locator("#fill-anchor").selectOption("object");
+  await ready();
+  assert.equal(
+    (await project()).objects[0].operations[0].fillSettings.anchor,
+    "object",
+  );
   await pick();
   await page.locator(".fill-pattern-picker > summary").click();
   await page.screenshot({ path: "test-results/fill-textures-desktop.png" });

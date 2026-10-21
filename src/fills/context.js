@@ -47,6 +47,7 @@ export function makeFillSettings(method, o, changes = {}) {
     if (!Object.hasOwn(changes, "frame")) s.frame = [1, 0, 0, 1, 0, 0];
     if (!Object.hasOwn(changes, "angle")) s.angle = o.angle || 0;
   }
+  s.frame=s.frame.map(n=>Object.is(n,-0)?0:n);
   return validateFillSettings(s);
 }
 export function fillCoordinates(settings) {

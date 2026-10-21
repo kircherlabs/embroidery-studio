@@ -124,6 +124,46 @@ try {
       ?.textContent.includes("Library updated"),
   );
   assert.equal(await p.locator("[data-artwork]").count(), 0);
+  await p.keyboard.press("Escape");
+  await p.evaluate(async () => {
+    const db = await new Promise((resolve, reject) => {
+      const r = indexedDB.open("embroidery-artwork-v1", 1);
+      r.onsuccess = () => resolve(r.result);
+      r.onerror = () => reject(r.error);
+    });
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction("items", "readwrite");
+      tx.objectStore("items").put({ bad: true }, "broken-fixture");
+      tx.oncomplete = resolve;
+      tx.onerror = () => reject(tx.error);
+    });
+    db.close();
+  });
+  await p.locator("#artwork-library").click();
+  await p.waitForFunction(() =>
+    document
+      .querySelector("#artwork-status")
+      ?.textContent.includes("1 unreadable"),
+  );
+  await p.locator("#artwork-management").evaluate((e) => (e.open = true));
+  const recovery = p.waitForEvent("download");
+  await p.locator("#artwork-recovery").click();
+  assert.equal(
+    JSON.parse(await readFile(await (await recovery).path(), "utf8")).items
+      .length,
+    500,
+  );
+  await p.locator("#artwork-cleanup").click();
+  await p.locator("#artwork-back").click();
+  await p.locator("#artwork-management").evaluate((e) => (e.open = true));
+  await p.locator("#artwork-cleanup").click();
+  await p.locator("#artwork-confirm").click();
+  await p.waitForFunction(() =>
+    document
+      .querySelector("#artwork-status")
+      ?.textContent.includes("Library updated"),
+  );
+  assert.match(await p.locator("#artwork-count").innerText(), /499 saved/);
   await p.locator("#artwork-search").fill("");
   await p.screenshot({ path: "test-results/artwork-gallery-desktop.png" });
   for (const width of [1280, 768, 390]) {

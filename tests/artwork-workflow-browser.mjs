@@ -3,6 +3,7 @@ import { createRequire } from "node:module";
 import { readFile, mkdir } from "node:fs/promises";
 import { artworkFixture } from "./helpers/artwork-fixtures.mjs";
 import { smartShape } from "../src/creative.js";
+import { chooseTool } from "./helpers/ui.mjs";
 import { artworkBounds } from "../src/artwork-library.js";
 import { decodePes, modelMachineSizeMm } from "./helpers/pes-decoder.mjs";
 const { chromium } = createRequire(import.meta.url)(
@@ -30,13 +31,11 @@ try {
         (await (await import("./src/artwork-store.js")).loadArtwork()).records,
     );
   const load = async (p) => {
-    await page
-      .locator("#file-input")
-      .setInputFiles({
-        name: "Artwork.embstudio",
-        mimeType: "application/json",
-        buffer: Buffer.from(JSON.stringify(p)),
-      });
+    await page.locator("#file-input").setInputFiles({
+      name: "Artwork.embstudio",
+      mimeType: "application/json",
+      buffer: Buffer.from(JSON.stringify(p)),
+    });
     await page.locator("#dialog-submit").click();
     await page.waitForFunction(
       (name) => window.studio.getProject().name === name,
@@ -66,6 +65,24 @@ try {
   await pick("outer");
   await page.locator('[data-select="outer"]').click({ button: "right" });
   await page.locator('[data-arrange="save-artwork"]').click();
+  await page.evaluate(() => {
+    window.artworkOriginalPut = IDBObjectStore.prototype.put;
+    IDBObjectStore.prototype.put = function () {
+      throw Error("Simulated artwork quota failure");
+    };
+  });
+  await page.locator("#artwork-name").fill("Wildlife Patch");
+  await page.locator("#artwork-confirm").click();
+  await page.waitForFunction(() =>
+    document
+      .querySelector("#artwork-status")
+      ?.textContent.includes("quota failure"),
+  );
+  assert.equal((await library()).length, 0);
+  assert.deepEqual(await project(), original);
+  await page.evaluate(() => {
+    IDBObjectStore.prototype.put = window.artworkOriginalPut;
+  });
   await saveName("Wildlife Patch");
   assert.deepEqual(
     await project(),
@@ -242,6 +259,95 @@ try {
     false,
     "oversize source remains full size and gets normal hoop warning",
   );
+  const wideCopy = await project();
+  await page.locator("#artwork-library").click();
+  await page.locator("#artwork-search").fill("Oversize");
+  await page.locator("[data-artwork]").click();
+  await page.locator("#artwork-management").evaluate((e) => (e.open = true));
+  await page.locator("#artwork-delete").click();
+  await page.locator("#artwork-confirm").click();
+  await page.waitForFunction(() =>
+    document
+      .querySelector("#artwork-status")
+      ?.textContent.includes("Library updated"),
+  );
+  assert.deepEqual(
+    await project(),
+    wideCopy,
+    "deleting a saved item leaves inserted project copies intact",
+  );
+  await page.keyboard.press("Escape");
+  await chooseTool(page, "polygon");
+  await page.locator("#stage").click({ position: { x: 200, y: 200 } });
+  const drawing = await page.evaluate(() => window.studio.getDrawing());
+  assert.equal(drawing.active, true);
+  await page.locator("#artwork-library").click();
+  await page.locator("[data-artwork]").first().click();
+  assert.ok(await page.locator("#artwork-insert").isDisabled());
+  assert.match(
+    await page.locator("#artwork-selected").innerText(),
+    /Finish or cancel/,
+  );
+  await page.keyboard.press("Escape");
+  assert.deepEqual(
+    await page.evaluate(() => window.studio.getDrawing()),
+    drawing,
+  );
+  await page.locator("#cancel-draw").click();
+  const touch = await browser.newPage({
+    viewport: { width: 390, height: 844 },
+    hasTouch: true,
+    isMobile: true,
+  });
+  touch.on("pageerror", (e) => errors.push(e.stack));
+  await touch.goto(process.env.STUDIO_URL || "http://127.0.0.1:5173/");
+  await touch.waitForFunction(() => window.studio?.getPlan());
+  const star = smartShape("star", 30, 30);
+  await touch.locator("#file-input").setInputFiles({
+    name: "Touch.embstudio",
+    mimeType: "application/json",
+    buffer: Buffer.from(
+      JSON.stringify({
+        version: 1,
+        name: "Touch artwork",
+        machine: "se700",
+        objects: [star],
+      }),
+    ),
+  });
+  await touch.locator("#dialog-submit").tap();
+  await touch.waitForFunction(
+    () => window.studio.getProject().name === "Touch artwork",
+  );
+  await touch.locator("#toggle-layers").tap();
+  await touch.locator(`[data-select="${star.id}"]`).tap();
+  await touch.locator("#toggle-layers").tap();
+  await touch.locator("#edit-command").selectOption("save-artwork");
+  await touch.locator("#artwork-name").fill("Touch star");
+  await touch.locator("#artwork-confirm").tap();
+  await touch.waitForFunction(() =>
+    document.querySelector("#artwork-status")?.textContent.includes("Saved"),
+  );
+  await touch.locator('[aria-label="Close My Artwork"]').tap();
+  await touch.locator("#toggle-layers").tap();
+  await touch.locator("#new-project").tap();
+  await touch.locator("#dialog-submit").tap();
+  await touch.waitForFunction(
+    () => window.studio.getProject().objects.length === 0,
+  );
+  await touch.locator("#artwork-library").tap();
+  await touch.locator("[data-artwork]").tap();
+  await touch.locator("#artwork-insert").tap();
+  await touch.waitForFunction(
+    () => window.studio.getProject().objects.length === 1,
+  );
+  assert.equal(
+    await touch.evaluate(
+      () => window.studio.getProject().objects[0].shape.kind,
+    ),
+    "star",
+  );
+  await touch.close();
   assert.deepEqual(errors, []);
   console.log(
     "PASS context/header Save, linked dependency guidance, independent nested source, cross-project insert at size, fresh IDs, one Undo/Redo, live fonts, persistence, multiselection, no inventory side effects, actual PES needles/stops/origin/extents and oversize warning",

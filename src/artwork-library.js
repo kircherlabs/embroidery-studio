@@ -152,7 +152,7 @@ export function insertArtwork(project, raw, center = { x: 0, y: 0 }) {
         (key) => assets[key].data === asset.data,
       ),
       next = existing || fresh();
-    assets[next] = structuredClone(asset);
+    assets[next] ||= structuredClone(asset);
     assetMap.set(id, next);
   }
   const b = artworkBounds(a),

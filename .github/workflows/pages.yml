@@ -32,6 +32,10 @@ jobs:
           trap 'kill "$STUDIO_PID"' EXIT
           node tests/export-package-browser.mjs
           node tests/thread-library-ux-browser.mjs
+          node tests/thread-bulk-browser.mjs
+          node tests/artwork-store-browser.mjs
+          node tests/artwork-gallery-browser.mjs
+          node tests/artwork-workflow-browser.mjs
           node tests/thread-starters-browser.mjs
           node tests/thread-entry-browser.mjs
           node tests/thread-inventory-browser.mjs

@@ -38,6 +38,15 @@ test("reference assets remain portable and independent, without contributing sti
   assert.equal(generate(d).events.filter((e) => e.cmd === "stitch").length, 0);
   assert.deepEqual(a.referenceAssets, p.referenceAssets);
   validateProject(d);
+  const existing = addReference(d, { ...asset, name: "Existing guide.png" }),
+    existingKey = existing.reference.assetId;
+  d.referenceAssets[existingKey].name = "Existing guide.png";
+  insertArtwork(d, a);
+  assert.equal(
+    d.referenceAssets[existingKey].name,
+    "Existing guide.png",
+    "deduplication must not overwrite destination asset metadata",
+  );
 });
 test("editable source and relationships survive independent insertion with exact dimensions", () => {
   const p = artworkFixture(),

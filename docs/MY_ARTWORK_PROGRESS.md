@@ -1,100 +1,47 @@
 # My Artwork and bulk thread ownership — progress
 
 Base: v0.14.1 / main `8c6636b`. Branch: `feature/my-artwork-library`.
-Protected backups, including BACKUP-V0.14.1, must not be modified.
+Protected backups, including BACKUP-V0.14.1, remain untouched.
 
-## A — complete, locally verified
+## Completed milestones
 
-Explicit bulk Add Selected / Remove Selected actions reflect checked ownership;
-mixed selections offer Add Unowned and Remove Owned separately. Checked count,
-Clear selection, keyboard operation and clearing stale checks on view/filter
-changes are implemented. Removing ownership changes quantity only; catalog,
-notes, favorite, spool length, physical-thread snapshots and project assignments
-are retained. Existing positive quantities are never incremented by Add.
+| Milestone            | Commit    | Implementation and validation                                                                                                                                                                                                                    |
+| -------------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| A — Thread ownership | `c521460` | Explicit Add/Remove for owned/unowned/mixed checks; count and Clear; retain metadata/catalog/project assignments. Ownership unit, bulk/starter/inventory browser tests pass.                                                                     |
+| B — Reusable source  | `429dcb3` | Extraction/validation, dependencies, fresh IDs/reference remapping, linked transforms, groups, sewing order and physical size. Source/effects/rails/text tests pass.                                                                             |
+| C — Persistence      | `1c8960b` | Separate IndexedDB, atomic writes, portable backup/import, corrupt-entry isolation and recovery. Record/storage browser tests pass, including quota rollback.                                                                                    |
+| D — Gallery          | `eeb4113` | Companion modal, source SVG previews, search, 40-card pages, management, exact header placement. Thumbnail and 500-entry desktop/tablet/mobile tests pass.                                                                                       |
+| E — Workflows        | `a51b275` | Context/keyboard/touch shared save, one-Undo cross-project insert, live lettering and full-size oversize warnings. Browser verifies source independence, project reload, physical thread snapshots and decoded PES needles/stops/extents/origin. |
 
-Files: thread-ownership.js, thread-ui.js, new ownership unit/bulk browser suites,
-and adapted starter-browser interaction (the old add-only behavior is superseded).
-Tests: ownership unit; bulk browser; starter browser; existing inventory browser,
-including 5,000-record matching, backup/restore/quota rollback, export, persistence.
-All pass. No intermediate deployment.
+Primary files: `src/artwork-{library,records,store,thumbnail,ui}.js`,
+`src/thread-ownership.js`, existing app/arrange/thread-ui, index/workspace CSS.
+New unit/browser suites accompany each module; shared realistic fixture contains
+nested groups, holes, Smart Shapes, cubic handles, rails/rungs, live lettering on
+a baseline, linked effects, construction steps and manual stitches.
 
-## Next
+## F — locally verified; CI/publication pending
 
-B: Extract and validate reusable source artwork, include/reject dependencies,
-deep-clone and remap IDs/relationships, preserve ordering and physical dimensions.
-C: IndexedDB records, corrupt-entry recovery and portable import/export.
-D: Companion modal and thumbnails; My Artwork immediately before Threads.
-E: Context Save and one-Undo insertion integration.
-F: Full automated/browser/export regression, visual review, docs, PR and Pages.
+310 automated tests and all 10 native codec/format safety tests pass. Expanded
+gallery recovery checks and existing Thread Library UX/header keyboard/mobile
+checks pass. Reference asset deduplication retains destination metadata. Chrome
+production-build storage/gallery/bulk/workflow tests all pass, including quota
+retry, independent deletion, draft protection and actual touch save/insert.
 
-## B — complete, locally verified
+CI includes all 38 previous browser suites plus bulk ownership, artwork storage,
+gallery and cross-project suites (42 total). Release v0.15.0.
+User guide: `docs/MY_ARTWORK.md`.
 
-Source extraction uses existing hierarchy copying and project validation. External
-linked originals, SVG fill dependencies and construction artwork require explicit
-complete selection, with actionable feedback. Root parent scope is detached while
-inherited visibility/locks/pins are retained. Insertion uses fresh node/action/asset
-IDs, remaps internal references, preserves source/action settings and manual sewing
-order, and centers at physical size without changing destination equipment.
-Linked transforms are conjugated when both original and instance move, avoiding
-extra translation. Inserts are prepared/validated in a draft before committing.
-32 MB per element and bounded portable-data validation protect imports.
+Next: commit F, push and open PR.
+Merge only after CI passes; wait for Pages and verify public runtime assets and
+isolated live workflows. Record publication evidence here. No intermediate
+milestone has been deployed.
 
-Files: artwork-library.js, source-preservation unit suite and shared realistic
-fixture. Four new tests and 37 related effects/manual-satin/path-text tests pass.
-Stored artwork is source data, not generated stitch replacement.
+## Boundaries
 
-Next: C persistent records and backups. C–F are not implemented yet.
-
-## C — complete, locally verified
-
-Separate versioned IndexedDB artwork records persist outside projects. Validated
-backups preserve editable payloads; ID/name collisions create independent copies,
-repeat imports skip duplicates. Invalid records are isolated and kept in storage;
-raw recovery export and explicit invalid-entry cleanup are available to the UI.
-Writes/imports are atomic, preserving prior records on quota or validation failure.
-Limits: 1,000 entries / 64 MB library, 32 MB element, 72 MB import file.
-
-Files: artwork-records.js, artwork-store.js, record unit and storage browser tests.
-Tests pass backup round-trip, malformed entry isolation, duplicate/collision import,
-rename/delete, real IndexedDB persistence, quota failure rollback and recovery.
-Next: D companion interface/thumbnail rendering; then E workflow integration and F.
-B and C are now complete; earlier Next lists are historical milestone checkpoints.
-
-## D — complete, locally verified
-
-My Artwork is immediately before Threads in the main header. The companion modal
-reuses thread-library controls/theme/card styling and a single scrolling content
-area with a fixed Insert footer. Source-only SVG previews preserve aspect ratio,
-holes and assigned colors with contrast outlines; no stitch generation is used.
-Search, 40-card pagination, selection, name editing, deletion confirmation,
-backup preview/import and recovery management are wired to C's real store.
-Gallery supports 500-record browser test without rendering every record at once.
-Shared app integration supplies real selection/history APIs; context Save and
-complete cross-project/history/export acceptance remain milestone E.
-
-Files: artwork-ui.js, artwork-thumbnail.js, app/index/workspace CSS, new gallery
-browser and thumbnail unit tests, extended exact-header-order regression.
-Tests pass previews/counters/colors, empty/disabled states, gallery management,
-real backup duplicate handling, escaping, keyboard focus, desktop/tablet/mobile.
-Next: E context menu and full cross-project insertion verification. F remains.
-
-## E — complete, locally verified
-
-Objects right-click and Shift+F10 expose Save to My Artwork through the existing
-shared context menu. The Objects edit dropdown provides the touch equivalent.
-Both route to the same name/extract/save flow as the library's Save Selection.
-External dependencies are named. Insertion is one project mutation/Undo step,
-selects inserted roots, exits prior isolation and fits selection, preserving size
-and normal oversized-hoop warnings. Unfinished drawings must finish/cancel before
-insertion. Library management never modifies source/destination project copies.
-
-Files: app.js, arrange.js, index.html, dependency/thumbnail refinements and new
-artwork-workflow-browser.mjs. The real browser test passes source save unchanged,
-linked guidance, nested cross-project insertion, all IDs, physical sizes, one
-Undo/Redo, live font switching, independent library data, project save/reload,
-multiselection, no inventory changes, full-size oversized insertion, and real PES
-export: every decoded needle, pauses, independent extents and corrected origin.
-Reference assets also pass portable-source/non-stitching unit regression.
-
-Next: F full regression, mobile/visual polish, final docs, PR and deployment.
-A–E are complete locally; F and publication remain pending.
+- Local to this site/browser profile; export backups before clearing site data.
+  Limits: 1,000 items / 64 MB, 32 MB per item, 72 MB import.
+- External dependencies must be selected explicitly; errors name them.
+- Source previews are lightweight approximations, not stitch simulations.
+- Hidden/locked flags and saved manual sewing order are retained.
+- Insertions do not change equipment, inventory or source entries.
+- No engine/exporter changes; software tests do not claim physical sew-out.

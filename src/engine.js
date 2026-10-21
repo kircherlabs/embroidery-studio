@@ -13,6 +13,7 @@ import { duplicateArtwork } from "./artwork-diagnostics.js";
 import { generateFill } from "./fills/registry.js";
 import "./fills/tatami.js";
 import "./fills/contour.js";
+import "./fills/cross.js";
 export { inside, distance } from "./geometry.js";
 const rotate = (p, a) => ({
   x: p.x * Math.cos(a) - p.y * Math.sin(a),
@@ -773,11 +774,12 @@ export function generate(project) {
       continue;
     }
     let first = true;
-    for (const { p, phase, continuous } of paths) {
+    for (const { p, phase, continuous, travel, noLock } of paths) {
       if (!p.length) continue;
       const d = distance(last, p[0]);
       // Only connect nearby rows when the complete connector lies inside the fill.
       const safe =
+        travel !== "jump" &&
         o.type === "fill" &&
         !first &&
         (continuous || d < 2.2) &&
@@ -793,12 +795,12 @@ export function generate(project) {
       if (first || !safe) {
         const trimmed = events.length && d > 3;
         if (trimmed) trimAndLock(o);
-        else if (d > 0.3) lockEnd(o);
+        else if (d > 0.3 && !noLock) lockEnd(o);
         emit("jump", p[0], o.color, o.id, phase);
         // Positioning is not a needle penetration. Anchor at the destination
         // before sewing away from it; otherwise a codec must invent this step.
         emit("stitch", p[0], o.color, o.id, "anchor");
-        if (o.tieIn !== false && (first || trimmed || d > 0.3))
+        if (o.tieIn !== false && (first || trimmed || (d > 0.3 && !noLock)))
           lock(p, o, "tie");
       } else sew(p[0], o, phase);
       for (let i = 1; i < p.length; i++) sew(p[i], o, phase);

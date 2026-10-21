@@ -208,6 +208,8 @@ export function renderInspector(api) {
         ?.closest("label")
         .querySelector(".field-title");
       if (title) title.textContent = "Contour spacing";
+      if (control.every((o) => o.fillSettings?.method === "cross"))
+        $("spacing")?.closest("label").setAttribute("hidden", "");
     }
   }
   const transformPanel = $("transform-settings");

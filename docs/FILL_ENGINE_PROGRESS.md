@@ -102,12 +102,30 @@ independently decoded Contour PES needle coordinates/dimensions. Tatami texture
 Edge and existing sewing-action Chrome workflows also pass. Build/diff check pass.
 Screenshot: test-results/contour-fill-desktop.png (ignored). No physical sew-out.
 
-Implementation status: A, B, C and D complete. F Cross is next. E Meander,
+Milestone D committed: `3492966`.
+
+Milestone F: complete-cell Cross Stitch, explicit size/pitch/direction/inset and
+pattern placement. Each cell's boundary and both diagonals must be contained;
+even tiny counters fully enclosed by a cell exclude it. Quantized diagonals are
+validated again. Serpentine row tours keep the same local second diagonal on top.
+New explicit jump travel prevents the existing nearby-fill connector from adding
+front-side bars; internal untrimmed jumps avoid unnecessary repeated tie locks.
+Legacy paths do not use these opt-in flags and every legacy hash stays exact.
+
+F verification: 328 Node tests pass, including actual leg order, jump/needle
+commands, tiny counters, transforms, physical pitch and no-fit diagnostics.
+Expanded Edge browser verifies pitch/direction, invalid size, contextual controls,
+action identity/colors and exact independently decoded Cross PES coordinates.
+Rendered screenshot: test-results/cross-fill-desktop.png. Build/diff check pass.
+Physical sew-outs remain required; these are front-side crosses with jump travel,
+not claims about a hand-sewn reverse side or automatic machine trimming support.
+
+Implementation status: A, B, C, D and F complete. E Meander is next.
 G Emboss, H Ripple/Spiral and I release integration remain unimplemented.
 Order: A → B → C → D → F → E → G → H → I.
 
-Baseline commit: `787ef69`. Next: commit D, then F Cross Stitch: complete-contained
-X cells, consistent top diagonal, safe row tours and real export verification.
+Baseline commit: `787ef69`. Next: commit F, then E Stipple/Meander: real curved
+coverage paths with containment/clearance checks and distinct reviewed presets.
 Preserve every protected backup ref. Do not regenerate legacy expectations to
 accommodate changed output. No public release until validated working milestones.
 

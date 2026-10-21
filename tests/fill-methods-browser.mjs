@@ -56,6 +56,8 @@ try {
     });
     await page.locator("#design-tab").click();
     await pick();
+    await ready();
+    await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
   };
   const outer = [
       { x: -18, y: -14 },
@@ -79,20 +81,18 @@ try {
       color: "#6689a5",
     });
   await ready();
-  await page
-    .locator("#file-input")
-    .setInputFiles({
-      name: "methods.embstudio",
-      mimeType: "application/json",
-      buffer: Buffer.from(
-        JSON.stringify({
-          version: 1,
-          name: "Decorative methods",
-          machine: "se700",
-          objects: [o],
-        }),
-      ),
-    });
+  await page.locator("#file-input").setInputFiles({
+    name: "methods.embstudio",
+    mimeType: "application/json",
+    buffer: Buffer.from(
+      JSON.stringify({
+        version: 1,
+        name: "Decorative methods",
+        machine: "se700",
+        objects: [o],
+      }),
+    ),
+  });
   await page.locator("#dialog-submit").click();
   await ready();
   await pick();
@@ -131,6 +131,23 @@ try {
   await ready();
   assert.deepEqual(await project(), saved);
   await pick();
+  await page.locator("#fill-method").selectOption("cross");
+  await ready();
+  assert(await page.locator("#spacing").isHidden());
+  assert(await page.locator("#fill-size").isVisible());
+  const crosses = (await plan()).diagnostics.fills[0].crosses;
+  await field("fill-pitch", 3);
+  assert((await plan()).diagnostics.fills[0].crosses < crosses);
+  await field("fill-size", 4);
+  assert.match(
+    await page.locator("#fill-input-error").innerText(),
+    /grid spacing/,
+  );
+  assert.equal((await project()).objects[0].operations[0].fillSettings.size, 2);
+  await field("fill-angle", 20);
+  assert.equal((await project()).objects[0].operations[0].id, id);
+  await exportCheck("cross-fill");
+  await page.screenshot({ path: "test-results/cross-fill-desktop.png" });
   await page.locator("#fill-method").selectOption("tatami");
   await ready();
   assert.equal((await project()).objects[0].operations[0].id, id);

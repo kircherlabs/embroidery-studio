@@ -11,6 +11,7 @@ import { artworkFixture, square } from "./helpers/artwork-fixtures.mjs";
 import { object, validateProject } from "../src/model.js";
 import { syncLinkedArtwork } from "../src/linked-artwork.js";
 import { generate } from "../src/engine.js";
+import { addReference } from "../src/references.js";
 const empty = () => ({
   version: 1,
   name: "Destination",
@@ -19,6 +20,25 @@ const empty = () => ({
   groups: [],
 });
 const near = (a, b) => assert.ok(Math.abs(a - b) < 1e-8, `${a} != ${b}`);
+test("reference assets remain portable and independent, without contributing stitches", () => {
+  const p = empty(),
+    asset = {
+      name: "Guide.png",
+      width: 1,
+      height: 1,
+      data: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl6M0sAAAAASUVORK5CYII=",
+    },
+    o = addReference(p, asset),
+    a = extractArtwork(p, [o.id]),
+    d = empty();
+  insertArtwork(d, a);
+  const reference = d.objects[0];
+  assert.equal(d.referenceAssets[reference.reference.assetId].data, asset.data);
+  assert.equal(reference.locked, true);
+  assert.equal(generate(d).events.filter((e) => e.cmd === "stitch").length, 0);
+  assert.deepEqual(a.referenceAssets, p.referenceAssets);
+  validateProject(d);
+});
 test("editable source and relationships survive independent insertion with exact dimensions", () => {
   const p = artworkFixture(),
     before = structuredClone(p),

@@ -2321,6 +2321,10 @@ const collapseCompactSequence = () => {
 collapseCompactSequence();
 compactSequence.addEventListener("change", collapseCompactSequence);
 async function editCommand(command) {
+  if (command === "save-artwork") {
+    await artworkUI.open({ save: true });
+    return;
+  }
   if (command === "repeat") {
     await repeatDialog({ state, ask, mutate, toast });
     return;
@@ -2911,6 +2915,33 @@ artworkUI = installArtworkLibrary({
   },
 });
 $("artwork-library").onclick = () => artworkUI.open();
+function artworkObjectMenu(e) {
+  if (e.target.closest("input,textarea")) return;
+  const row = e.target.closest(".object-row"),
+    id = row?.querySelector("[data-select]")?.dataset.select;
+  if (!id) return;
+  e.preventDefault();
+  e.stopPropagation();
+  if (
+    !selectionIds(state).includes(id) &&
+    !selectedLeaves(state).some((o) => o.id === id)
+  )
+    select(id);
+  const trigger = [
+      ...document.querySelectorAll("#object-list [data-select]"),
+    ].find((el) => el.dataset.select === id),
+    r = trigger?.getBoundingClientRect();
+  arrangeMenu.open(
+    e.type === "contextmenu" ? e.clientX : r.left,
+    e.type === "contextmenu" ? e.clientY : r.bottom,
+    trigger,
+  );
+}
+$("object-list").addEventListener("contextmenu", artworkObjectMenu);
+$("object-list").addEventListener("keydown", (e) => {
+  if (e.key === "ContextMenu" || (e.shiftKey && e.key === "F10"))
+    artworkObjectMenu(e);
+});
 threadUI = installThreads({
   state,
   mutate,

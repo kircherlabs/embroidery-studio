@@ -44,7 +44,7 @@ const payloadProject = (a) => ({
   groups: a.groups,
   ...(a.referenceAssets ? { referenceAssets: a.referenceAssets } : {}),
 });
-function checkLinks(a) {
+function checkLinks(a, source = null) {
   const all = [...a.groups, ...a.objects],
     ids = new Set(all.map((n) => n.id)),
     leaves = new Set(a.objects.map((n) => n.id));
@@ -57,7 +57,7 @@ function checkLinks(a) {
     for (const id of refs)
       if (!leaves.has(id))
         throw Error(
-          `Also select related artwork for “${n.name}” (missing ${id}). Select the complete linked or construction group.`,
+          `Also select related artwork “${source?.objects.find((o) => o.id === id)?.name || id}” to save “${n.name}”. Select the complete linked or construction group.`,
         );
     if (n.parentId && !ids.has(n.parentId))
       throw Error("Artwork has an external parent.");
@@ -118,6 +118,7 @@ export function extractArtwork(project, ids) {
   }
   if (isManualOrder(p))
     a.order = sewingIds(p).filter((id) => a.objects.some((o) => o.id === id));
+  checkLinks(a, p);
   return validateArtwork(a);
 }
 export function artworkBounds(a) {

@@ -1,5 +1,6 @@
 import { artworkBounds } from "./artwork-library.js";
 import { simplifyPath } from "./geometry.js";
+import { isVisible } from "./hierarchy.js";
 export const artworkDimensions = (a) => {
   const b = artworkBounds(a);
   return `${b.width.toFixed(1)} × ${b.height.toFixed(1)} mm · ${a.objects.length} object${a.objects.length === 1 ? "" : "s"}`;
@@ -11,6 +12,15 @@ export function artworkThumbnail(a) {
     pad = span * 0.08;
   const paths = [];
   for (const o of a.objects) {
+    if (!isVisible(a, o)) continue;
+    if (o.type === "reference") {
+      const asset = a.referenceAssets?.[o.reference.assetId];
+      if (asset)
+        paths.push(
+          `<image href="${asset.data}" x="-0.5" y="-0.5" width="1" height="1" transform="matrix(${o.reference.frame.join(" ")})" opacity="${o.reference.opacity}" preserveAspectRatio="none"/>`,
+        );
+      continue;
+    }
     let d = "";
     if (o.type === "manual") {
       let move = true;

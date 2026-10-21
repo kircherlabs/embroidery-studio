@@ -77,3 +77,24 @@ browser and thumbnail unit tests, extended exact-header-order regression.
 Tests pass previews/counters/colors, empty/disabled states, gallery management,
 real backup duplicate handling, escaping, keyboard focus, desktop/tablet/mobile.
 Next: E context menu and full cross-project insertion verification. F remains.
+
+## E — complete, locally verified
+
+Objects right-click and Shift+F10 expose Save to My Artwork through the existing
+shared context menu. The Objects edit dropdown provides the touch equivalent.
+Both route to the same name/extract/save flow as the library's Save Selection.
+External dependencies are named. Insertion is one project mutation/Undo step,
+selects inserted roots, exits prior isolation and fits selection, preserving size
+and normal oversized-hoop warnings. Unfinished drawings must finish/cancel before
+insertion. Library management never modifies source/destination project copies.
+
+Files: app.js, arrange.js, index.html, dependency/thumbnail refinements and new
+artwork-workflow-browser.mjs. The real browser test passes source save unchanged,
+linked guidance, nested cross-project insertion, all IDs, physical sizes, one
+Undo/Redo, live font switching, independent library data, project save/reload,
+multiselection, no inventory changes, full-size oversized insertion, and real PES
+export: every decoded needle, pauses, independent extents and corrected origin.
+Reference assets also pass portable-source/non-stitching unit regression.
+
+Next: F full regression, mobile/visual polish, final docs, PR and deployment.
+A–E are complete locally; F and publication remain pending.

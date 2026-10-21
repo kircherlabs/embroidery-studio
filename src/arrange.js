@@ -195,6 +195,12 @@ export function installArrangeMenu({ state, command, fitDesign, fitHoop }) {
       "</div>" +
       '<div class="menu-caption">Repeat & sewing style</div>' +
       add(
+        "save-artwork",
+        "Save to My Artwork",
+        "Save selected editable source objects and groups to your personal library without changing the project.",
+        !leaves(state.project, state.selectionIds || []).length,
+      ) +
+      add(
         "repeat",
         "Repeat artwork…",
         "Create independent editable linear, radial or mirrored copies. Keeps hierarchy and complete sewing actions; Undo removes copies.",

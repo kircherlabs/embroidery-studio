@@ -160,7 +160,7 @@ Original HEX-only design/export workflows remain available without an inventory.
 ## Browse and personal collection (v0.14.1)
 
 The default **Browse Threads** view shows built-in and personal catalog colors in
-an adjustable-width swatch grid. Search brand, color name or text spool number;
+a responsive swatch grid. Search brand, color name or text spool number;
 Brand and Product line filters remain available. **My Collection** uses the same
 library, restricted to spools with positive owned quantities. Search and filters
 remain when switching views.

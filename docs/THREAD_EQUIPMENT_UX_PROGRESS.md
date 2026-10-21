@@ -1,8 +1,11 @@
 # Thread Library & Machine Selector UX Polish — v0.14.1
 
 Base: stable main `61ab117` (v0.14.0). Branch: `feature/thread-equipment-ux`.
-Implementation and local validation complete; PR CI, merge and Pages publication pending.
-Protected backup branches are untouched.
+Implementation, local validation and full PR CI are complete. PR #25 is merged.
+Validated feature head: `5334f990534a4b50af15b7ace5e3dbdbb9145f62`.
+Runtime merge: `c28259de11b47f561b19b012af8ab378b550b04d`.
+**v0.14.1 is published and verified live.** Current checkout: main.
+Protected backup branches are untouched. This publication record changes documentation only.
 
 ## Implemented
 
@@ -75,13 +78,29 @@ Updated captures: `ux-after-threads-selected-desktop.png`,
 `ux-after-threads-selected-mobile.png`, `ux-after-equipment-desktop.png`,
 `ux-after-equipment-mobile.png`. The new browser suite regenerates updated images.
 
-## Remaining work / handoff
+## Publication — complete
 
-1. Complete full PR CI (302 JS + 10 native + 38 browser suites + static build).
-2. Merge the verified head, wait for the existing Pages workflow, then compare
-   published runtime assets and run isolated live browser workflows.
-3. Record PR/deployment evidence here. Do not mark publication complete before
-   verifying it. No additional feature expansion is part of this update.
+- [PR #25](https://github.com/kircherlabs/embroidery-studio/pull/25) merged the
+  verified feature head `5334f99` into main runtime commit `c28259d`.
+- [Final PR CI](https://github.com/kircherlabs/embroidery-studio/actions/runs/39554443044)
+  passed all 302 JS tests, 10 native tests, 38 browser suites and the static build.
+- [Main / Pages workflow](https://github.com/kircherlabs/embroidery-studio/actions/runs/39555425107)
+  repeated the full checks successfully and deployed the release. Test job
+  `119073966611` and deployment job `119077742468` both succeeded.
+- The public `index.html`, `workspace.css` and `src/thread-ui.js` match the merged
+  runtime source (line endings normalized); the page identifies v0.14.1.
+- Three isolated live suites passed: thread-library UX (including header order,
+  Hints, touch and collection/assignment separation), equipment (custom profiles,
+  hoops, defaults, persistence and mobile), and threads (catalog imports,
+  assignment, Undo/Redo, real exported PES coordinates, 5,000-record paging).
+- Final desktop/mobile screenshots were captured from the published site. The
+  user's open browser and its personal workspace were not modified. Local preview
+  servers were stopped. All protected backup refs retain their original commits.
+
+No implementation or deployment steps remain for this focused update. Evidence
+is retained in ignored `test-results/ux-unit.log`, `ux-codec.log`, `ux-formats.log`,
+`ux-live-assets.json`, `ux-live-thread-library-ux.log`, `ux-live-equipment.log`
+and `ux-live-threads.log`.
 
 Existing limitations remain: starter catalogs are partial and screen colors are
 approximate; ownership is a personal setting rather than project Undo history.

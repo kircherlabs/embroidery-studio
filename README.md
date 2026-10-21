@@ -21,6 +21,12 @@ See the [fill guide](docs/DECORATIVE_FILLS.md), [measured validation](docs/FILL_
 and [editable reference projects/PES samples](examples/fill-swatches/README.md).
 New fill projects require the version 2 capability; physical sew-outs remain necessary.
 
+**Manual cleanup preview:** Display → Show Manual Trims highlights estimated
+connecting threads separately from blue jumps and orange trim commands. The
+existing sequence track now supports event inspection, clustering, zoom and pan.
+See the [cleanup and timeline guide](docs/MANUAL_CLEANUP.md) for machine/format
+assumptions, including JEF decoder-inferred trim markers. No commands are changed.
+
 **Drawing style** sets the stitching for newly drawn closed shapes. To change
 existing artwork, select its objects or SVG group, choose a style, and click
 **Apply to selected artwork** in the same popup. Multi-step replacement requires

@@ -27,6 +27,7 @@ import {
 import { objectBounds, pointsOf, bounds } from "./model.js";
 import { inside, distance } from "./engine.js";
 import { movementSegments } from "./preview.js";
+import { drawCleanupOverlay } from "./manual-cleanup.js";
 import { closedOutlinePreview, drawClosedOutline } from "./outline-preview.js";
 import {
   EDITING_STYLE,
@@ -542,6 +543,21 @@ export class Stage {
         ctx.stroke();
         ctx.setLineDash([]);
       }
+      if (s.showManualTrims && !editing)
+        drawCleanupOverlay(ctx, s.cleanupReport, {
+          scale,
+          end,
+          selected: s.cleanupSelected,
+          included: (c) =>
+            included({
+              objectId: c.toObjectId,
+              operationId: events[c.resumeIndex]?.operationId,
+            }) ||
+            included({
+              objectId: c.fromObjectId,
+              operationId: events[c.startIndex]?.operationId,
+            }),
+        });
       if (s.showEvents) {
         for (let i = 0; i < end; i++) {
           const e = events[i];

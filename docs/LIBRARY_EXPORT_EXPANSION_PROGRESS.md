@@ -1,7 +1,11 @@
 # Equipment, thread library and export expansion — progress
 
-Base: v0.13.0 / main `3a4f2f7`. Branch: `feature/library-equipment-packages`.
-Protected backup branches are unchanged. Runtime changes are not deployed until release validation.
+Base: v0.13.0 / main `3a4f2f7`. Implementation branch:
+`feature/library-equipment-packages`, merged through PR #24.
+**v0.14.0 is merged and live.** Current branch: main; validated runtime commit:
+`299fa6b5c2153e75eb38e50b6e692181fa27cd83`. Final feature head: `6c8c4bd`.
+This publication record is a documentation-only follow-up to that runtime commit.
+All protected backup branches remain unchanged.
 
 ## A — complete and verified
 
@@ -94,34 +98,48 @@ Browser download passes every-entry byte comparison to observed unmodified write
 output, separate standalone PES equivalence, dimensions, colors/stops, review/cancel,
 project preservation and mobile. Final unit rerun and production build passed before commit.
 
-## F — release validation in progress
+## F — complete, published and verified
 
-Release target: v0.14.0. All 302 JS tests and 10 native codec/format tests passed.
-All 37 local browser suites passed. The final production build separately
-passed starter, entry, equipment and actual ZIP workflows in Chrome, including mobile.
-Mark selected owned now works directly without a separate checkbox; checkboxes still
-select multiple spools, and repeated marking never increments stock. Selected ownership,
-bulk inventory and entry browser suites passed again after this final usability refinement.
-Source provenance is retained on personal color correction; its updated browser
-assertions pass against the production build. Desktop/mobile screenshots reviewed.
+- Release: **v0.14.0**; [PR #24](https://github.com/kircherlabs/embroidery-studio/pull/24)
+  merged as `299fa6b5c2153e75eb38e50b6e692181fa27cd83`.
+- All **302 JS tests**, **10 native codec/format tests** and **37 browser suites**
+  passed locally and in the final [PR CI run](https://github.com/kircherlabs/embroidery-studio/actions/runs/39532648107).
+- The same full [main workflow and Pages deployment](https://github.com/kircherlabs/embroidery-studio/actions/runs/39533713469)
+  passed. Both test-build (`119005336963`) and deploy (`119008601961`) succeeded.
+- [Public app](https://kircherlabs.github.io/embroidery-studio/) reports v0.14.0.
+  All **12 published runtime/version/license source checks** match the merged release,
+  normalizing line endings. Report: `test-results/library-expansion-live-sources.json`.
+- All four final browser suites passed on the public URL in isolated profiles:
+  thread-starters, thread-entry, equipment and export-package. Actual ZIP downloads,
+  every writer's original bytes, standalone PES equivalence, decoded dimensions,
+  stops/JEF omissions, reload, canonical IDs and mobile layout were checked.
+  Logs: `test-results/expansion-live-*.log`. The user's open workspace was not touched.
+- Additional production-build Chrome desktop/mobile workflows passed for starter
+  catalogs, entry, equipment and ZIP packaging. Reviewed screenshots:
+  `thread-starters-*`, `library-entry-*`, `export-package-*` under test-results.
 
-Files: package/footer version, README, thread/machine/previous-progress docs, thread-ui
-provenance retention and its browser assertion. Logs: test-results/expansion-F-_.log,
-expansion-dist-_.log; screenshots: thread-starters-_, library-entry-_, export-package-\*.
+Release preparation `33cd19c`, direct selected ownership `5de8b2d`, same-color physical
+spool ZIP regression `e73c9b5`, and canonical line-identity repair `6c8c4bd` are integrated.
+Mark selected owned needs no separate checkbox; checkboxes still support bulk marking,
+and repeated marking never increments quantities. Personal color corrections retain
+original source references. Existing displayed product-line names resolve canonical
+IDs; ambiguous same-name lines are explained rather than silently merged. Line
+suggestions are limited to 100, with exact typed names resolved against the full library.
+Starter, entry, inventory and legacy catalog suites passed again after those refinements.
 
-Exact next steps: require full CI success on the latest commit of PR #24 before merging.
-The final added ZIP regression verifies actual six-format thread-change pauses and
-ordered CSV spool numbers for distinct physical products sharing the same HEX. It
-passes, as does the complete 302-test rerun. No runtime changed in that test follow-up.
-Release preparation `33cd19c`, selected-ownership polish `5de8b2d` and ZIP identity
-regression `e73c9b5` are pushed. Final manual-entry review also resolves displayed
-existing line names to canonical IDs, offers brand/line suggestions, rejects ambiguous
-same-name lines and prevents a duplicate identity derived from a starter coverage label.
-Starter, entry and legacy catalog browser suites pass after that repair. Line suggestions
-are limited to 100; typed known names still resolve against the complete installed library. Wait for the main
-Pages deployment, compare published runtime sources and v0.14.0 footer, and run the
-new thread-entry/starter/equipment/ZIP browser workflows on the public URL. Only then
-record publication as verified. Do not bypass failed checks.
+Files completed in F: package/footer version, README, current and historical equipment/
+thread documentation, thread-ui refinements and starter/package browser regression
+coverage. No stitch-generation algorithm or machine writer was rewritten. The final
+ZIP regression verifies both physical spool numbers and pauses across all six actual
+writers when the two products share a digital color. Independent ZIP CRC, exact stored
+bytes and original PES origin/dimension regressions pass. No tests were weakened.
+
+### Protected branch checkpoints
+
+- `backup-before-creative-update`: `99c0a78cd7ec7c026d32c44195ebea882f06c925`
+- `BACKUP-V0.12.6`: `c13460ed95fc18fa38714b8b0547b6ae4c89cec8`
+- `BACKUP-V0.12.8`: `34d6ab6e7225cc2ebe7d47e70c20d14f524051fb`
+- `BACKUP-V0.13.0`: `3a4f2f71e0a4a2d0341ce7a5cdaaeb81f1060508`
 
 Remaining coverage: starters are deliberately partial, Floriani is not populated,
 Madeira/Sulky/Robison-Anton subset color names are not asserted where only identifiers
@@ -132,4 +150,18 @@ Existing JEF large-field and VP3 STOP limits remain, with no new hardware sew-ou
 ZIP does not add preview images or EXP companion palette files; README/CSV preserve
 color instructions. These are explicit limitations, not hidden completed features.
 
-Never mark partial stages complete. Record each stage's checks/commit and exact handoff here.
+## Exact next work / resume
+
+A–F's delivered software package and publication are verified; do not repeat completed
+milestones. Read current branch/status and this report before making further changes.
+Future work should expand reviewed starter coverage (including Floriani), improve
+color references with documented/licensed measurements where available, and research
+more exact models, optional hoops and input-format manuals. Keep factual identifiers
+separate from chart graphics and proprietary RGB datasets. Research JEF modern hoop
+headers and VP3 standalone STOP preservation before relaxing existing guards. Perform
+recorded physical sew-outs before elevating machine/color verification claims.
+
+No unresolved critical software regression remains in this release. Known coverage and
+hardware limitations above remain explicit. The final documentation-only publication
+commit does not change runtime, tests or workflow assets; no additional deployment is
+needed for that record. Never modify or delete protected backup branches.

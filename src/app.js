@@ -1,3 +1,9 @@
+import {
+  packageFormats,
+  preparePackage,
+  packageArchive,
+  packageName,
+} from "./export-package.js";
 import { installThreads } from "./thread-ui.js";
 import { threadTargets } from "./thread-assignment.js";
 import { exportPreflight, checkRoundTrip } from "./export-safety.js";
@@ -60,7 +66,7 @@ import {
   PALETTE,
   validateProject,
 } from "./model.js";
-import { analyze } from "./engine.js";
+import { analyze, generate } from "./engine.js";
 import { importSVG, lettering } from "./importers.js";
 import { Stage } from "./stage.js";
 import { planningOptions } from "./planning.js";
@@ -1668,7 +1674,8 @@ function formatRequest(data) {
 }
 async function exportDialog() {
   if (busy || !state.plan) return;
-  const plan = state.plan;
+  const plan = state.plan,
+    exportProject = structuredClone(state.project);
   if (plan?.issues?.some((i) => i.severity === "error")) {
     toast(
       "Resolve Design Issues errors, or explicitly disable invalid steps before exporting.",
@@ -1692,7 +1699,7 @@ async function exportDialog() {
   const selectedFormat = preferredExport(state.project, preferences);
   const pending = ask(
     "Ready for the machine",
-    `<p><strong>${esc(state.project.name)}</strong><br>${fmt(plan.stats.stitches)} stitches · ${num(plan.stats.bounds.width)} × ${num(plan.stats.bounds.height)} mm · ${esc(getMachine(state.project).name)}</p><label>Machine format<select id="export-format"><option value="pes">PES v6 · Brother / Baby Lock</option><option value="pec">PEC · Brother</option><option value="dst">DST · Tajima (palette not stored)</option><option value="exp">EXP · Melco (palette not stored)</option><option value="jef">JEF · Janome</option><option value="vp3">VP3 · Husqvarna / Pfaff</option></select></label><p>The local conversion engine downloads on first use. Your design stays in your browser. After export, the simulator displays the stitch sequence decoded from the actual machine file.</p><p>Trims and color handling depend on the file format and machine. Inspect the preview and test on scrap fabric before your final sew-out.</p>`,
+    `<p><strong>${esc(state.project.name)}</strong><br>${fmt(plan.stats.stitches)} stitches · ${num(plan.stats.bounds.width)} × ${num(plan.stats.bounds.height)} mm · ${esc(getMachine(state.project).name)}</p><label>Machine format<select id="export-format"><option value="pes">PES v6 · Brother / Baby Lock</option><option value="pec">PEC · Brother</option><option value="dst">DST · Tajima (palette not stored)</option><option value="exp">EXP · Melco (palette not stored)</option><option value="jef">JEF · Janome</option><option value="vp3">VP3 · Husqvarna / Pfaff</option><option value="zip">Export all formats as ZIP…</option></select></label><p>The local conversion engine downloads on first use. Your design stays in your browser. Individual machine-file exports update the simulator from the decoded file; ZIP packages preserve the current view.</p><p>Trims and color handling depend on the file format and machine. Inspect the preview and test on scrap fabric before your final sew-out.</p>`,
     "Export machine file",
   );
   $("export-format").value = selectedFormat;
@@ -1705,8 +1712,26 @@ async function exportDialog() {
     '<div id="export-safety" role="status"></div>',
   );
   const updateFormat = () => {
-    const format = $("export-format").value,
-      check = exportPreflight(state.project, plan.events, format);
+    const format = $("export-format").value;
+    if (format === "zip") {
+      $("export-format-guidance").textContent =
+        "Design package for distribution. Includes safely validated writers, not universal machine compatibility. Review inclusions, omissions and format limitations before the single ZIP download.";
+      const rows = packageFormats().map((f) => ({
+        format: f,
+        ...exportPreflight(exportProject, plan.events, f),
+      }));
+      $("export-safety").innerHTML = rows
+        .map(
+          (r) =>
+            `<p class="${r.errors.length ? "export-error" : "property-note"}"><strong>${r.format.toUpperCase()}</strong>: ${esc(r.errors.length ? r.errors.join(" ") : "Eligible for encoding and decoded-command validation")}</p>`,
+        )
+        .join("");
+      $("dialog-submit").disabled = rows.every((r) => r.errors.length);
+      $("dialog-submit").textContent = "Prepare ZIP package";
+      return;
+    }
+    $("dialog-submit").textContent = "Export machine file";
+    const check = exportPreflight(state.project, plan.events, format);
     $("export-format-guidance").textContent = exportGuidance(
       state.project,
       format,
@@ -1727,6 +1752,43 @@ async function exportDialog() {
   $("export").disabled = true;
   const ext = $("export-format").value;
   try {
+    if (ext === "zip") {
+      // Capture one complete generated source plan, even when the simulator currently shows a decoded file.
+      const sourcePlan = generate(exportProject);
+      const result = await preparePackage(
+        exportProject,
+        sourcePlan,
+        formatRequest,
+        (format) => {
+          $("status").textContent =
+            "Preparing ZIP · validating " + format.toUpperCase() + "…";
+        },
+      );
+      const report = `<p><strong>${esc(exportProject.name)}</strong> · ${sourcePlan.stats.stitches.toLocaleString()} generated stitches · ${num(sourcePlan.stats.bounds.width)} × ${num(sourcePlan.stats.bounds.height)} mm</p><p>${result.files.length} validated machine files. README and ordered thread CSV included. Unzip before copying a compatible file to your machine.</p><h3>Included</h3>${result.files.map((f) => `<details><summary>${f.format.toUpperCase()} · validated</summary>${f.warnings.map((w) => `<p class="property-note">${esc(w)}</p>`).join("")}</details>`).join("")}<h3>Omitted</h3>${result.omitted.length ? result.omitted.map((o) => `<p class="export-error"><strong>${o.format.toUpperCase()}</strong>: ${esc(o.reasons.join(" "))}</p>`).join("") : "<p>None.</p>"}<p class="property-note">Check exact machine compatibility and physical hoop clearance. Software validation is not a physical sew-out. Thread approximations and format-specific pause/trim limitations are recorded in README.txt.</p>`;
+      const approved = await ask(
+        result.files.length
+          ? "Review design package"
+          : "No safe package available",
+        report,
+        result.files.length ? "Download ZIP package" : "Close",
+      );
+      if (!approved || !result.files.length) {
+        $("status").textContent = "ZIP package canceled · no files downloaded";
+        return;
+      }
+      const bytes = packageArchive(exportProject, sourcePlan, result);
+      download(
+        bytes,
+        packageName(exportProject.name) + ".zip",
+        "application/zip",
+      );
+      $("status").textContent =
+        `ZIP exported · ${result.files.length} formats · ${result.omitted.length} omissions reviewed`;
+      toast(
+        "ZIP package downloaded. Unzip it and follow its README and thread sequence.",
+      );
+      return;
+    }
     const result = await formatRequest({
       action: "export",
       format: ext,

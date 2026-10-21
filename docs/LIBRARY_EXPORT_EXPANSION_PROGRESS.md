@@ -70,8 +70,23 @@ Validation: 13 equipment/export unit tests; existing equipment and actual six-fo
 export-safety browser suites pass, including search, field changes, old/custom projects,
 no automatic artwork changes, history, mobile and unsafe-export blocking. The old
 SE700 single-hoop assertion now checks the exact two documented 100 mm hoop IDs.
-E: locally packaged validated format bytes, review omissions, README/thread chart,
-archive extraction and standalone-byte comparisons, browser download.
+E — implemented, focused validation passed (D commit `b7555ba`).
+Export dialog includes “Export all formats as ZIP”. Each implemented, round-trip-tested
+writer runs separately against one captured generated project plan. The existing
+preflight, decoded-needle/pause and field checks apply independently. Users review
+included formats, omissions and warnings before downloading; no files means no ZIP.
+The archive preserves exact writer bytes, includes README and ordered thread CSV,
+normalizes filenames, bounds retained machine bytes at 64 MB and never includes
+reference images or personal inventory. Existing single-file export stays intact.
+Files: export-package.js, app.js, vendor/fflate.js + MIT license, new package unit and
+browser tests, CI and documentation. fflate 0.8.3 is pinned locally, SHA256
+B7CA4450B19559A1D50EB381ADCEE94B82449674BE4CD17789D9BEBA7E6122A1.
+Three unit cases validate actual six-format commands/bytes, archive extraction and
+independent ZIP CRC checks, geometry with holes, names, failures and JEF/VP3 omissions.
+Browser download passes every-entry byte comparison to observed unmodified writer
+output, separate standalone PES equivalence, dimensions, colors/stops, review/cancel,
+project preservation and mobile. Final unit rerun/build precede the E commit.
+
 F: full regression/build/mobile QA, docs/version, PR/CI/merge/Pages and live verification.
 
 Never mark partial stages complete. Record each stage's checks/commit and exact handoff here.

@@ -78,3 +78,11 @@ The independently assembled factual starter subsets and original approximate Stu
 swatches are documented in [THREAD_STARTERS.md](docs/THREAD_STARTERS.md). They do not
 include manufacturer chart graphics, copied palette RGB datasets or official conversion
 tables. All brand names identify their respective products; no endorsement is implied.
+
+## fflate 0.8.3
+
+Local ZIP packaging uses [fflate](https://github.com/101arrowz/fflate), Copyright (c)
+2026 Arjun Barrett, MIT license. Unmodified browser ESM distribution is in
+`vendor/fflate.js`; the full license is in `vendor/fflate.LICENSE`. Download source:
+https://cdn.jsdelivr.net/npm/fflate@0.8.3/esm/browser.js. SHA256:
+B7CA4450B19559A1D50EB381ADCEE94B82449674BE4CD17789D9BEBA7E6122A1.

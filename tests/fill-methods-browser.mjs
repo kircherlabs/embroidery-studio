@@ -176,6 +176,30 @@ try {
   );
   await exportCheck("meander-fill");
   assert.equal((await project()).objects[0].operations[0].id, id);
+  await page.locator("#fill-method").selectOption("emboss");
+  await ready();
+  assert(await page.locator("#spacing").isVisible());
+  assert.equal(await page.locator("#fill-motif").inputValue(), "diamonds");
+  const motifStreams = new Set();
+  for (const motif of [
+    "dots",
+    "diamonds",
+    "checker",
+    "lattice",
+    "diagonal",
+    "waves",
+  ]) {
+    await page.locator("#fill-motif").selectOption(motif);
+    await ready();
+    const current = await plan();
+    assert(!current.issues.some((i) => i.severity === "error"));
+    motifStreams.add(JSON.stringify(current.events));
+  }
+  assert.equal(motifStreams.size, 6);
+  await field("fill-strength", 1);
+  await field("fill-motifAngle", 25);
+  await exportCheck("emboss-fill");
+  await page.screenshot({ path: "test-results/emboss-fill-desktop.png" });
   await page.locator("#fill-method").selectOption("tatami");
   await ready();
   assert.equal((await project()).objects[0].operations[0].id, id);

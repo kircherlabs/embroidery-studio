@@ -199,7 +199,7 @@ export function renderInspector(api) {
         (o) =>
           o.type === "fill" &&
           o.fillSettings &&
-          o.fillSettings.method !== "tatami",
+          !["tatami", "emboss"].includes(o.fillSettings.method),
       )
     ) {
       $("compensation")?.closest("label").setAttribute("hidden", "");

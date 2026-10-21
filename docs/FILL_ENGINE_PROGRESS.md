@@ -144,12 +144,30 @@ Edge browser renders reviewed for all five styles and exact decoded Looping PES
 coordinates pass. Screenshots: test-results/meander-{style}-desktop.png. Static
 build/diff check pass. Physical sew-outs remain required.
 
-Implementation status: A, B, C, D, F and E complete. G Emboss is next.
-H Ripple/Spiral and I release integration remain unimplemented.
+Milestone E committed: `c950409`.
+
+Milestone G: Dots, Diamonds, Checkerboard, Lattice, Diagonal Bands and Waves
+Embossed Tatami. Analytic/polyline motif boundaries are intersected with actual
+fill rows and pin real needle penetrations. Emphasis controls the fraction of
+rows carrying motif marks; ordinary row density and endpoints remain unchanged.
+Constrained redistribution retains maximum segment length and avoids crowded
+marks, reporting reduced motif fidelity. Scale/repeat/angle/phase/inset/placement
+remain editable; ordinary Tatami underlay and compensation remain applicable.
+This is surface texture, not raised padding or a cosmetic motif overlay.
+
+G verification: 333 Node tests pass, including six distinct real streams,
+unchanged row count/coverage, exact zero-emphasis equivalence, bounds, holes,
+parameter effects and narrow endpoint retention. Growth stays below 2× baseline
+for representative full-emphasis motifs. Expanded Edge browser verifies all six
+motifs/controls/action identity and exact decoded Emboss PES coordinates.
+Build/diff check pass; physical texture appearance requires sew-out validation.
+
+Implementation status: A, B, C, D, F, E and G complete. H Ripple/Spiral is next.
+I release integration remains unimplemented.
 Order: A → B → C → D → F → E → G → H → I.
 
-Baseline commit: `787ef69`. Next: commit E, then G Embossed Tatami: actual motif
-penetrations with bounded spacing/count growth, not a cosmetic overlay.
+Baseline commit: `787ef69`. Next: commit G, then H distinct circular/elliptical
+Ripple and a true noncrossing Spiral, preserving all counters and safe travel.
 Preserve every protected backup ref. Do not regenerate legacy expectations to
 accommodate changed output. No public release until validated working milestones.
 

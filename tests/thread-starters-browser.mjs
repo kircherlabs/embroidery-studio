@@ -77,6 +77,8 @@ try {
     1,
     "only correction is stored, not 171 built-ins",
   );
+  assert.match(stored.records[0].source.name, /Personal correction/);
+  assert.ok(stored.records[0].source.url.includes("newbrothread-official.com"));
   assert.equal(stored.inventory.length, 1);
   assert.equal(stored.inventory[0].thread.id, id);
   await page.locator("#thread-brand").selectOption("newbrothread");

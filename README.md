@@ -71,6 +71,17 @@ Assign a physical product to a sewing action while retaining the original design
 color; saved projects keep that identity even if the catalog is missing. No unlicensed
 manufacturer color chart is bundled. See [thread library and storage](docs/THREAD_LIBRARY.md).
 
+**v0.14.0 equipment, thread and package tools:** 42 documented machine profiles with
+cross-brand search; 171 built-in starter thread entries across seven brands; simplified
+Add thread with optional product line, live HEX/RGB/picker swatches and personal color
+corrections. Starter swatches are Studio estimates, not measured manufacturer colors.
+Management/import/backup controls are expandable; inventory remains optional.
+**Export → Export all formats as ZIP…** validates each writer separately and includes
+a README and ordered thread CSV. Review omissions before download; JEF large-field
+and VP3 standalone-stop restrictions remain. See [starter coverage](docs/THREAD_STARTERS.md),
+[equipment coverage](docs/EQUIPMENT_EXPANSION.md), [ZIP workflow](docs/EXPORT_PACKAGES.md)
+and [release progress](docs/LIBRARY_EXPORT_EXPANSION_PROGRESS.md).
+
 ## Design tools and workspace
 
 The compact SVG toolbar above the canvas groups selection/editing, geometry,
@@ -375,7 +386,6 @@ readable. See [editing architecture and limits](docs/EDITING.md).
 MIT licensed. pyembroidery is vendored under MIT with its license. Pyodide loads
 unmodified under its own license. No Ink/Stitch GPL code is copied. See
 [third-party notices](THIRD_PARTY_NOTICES.md).
-
 
 Physical threads are optional: **Threads** opens personal CSV/JSON/GPL catalogs,
 reviewed perceptual matches and spool assignment. Record owned spools in **Collection

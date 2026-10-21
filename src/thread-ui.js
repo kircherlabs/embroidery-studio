@@ -677,7 +677,13 @@ export function installThreads(api) {
           material: $("manual-thread-material").value,
           weight: $("manual-thread-weight").value,
           source: {
-            name: "Personal spool label",
+            ...(existing?.source || {}),
+            name: existing
+              ? (
+                  "Personal correction: " +
+                  (existing.source.name || "spool label")
+                ).slice(0, 160)
+              : "Personal spool label",
             verification: "user-entered",
           },
         });

@@ -1,10 +1,12 @@
 # Machines and design fields
 
 Open **Machine & hoop** above the canvas. Choose **Brand → Model → Hoop**.
-The initial library includes SE700, Flourish II, Memory Craft 500E, B 500 (SDT),
-Designer Jade 35, creative 1.5 and SE9180. Each profile links to its manufacturer
-evidence in **Profile details & sources**. This is a curated starting library,
-not a promise that every hoop or every model generation is supported.
+The library contains 42 documented model profiles across seven brands, with common
+discontinued models and generation-specific module requirements. Find a model searches
+across brands; Brand → Model → Hoop remains available. Included/optional hoop labels
+appear where verified. Each profile links to its evidence under Profile details & sources.
+See [expanded model coverage and source register](EQUIPMENT_EXPANSION.md). This remains
+a curated library, not a promise that every model generation or optional hoop is supported.
 
 Dimensions are usable design-field envelopes in millimeters, with approximate
 inches in the hoop selector. Outer physical hoop dimensions are separate and

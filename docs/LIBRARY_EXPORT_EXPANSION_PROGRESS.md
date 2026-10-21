@@ -23,9 +23,9 @@ browser test passes entry, unknown line, leading zeros, distinct brands, duplica
 errors, simulated storage failure/retry, filtered success, Enter inventory save and reload.
 Existing catalog, inventory and matching browser regressions also pass, including actual six-format exports. Production build and whitespace checks pass. CI includes the new entry suite.
 
-## Remaining milestones
+## B — complete and verified
 
-B — complete and verified (follows A commit `3303496`).
+Commit `09d5ecd` (A: `3303496`).
 Files: thread-ui, thread-records, workspace CSS and thread-entry browser regression.
 Large live swatch, HEX/RGB/picker synchronization and searchable copy-from-catalog color
 are implemented. Unknown colors remain explicit label-only records and are excluded
@@ -37,7 +37,9 @@ Catalog records override fallback inventory snapshots during browsing.
 All 19 relevant unit tests and entry/catalog/inventory/matching browser suites pass,
 including real exports, edit/remove, exact identity, corrected owned preview and reload.
 
-C — starter catalogs complete and verified (B commit `09d5ecd`).
+## C — starter catalogs complete and verified
+
+Commit `2db86a6`.
 171 reviewed starter records across seven brands: New brothread 70, Brother 12,
 Simthread 23, Madeira 12, Sulky 12, Robison-Anton 12, Isacord 30. Explicit subsets,
 not complete catalogs; Floriani remains unpopulated. Sources and rights/data review
@@ -56,7 +58,9 @@ the system Python alias is unavailable; rerun with the bundled interpreter passe
 No tests were weakened. Full manufacturer coverage and measured/licensed RGB remain
 future data work, not claimed complete.
 
-D — complete and verified (C commit `2db86a6`).
+## D — complete and verified
+
+Commit `b7555ba`.
 Expanded from 7 to 42 documented brand/model profiles across seven brands, including
 common discontinued Brother models, Janome MC400E/550E, Baby Lock Verve/Vesta/Meridian,
 generation-qualified BERNINA B570/B590, Pfaff ambition 640, Viking Topaz 65 and Singer
@@ -70,7 +74,10 @@ Validation: 13 equipment/export unit tests; existing equipment and actual six-fo
 export-safety browser suites pass, including search, field changes, old/custom projects,
 no automatic artwork changes, history, mobile and unsafe-export blocking. The old
 SE700 single-hoop assertion now checks the exact two documented 100 mm hoop IDs.
-E — implemented, focused validation passed (D commit `b7555ba`).
+
+## E — complete and verified
+
+Commit `8564083`.
 Export dialog includes “Export all formats as ZIP”. Each implemented, round-trip-tested
 writer runs separately against one captured generated project plan. The existing
 preflight, decoded-needle/pause and field checks apply independently. Users review
@@ -85,8 +92,33 @@ Three unit cases validate actual six-format commands/bytes, archive extraction a
 independent ZIP CRC checks, geometry with holes, names, failures and JEF/VP3 omissions.
 Browser download passes every-entry byte comparison to observed unmodified writer
 output, separate standalone PES equivalence, dimensions, colors/stops, review/cancel,
-project preservation and mobile. Final unit rerun/build precede the E commit.
+project preservation and mobile. Final unit rerun and production build passed before commit.
 
-F: full regression/build/mobile QA, docs/version, PR/CI/merge/Pages and live verification.
+## F — release validation in progress
+
+Release target: v0.14.0. All 301 JS tests and 10 native codec/format tests passed.
+The full 37-suite browser run is in progress. The final production build separately
+passed starter, entry, equipment and actual ZIP workflows in Chrome, including mobile.
+Source provenance is retained on personal color correction; its updated browser
+assertions pass against the production build. Desktop/mobile screenshots reviewed.
+
+Files: package/footer version, README, thread/machine/previous-progress docs, thread-ui
+provenance retention and its browser assertion. Logs: test-results/expansion-F-_.log,
+expansion-dist-_.log; screenshots: thread-starters-_, library-entry-_, export-package-\*.
+
+Exact next steps: finish all 37 local browser suites, commit the release preparation,
+push and open/attach a PR; require full CI success before merging. Wait for the main
+Pages deployment, compare published runtime sources and v0.14.0 footer, and run the
+new thread-entry/starter/equipment/ZIP browser workflows on the public URL. Only then
+record publication as verified. Do not bypass failed checks.
+
+Remaining coverage: starters are deliberately partial, Floriani is not populated,
+Madeira/Sulky/Robison-Anton subset color names are not asserted where only identifiers
+were established. Swatches are Studio estimates, not manufacturer measurements or
+licensed catalog RGBs. Exact format evidence remains pending for new field-only Pfaff,
+Viking and Singer profiles; no full 50–100-model or universal hoop coverage is claimed.
+Existing JEF large-field and VP3 STOP limits remain, with no new hardware sew-outs.
+ZIP does not add preview images or EXP companion palette files; README/CSV preserve
+color instructions. These are explicit limitations, not hidden completed features.
 
 Never mark partial stages complete. Record each stage's checks/commit and exact handoff here.

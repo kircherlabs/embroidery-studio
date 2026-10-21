@@ -1,4 +1,6 @@
-# Equipment and physical threads — resumable progress
+# Equipment and physical threads — v0.13.0 historical progress
+
+For the v0.14.0 expansion, follow [LIBRARY_EXPORT_EXPANSION_PROGRESS.md](LIBRARY_EXPORT_EXPANSION_PROGRESS.md). The historical licensing/data limits below describe v0.13.0; reviewed factual starter subsets with original Studio approximations are documented in [THREAD_STARTERS.md](THREAD_STARTERS.md).
 
 Starting point: stable main `34d6ab6` (v0.12.8, smart image import integrated).
 Protected backups `backup-before-creative-update`, `BACKUP-V0.12.6` and
@@ -13,6 +15,7 @@ validation below records each milestone; see the publication checkpoint for fina
 ## Stage A — complete and verified (`5f99fd9`)
 
 Implemented:
+
 - `src/equipment.js`: versioned manufacturer/model/hoop reference data, evidence URLs,
   nullable unknown specifications, generic fields, custom profiles and local defaults.
 - `src/equipment-ui.js`, `index.html`, `workspace.css`, `src/help.js`: existing expandable
@@ -60,6 +63,7 @@ Files: `src/export-safety.js`, `src/app.js`, `src/codec.py`, `src/format-worker.
 `tests/export-safety-browser.mjs`.
 
 Audit findings and corrections:
+
 - Existing six writers remain PES, PEC, DST, EXP, JEF, VP3. HUS/VIP/PHC have no
   writers in the pinned dependency; do not offer them as implemented exports.
 - VP3 drops standalone STOP; block those exports rather than silently dropping

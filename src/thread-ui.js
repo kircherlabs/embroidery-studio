@@ -130,6 +130,15 @@ export function installThreads(api) {
         );
     return [...items].sort((a, b) => a[1].localeCompare(b[1]));
   }
+  function updateOwnedButton() {
+    const selected = libraryThreads(library).some((r) => r.id === chosen);
+    $("thread-owned-add").textContent = collectionChecks.size
+      ? `Mark checked owned (${collectionChecks.size})`
+      : selected
+        ? "Mark selected owned"
+        : "Mark as owned";
+    $("thread-owned-add").disabled = !collectionChecks.size && !selected;
+  }
   function renderList() {
     if (!$("thread-search")) return;
     const query = $("thread-search").value.trim().toLowerCase(),
@@ -211,9 +220,7 @@ export function installThreads(api) {
     }
     $("thread-use").disabled = !selected || !targets.length;
     $("thread-collection-edit").disabled = !selected;
-    $("thread-owned-add").textContent =
-      `Mark checked owned (${collectionChecks.size})`;
-    $("thread-owned-add").disabled = !collectionChecks.size;
+    updateOwnedButton();
   }
   function picker() {
     chosen = null;
@@ -303,9 +310,7 @@ export function installThreads(api) {
       if (!id) return;
       if (e.target.checked) collectionChecks.add(id);
       else collectionChecks.delete(id);
-      $("thread-owned-add").disabled = !collectionChecks.size;
-      $("thread-owned-add").textContent =
-        `Mark checked owned (${collectionChecks.size})`;
+      updateOwnedButton();
     };
     $("thread-results").onclick = (e) => {
       const row = e.target.closest("[data-thread]");
@@ -425,8 +430,11 @@ export function installThreads(api) {
     $("thread-owned-add").onclick = async () => {
       const next = structuredClone(library),
         ids = new Set(next.inventory.map((i) => i.thread.id));
+      const selectedIds = collectionChecks.size
+        ? collectionChecks
+        : new Set([chosen]);
       for (const thread of libraryThreads(library).filter((r) =>
-        collectionChecks.has(r.id),
+        selectedIds.has(r.id),
       )) {
         if (ids.has(thread.id)) {
           const entry = next.inventory.find((i) => i.thread.id === thread.id);
@@ -436,7 +444,9 @@ export function installThreads(api) {
       if (await persist(next)) {
         collectionChecks.clear();
         renderList();
-        api.toast("Checked spools marked owned; existing quantities retained.");
+        api.toast(
+          "Selected spools marked owned; existing quantities retained.",
+        );
       }
     };
     $("thread-requirements").onclick = () =>

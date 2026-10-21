@@ -99,6 +99,9 @@ project preservation and mobile. Final unit rerun and production build passed be
 Release target: v0.14.0. All 301 JS tests and 10 native codec/format tests passed.
 The full 37-suite browser run is in progress. The final production build separately
 passed starter, entry, equipment and actual ZIP workflows in Chrome, including mobile.
+Mark selected owned now works directly without a separate checkbox; checkboxes still
+select multiple spools, and repeated marking never increments stock. Selected ownership,
+bulk inventory and entry browser suites passed again after this final usability refinement.
 Source provenance is retained on personal color correction; its updated browser
 assertions pass against the production build. Desktop/mobile screenshots reviewed.
 

@@ -46,7 +46,10 @@ try {
     /studio-approximation/,
   );
   const id = await page.locator(".thread-result").getAttribute("data-thread");
-  await page.locator("[data-collection-check]").check();
+  assert.equal(
+    await page.locator("#thread-owned-add").innerText(),
+    "Mark selected owned",
+  );
   await page.locator("#thread-owned-add").click();
   await page.waitForFunction(() =>
     document.querySelector("#thread-results").textContent.includes("Owned ×1"),
@@ -67,6 +70,12 @@ try {
   await page.locator("#thread-search").fill("Prussian");
   await page.waitForFunction(
     () => document.querySelectorAll(".thread-result").length === 2,
+  );
+  await page.locator("#thread-brand").selectOption("newbrothread");
+  await page.locator(".thread-result").click();
+  await page.locator("#thread-owned-add").click();
+  await page.waitForFunction(() =>
+    document.querySelector("#thread-results").textContent.includes("Owned ×1"),
   );
   const stored = await page.evaluate(async () => {
     const { loadThreads } = await import("./src/thread-store.js");

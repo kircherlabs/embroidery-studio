@@ -9,7 +9,7 @@ export const FILL_DEFAULTS = {
     period: 8,
     variation: 0.1,
     amplitude: 0.5,
-    step: 0.2,
+    step: 0.17,
     edgeOptimize: false,
     edgeMinimum: 0.6,
   },

@@ -11,6 +11,7 @@ import { preparePlan } from "./planning.js";
 import { routeFill } from "./fill-routing.js";
 import { duplicateArtwork } from "./artwork-diagnostics.js";
 import { generateFill } from "./fills/registry.js";
+import "./fills/tatami.js";
 export { inside, distance } from "./geometry.js";
 const rotate = (p, a) => ({
   x: p.x * Math.cos(a) - p.y * Math.sin(a),
@@ -105,14 +106,20 @@ export function fillRows(
   pattern = "quarter",
   maxSatin = null,
   counterClearance = maxSatin ? 0.08 : 0,
+  textureOptions = null,
 ) {
   if (!rings.length) return [];
   const a = (angle * Math.PI) / 180,
     rs = rings.map((r) => r.map((p) => rotate(p, -a))),
     b = bounds(rs.flat()),
     rows = [];
-  let row = 0;
-  for (let y = b.minY + spacing / 2; y < b.maxY; y += spacing, row++) {
+  const first = textureOptions?.fixed
+    ? Math.ceil((b.minY - spacing / 2) / spacing) * spacing + spacing / 2
+    : b.minY + spacing / 2;
+  let row = textureOptions?.fixed
+    ? Math.round((first - spacing / 2) / spacing)
+    : 0;
+  for (let y = first; y < b.maxY; y += spacing, row++) {
     const cuts = [];
     for (const r of rs)
       for (let i = 0, j = r.length - 1; i < r.length; j = i++) {
@@ -160,8 +167,9 @@ export function fillRows(
                     : Infinity,
                 )),
           pts = [{ x: x1, y }],
-          phase =
-            pattern === "aligned"
+          phase = textureOptions?.phase
+            ? textureOptions.phase(row) * length
+            : pattern === "aligned"
               ? 0
               : pattern === "half"
                 ? ((row % 2) * length) / 2

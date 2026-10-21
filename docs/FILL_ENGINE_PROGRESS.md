@@ -45,14 +45,31 @@ Tatami stitches.
 Verification: all 317 automated tests pass (including original event hashes).
 Existing action-card, library storage and full artwork workflow browser suites
 pass in Chrome/Edge, covering touch, nested source, history, live fonts and decoded
-PES needle/stops/dimensions/origin. A is ready to commit after final build/check.
+PES needle/stops/dimensions/origin. A committed as `f377937`.
 
-Implementation status: A complete locally;
-B/C Tatami expansion, D Contour, E Meander, F Cross, G Emboss, H Ripple/Spiral,
-I release integration all not started. Proposed order: A → B → C → D → F → E → G → H → I.
+Milestone B: real Twill, deterministic Random, Wave, Third, Fifth, Progressive
+and Chevron Tatami phase generators with fixed physical-mm frames. Existing
+Classic/Brick/Aligned stay legacy until an expanded texture is explicitly chosen.
+The action card has one texture dropdown plus an optional grid of generated
+needle-placement samples and contextual period/amplitude/step/seed controls.
+Reset restores the original Classic generator. Settings remain independent per
+action; source-level settings migrate safely on materialization. Aligned/repeated
+penetrations receive an actionable warning, not artificial preview differences.
 
-Baseline commit: `787ef69`. Next: commit verified A infrastructure, then B real
-Tatami texture generators and contextual picker. C adds custom/edge controls.
+B verification: 322 Node tests pass, including 134 immutable legacy baselines,
+actual event distinctions, holes/islands/connectors, transforms, density,
+underlay/compensation and Reset. New Edge browser workflow passes: invalid input,
+single-action edits, real sample geometry, Undo/Redo, save/reload, legacy Reset,
+desktop/mobile overflow and independently decoded PES coordinates/dimensions.
+Screenshots: ignored test-results/fill-textures-{desktop,mobile}.png. Static build
+and diff check pass. No physical sew-out performed.
+
+Implementation status: A and B complete; C custom/edge controls in progress next.
+D Contour, E Meander, F Cross, G Emboss, H Ripple/Spiral and I release integration
+remain unimplemented. Order: A → B → C → D → F → E → G → H → I.
+
+Baseline commit: `787ef69`. Next: commit B, then implement C custom sequences,
+explicit pattern anchoring and constrained edge-spacing optimization.
 Preserve every protected backup ref. Do not regenerate legacy expectations to
 accommodate changed output. No public release until validated working milestones.
 

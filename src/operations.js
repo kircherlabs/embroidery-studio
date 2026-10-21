@@ -158,6 +158,12 @@ export function threadColors(o) {
 }
 export function materialize(o) {
   if (!o.operations) o.operations = [{ ...defaultOperation(o), id: uid() }];
+  if (o.fillSettings) {
+    for (const op of o.operations)
+      if (op.type === "fill" && !op.fillSettings)
+        op.fillSettings = structuredClone(o.fillSettings);
+    delete o.fillSettings;
+  }
   return o.operations;
 }
 export function makeOperation(type, o) {

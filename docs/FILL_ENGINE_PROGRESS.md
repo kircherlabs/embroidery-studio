@@ -1,8 +1,11 @@
 # Decorative fill package — progress
 
 Base: main, v0.15.0, `6a0dcd2`. Branch: `feature/decorative-fills`.
-The user approved the assessment and sequential implementation. No deployment
-has been made for this package.
+The user approved the assessment and sequential implementation. **All milestones
+A–I are complete and released as v0.16.0 on 2026-10-21.**
+PR [#27](https://github.com/kircherlabs/embroidery-studio/pull/27) merged as
+`6f16b20f5227b85d83dbbabb1113ebab3f031f94` and is live on GitHub Pages.
+The final release evidence and remaining practical limitations are below.
 
 Read: requested five starting reports, all topic/license reports, relevant
 experimental prototypes, attached thread-matching specification and current
@@ -216,38 +219,46 @@ The initial local runner needed the explicit bundled PYTHON executable; a sample
 count assertion was scoped to the eleven texture buttons, independently of the
 seven method buttons. No existing behavioral test was weakened.
 Documentation: DECORATIVE_FILLS.md, FILL_BENCHMARKS.md,
-examples/fill-swatches/README.md. Proposed release v0.16.0.
+examples/fill-swatches/README.md. Released as v0.16.0.
 
-Implementation status: A–H complete in the approved A→B→C→D→F→E→G→H order.
+Implementation status: A–I complete in the approved A→B→C→D→F→E→G→H→I order.
 I source integration is committed as `ae51057`, with optional-field/Custom fixes
-in `9a8d6ec` and final preset/transfer hardening in `f1f83a1`. PR #27 is open
-and attached. Exact-head GitHub CI, merge, Pages
-and live verification remain outstanding. Nothing from this branch is deployed
-yet. Do not mark release complete before those checks pass.
-Order: A → B → C → D → F → E → G → H → I.
+in `9a8d6ec` and final preset/transfer hardening in `f1f83a1`. Browser synchronization
+is finalized in `5fe3a26`; PR #27 is merged and attached.
 
-CI on `f1f83a1` passed Node/Python and preceding browser workflows, but the new
-integration browser asserted preset state before the native dialog close event
-applied it. The test now waits for the preset state before checking the regenerated
-plan; existing assertions remain intact. Edge reproduced a passing interaction
-before this timing correction. Exact-head CI must be rerun before release.
-The next run caught the established thread UX test measuring a desktop grid
-immediately after resizing to mobile, before the workspace media event applied
-compact mode. It now waits for that mode before retaining the same overflow and
-header-layout assertions. No production equipment/layout changes were needed.
-The subsequent run reached the new cross-project integration test and exposed
-the same native-close race when capturing the empty New Project baseline. Undo
-correctly restored the empty project; the expected baseline had been read too
-early. All three native-confirmation transitions in the new test now wait for
-their intended project state, then await stitch generation. Remaining library
-and history handlers are synchronous or already have explicit completion waits.
+Linux CI exposed native-dialog close timing in the new integration test's preset
+and New Project baseline reads, plus the established mobile equipment test
+measuring before its responsive media event. Tests now wait for the intended
+project/compact state; all original assertions remain. A deliberate 200 ms
+dialog-listener delay reproduces the original failure and passes the corrected
+test. No production dialog, equipment or layout changes were needed.
 
-Baseline commit: `787ef69`. Next: push the browser synchronization fix, wait for exact-head
-CI on PR #27, merge, wait for Pages and verify deployed source/version and isolated live
-fill workflows. Protected refs checked unchanged, including BACKUP-V0.15.0 at
+Release verification:
+
+- Exact-head PR CI on `5fe3a26` passed:
+  [run 39657226625](https://github.com/kircherlabs/embroidery-studio/actions/runs/39657226625).
+- Merged-main tests, build and Pages deployment passed:
+  [run 39659120531](https://github.com/kircherlabs/embroidery-studio/actions/runs/39659120531).
+  Both runs passed 345 Node tests, 4 codec + 6 format-safety Python tests and all
+  45 browser suites. Existing satin, drawing, import, library and export tests
+  remain enabled.
+- At 2026-10-21 19:21:56 UTC, all 30 changed public runtime files matched merged
+  source SHA-256 hashes (line endings normalized); live footer is v0.16.0.
+- All three fill browser suites passed against the actual GitHub Pages URL in
+  isolated Edge contexts: real textures/method samples, geometry/settings,
+  independent decoded PES needles/dimensions, history, save/reload, cross-project
+  My Artwork, seven mobile methods and real obsolete-worker termination.
+- Ignored local evidence: test-results/live-fill-verification.json,
+  fill-slow-dialog-before.log and generated live browser screenshots.
+
+Baseline commit: `787ef69`. There are no remaining implementation or release
+gates for this package. Practical follow-up is physical fabric sew-outs using
+examples/fill-swatches; none has been claimed. Open-coverage tips/cores, radial
+clipping and complexity limits remain documented in DECORATIVE_FILLS.md.
+Protected refs checked unchanged after deployment, including BACKUP-V0.15.0 at
 `6a0dcd2`, BACKUP-V0.14.1 at `8c6636b` and backup-before-creative-update at `99c0a78`.
 Preserve every protected backup ref. Do not regenerate legacy expectations to
-accommodate changed output. No public release until validated working milestones.
+accommodate changed output.
 
 The matching attachment is assessed separately: existing Delta E76 should not be
 silently replaced during fill development; see assessment appendix for a future

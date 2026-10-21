@@ -96,6 +96,80 @@ try {
   await page.locator("#thread-brand").selectOption("");
   await page.locator("#thread-collection").selectOption("all");
   assert.equal(await page.locator(".thread-result").count(), 3);
+  await page
+    .locator(".thread-result")
+    .filter({ hasText: "Prussian Blue" })
+    .click();
+  const ownedId = await page
+    .locator(".thread-result.selected")
+    .getAttribute("data-thread");
+  await page.locator("#thread-edit").click();
+  assert.equal(await page.locator("#manual-thread-number").inputValue(), "007");
+  assert.ok(
+    await page.locator("#manual-thread-number").evaluate((e) => e.readOnly),
+  );
+  await page.locator("#manual-thread-hex").fill("#336699");
+  assert.equal(
+    await page
+      .locator("#manual-color-preview")
+      .evaluate((e) => getComputedStyle(e).backgroundColor),
+    "rgb(51, 102, 153)",
+  );
+  assert.equal(await page.locator("#manual-color-R").inputValue(), "51");
+  await page.locator("#manual-color-R").fill("255");
+  assert.equal(
+    await page.locator("#manual-thread-hex").inputValue(),
+    "#ff6699",
+  );
+  await page.locator("#manual-color-picker").fill("#123abc");
+  assert.equal(
+    await page.locator("#manual-thread-hex").inputValue(),
+    "#123abc",
+  );
+  await page.locator("#manual-thread-save").click();
+  await page.locator("#thread-search").waitFor();
+  assert.equal(
+    await page.locator(".thread-result.selected").getAttribute("data-thread"),
+    ownedId,
+  );
+  assert.match(await page.locator("#thread-detail").innerText(), /#123abc/);
+  assert.match(await page.locator("#thread-results").innerText(), /Owned ×2/);
+  const stored = await page.evaluate(async () => {
+    const { loadThreads } = await import("./src/thread-store.js");
+    return loadThreads();
+  });
+  assert.equal(
+    stored.inventory.find((i) => i.thread.id === ownedId).thread.hex,
+    "#123abc",
+  );
+  assert.equal(
+    stored.records.find((i) => i.id === ownedId).source.colorAccuracy,
+    "user-selected",
+  );
+  await page.locator("#thread-manual").click();
+  await page.locator("#manual-thread-brand").fill("My label");
+  await page.locator("#manual-thread-number").fill("Z01");
+  await page
+    .locator("summary")
+    .filter({ hasText: "Use an existing catalog color" })
+    .click();
+  await page.locator("#manual-color-search").fill("Prussian");
+  await page.locator("#manual-color-source").selectOption(ownedId);
+  assert.equal(
+    await page.locator("#manual-thread-hex").inputValue(),
+    "#123abc",
+  );
+  await page.locator("#manual-thread-save").click();
+  await page.locator("#thread-search").waitFor();
+  await page.locator("#thread-delete").click();
+  await page.locator("#thread-delete-confirm").click();
+  await page.locator("#thread-search").waitFor();
+  const deleted = await page.evaluate(async () => {
+    const { loadThreads } = await import("./src/thread-store.js");
+    return loadThreads();
+  });
+  assert.equal(deleted.records.length, 3);
+  assert.equal(deleted.inventory.length, 1);
   await page.screenshot({ path: "test-results/library-entry-desktop.png" });
   await page.setViewportSize({ width: 390, height: 844 });
   await page.locator("#thread-manual").click();

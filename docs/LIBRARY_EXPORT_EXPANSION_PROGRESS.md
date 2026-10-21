@@ -25,8 +25,18 @@ Existing catalog, inventory and matching browser regressions also pass, includin
 
 ## Remaining milestones
 
-B: live visual/HEX/RGB color entry, catalog color selection, edit/remove custom threads,
-identity-preserving color correction, tests and commit.
+B — complete and verified (follows A commit `3303496`).
+Files: thread-ui, thread-records, workspace CSS and thread-entry browser regression.
+Large live swatch, HEX/RGB/picker synchronization and searchable copy-from-catalog color
+are implemented. Unknown colors remain explicit label-only records and are excluded
+from automatic visual matching until a user chooses a color. User selections carry
+user-selected accuracy. Personal entries support edit/remove; identity fields remain
+read-only during correction (use Add for another spool identity). Corrections update
+owned snapshots without altering quantities; saved project assignments remain snapshots.
+Catalog records override fallback inventory snapshots during browsing.
+All 19 relevant unit tests and entry/catalog/inventory/matching browser suites pass,
+including real exports, edit/remove, exact identity, corrected owned preview and reload.
+
 C: sourced real starter catalogs with reviewed factual identifiers and explicitly classified
 approximations; separate immutable built-ins from personal overrides/inventory. Do not
 copy the research dataset or chart graphics without review. Coverage must be honest.

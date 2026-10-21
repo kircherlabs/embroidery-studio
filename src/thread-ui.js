@@ -185,6 +185,28 @@ export function installThreads(api) {
     $("thread-detail").innerHTML = selected
       ? `${dot(selected)}<strong>${esc(display(selected))}</strong><p>${selected.hex ? esc(selected.hex) + " · digital approximation" : "No HEX reference; assignment retains the design color."}</p><p>${esc(selected.material || "Material unknown")} · ${esc(selected.weight || "Weight unknown")}${selected.spoolSizes.length ? " · " + esc(selected.spoolSizes.join(", ")) : ""}</p><details><summary>Source &amp; accuracy</summary><p>${esc(selected.source.name || "Source not provided")} · ${esc(selected.source.catalogVersion || "Version unknown")}<br>${esc(selected.source.verification)} · ${esc(selected.source.colorAccuracy)}</p><p>${esc(selected.source.url || "")}</p><p>${esc(selected.source.license || "Redistribution rights not established")}<br>${esc(selected.source.attribution || "")}</p></details>`
       : '<p class="property-note">Choose a color to view its spool identity and source. Screen approximations do not reproduce physical thread exactly.</p>';
+    if (selected && library.records.some((r) => r.id === selected.id)) {
+      $("thread-detail").insertAdjacentHTML(
+        "beforeend",
+        `<div class="thread-top-actions">${button("thread-edit", "Edit thread…")}${button("thread-delete", "Remove personal entry…")}</div>`,
+      );
+      $("thread-edit").onclick = () => manual(selected);
+      $("thread-delete").onclick = () => {
+        dialog.innerHTML =
+          head("Remove personal entry?") +
+          `<p>Remove ${esc(display(selected))} from your local catalog? Owned-spool records and saved project assignments keep their snapshots. Remove stock separately through Collection details.</p>` +
+          end(
+            button("thread-delete-back", "Keep entry") +
+              button("thread-delete-confirm", "Remove entry"),
+          );
+        $("thread-delete-back").onclick = picker;
+        $("thread-delete-confirm").onclick = async () => {
+          const next = structuredClone(library);
+          next.records = next.records.filter((r) => r.id !== selected.id);
+          if (await persist(next)) picker();
+        };
+      };
+    }
     $("thread-use").disabled = !selected || !targets.length;
     $("thread-collection-edit").disabled = !selected;
     $("thread-owned-add").textContent =
@@ -511,14 +533,97 @@ export function installThreads(api) {
       }
     };
   }
-  function manual() {
+  function manual(existing = null) {
     dialog.innerHTML =
-      head("Add a personal thread") +
-      `<p class="property-note">Copy the spool label. Only brand and spool number are required. Leave product line blank if unknown; it will be listed as Unspecified product line.</p><div class="thread-filters"><label>Brand<input id="manual-thread-brand" required maxlength="160" autocomplete="off" aria-describedby="manual-thread-error"></label><label>Product line (optional)<input id="manual-thread-line" maxlength="160"></label><label>Spool number<input id="manual-thread-number" required maxlength="80" aria-describedby="manual-thread-error"></label><label>Color name (optional)<input id="manual-thread-name" maxlength="160"></label><label>HEX approximation (optional)<input id="manual-thread-hex" placeholder="#123456" maxlength="7" aria-describedby="manual-thread-error"></label></div><details><summary>Optional spool details</summary><div class="thread-filters"><label>Material<input id="manual-thread-material" maxlength="160"></label><label>Weight<input id="manual-thread-weight" maxlength="160"></label></div></details><p id="manual-thread-error" role="alert"></p>` +
+      head(existing ? "Edit personal thread" : "Add a personal thread") +
+      `<p class="property-note">Copy the spool label. Only brand and spool number are required. Leave product line blank if unknown; it will be listed as Unspecified product line.</p><div class="thread-filters"><label>Brand<input id="manual-thread-brand" required maxlength="160" autocomplete="off" aria-describedby="manual-thread-error"></label><label>Product line (optional)<input id="manual-thread-line" maxlength="160"></label><label>Spool number<input id="manual-thread-number" required maxlength="80" aria-describedby="manual-thread-error"></label><label>Color name (optional)<input id="manual-thread-name" maxlength="160"></label><label>HEX approximation (optional)<input id="manual-thread-hex" placeholder="#123456" maxlength="7" aria-describedby="manual-thread-error"></label></div><div class="thread-color-editor"><output id="manual-color-preview" aria-live="polite"></output><label>Visual color picker<input type="color" id="manual-color-picker" value="#4079b0"></label>${button("manual-color-use", "Use picker color")}<div class="thread-rgb">${["R", "G", "B"].map((c) => `<label>${c}<input id="manual-color-${c}" type="number" min="0" max="255" step="1" aria-label="${c} color channel"></label>`).join("")}</div></div><p class="property-note">Screen colors are approximate. Choose a color to enable visual matching, or leave HEX empty for a label-only spool. Corrections keep the same spool identity; saved project snapshots change only when reassigned.</p><details><summary>Use an existing catalog color</summary><label>Search color or spool number<input id="manual-color-search" type="search"></label><label>Copy an approximate color<select id="manual-color-source"></select></label></details><details><summary>Optional spool details</summary><div class="thread-filters"><label>Material<input id="manual-thread-material" maxlength="160"></label><label>Weight<input id="manual-thread-weight" maxlength="160"></label></div></details><p id="manual-thread-error" role="alert"></p>` +
       end(
         button("manual-thread-back", "Back") +
           button("manual-thread-save", "Save thread"),
       );
+    const fields = {
+      brand: "brandName",
+      line: "lineName",
+      number: "number",
+      name: "colorName",
+      hex: "hex",
+      material: "material",
+      weight: "weight",
+    };
+    if (existing)
+      for (const [id, key] of Object.entries(fields))
+        $("manual-thread-" + id).value = existing[key] || "";
+    if (existing)
+      for (const key of ["brand", "line", "number"])
+        $("manual-thread-" + key).readOnly = true;
+    const preview = () => {
+      const hex = $("manual-thread-hex").value.trim();
+      const valid = /^#[0-9a-f]{6}$/i.test(hex);
+      $("manual-color-preview").className = valid ? "" : "unknown";
+      $("manual-color-preview").style.background = valid ? hex : "";
+      $("manual-color-preview").textContent = [
+        $("manual-thread-number").value,
+        $("manual-thread-name").value,
+        valid ? hex : "Choose an approximate color",
+      ]
+        .filter(Boolean)
+        .join(" · ");
+      if (valid) {
+        $("manual-color-picker").value = hex;
+        ["R", "G", "B"].forEach(
+          (c, i) =>
+            ($("manual-color-" + c).value = parseInt(
+              hex.slice(1 + i * 2, 3 + i * 2),
+              16,
+            )),
+        );
+      }
+    };
+    for (const id of ["hex", "number", "name"])
+      $("manual-thread-" + id).oninput = preview;
+    const useColor = () => {
+      $("manual-thread-hex").value = $("manual-color-picker").value;
+      preview();
+    };
+    $("manual-color-use").onclick = useColor;
+    $("manual-color-picker").oninput = useColor;
+    for (const c of ["R", "G", "B"])
+      $("manual-color-" + c).oninput = () => {
+        const inputs = ["R", "G", "B"].map((k) => $("manual-color-" + k));
+        if (inputs.every((e) => e.value !== "" && e.checkValidity())) {
+          $("manual-thread-hex").value =
+            "#" +
+            inputs
+              .map((e) => Number(e.value).toString(16).padStart(2, "0"))
+              .join("");
+          preview();
+        }
+      };
+    const sourceColors = () => {
+      const query = $("manual-color-search").value.toLowerCase();
+      $("manual-color-source").innerHTML =
+        option("", "Choose a color…") +
+        libraryThreads(library)
+          .filter(
+            (r) =>
+              r.hex && (!query || display(r).toLowerCase().includes(query)),
+          )
+          .slice(0, 30)
+          .map((r) => option(r.id, display(r)))
+          .join("");
+    };
+    $("manual-color-search").oninput = sourceColors;
+    $("manual-color-source").onchange = () => {
+      const r = libraryThreads(library).find(
+        (r) => r.id === $("manual-color-source").value,
+      );
+      if (r?.hex) {
+        $("manual-thread-hex").value = r.hex;
+        preview();
+      }
+    };
+    sourceColors();
+    preview();
     $("manual-thread-back").onclick = picker;
     $("manual-thread-brand").focus();
     $("manual-thread-save").className = "primary";
@@ -541,6 +646,10 @@ export function installThreads(api) {
       }
       save.disabled = true;
       try {
+        if (
+          ["R", "G", "B"].some((c) => !$("manual-color-" + c).checkValidity())
+        )
+          throw Error("RGB channels must be whole numbers from 0 to 255.");
         const r = normalizeThread({
           brandName: $("manual-thread-brand").value,
           lineName:
@@ -556,12 +665,25 @@ export function installThreads(api) {
           },
         });
         r.source.verification = "user-entered";
-        if (libraryThreads(library).some((t) => t.id === r.id))
+        r.source.colorAccuracy = r.hex ? "user-selected" : "unknown";
+        if (existing) {
+          r.id = existing.id;
+          r.brandId = existing.brandId;
+          r.lineId = existing.lineId;
+          if (r.id !== normalizeThread({ ...r }).id)
+            throw Error(
+              "Spool identity cannot change here. Add another thread for a different label.",
+            );
+        }
+        if (!existing && libraryThreads(library).some((t) => t.id === r.id))
           throw Error(
             "This brand, product line and spool number already exist. Select the existing thread rather than adding a duplicate.",
           );
         const next = structuredClone(library);
-        next.records = mergeCatalog(next.records, [r]).records;
+        next.records = mergeCatalog(next.records, [r], !!existing).records;
+        if (existing)
+          for (const i of next.inventory)
+            if (i.thread.id === r.id) i.thread = structuredClone(r);
         if (await persist(next)) {
           if (!dialog.open || !save.isConnected) return;
           picker();

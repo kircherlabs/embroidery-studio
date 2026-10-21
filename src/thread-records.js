@@ -129,9 +129,15 @@ export function validateThread(r) {
   if (
     !s ||
     !["user-imported", "user-entered"].includes(s.verification) ||
-    !["digital-approximation", "unknown", "user-measured"].includes(
-      s.colorAccuracy,
-    )
+    ![
+      "digital-approximation",
+      "unknown",
+      "user-measured",
+      "user-selected",
+      "chart-approximation",
+      "third-party-approximation",
+      "manufacturer-digital",
+    ].includes(s.colorAccuracy)
   )
     throw Error("Invalid thread provenance.");
   for (const [k, max] of Object.entries({
@@ -274,6 +280,6 @@ export const inventoryEntry = (thread, quantity = 1) =>
 export function libraryThreads(library) {
   // Removed catalogs do not erase personally recorded spool identities.
   const map = new Map(library.inventory.map((i) => [i.thread.id, i.thread]));
-  for (const r of library.records) if (!map.has(r.id)) map.set(r.id, r);
+  for (const r of library.records) map.set(r.id, r);
   return [...map.values()];
 }

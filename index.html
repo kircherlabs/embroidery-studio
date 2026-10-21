@@ -32,17 +32,17 @@
         /><span id="save-status">Saved on this device</span>
       </div>
       <div class="file-actions">
-        <button id="new-project" class="quiet">New</button
-        ><button id="open-file" class="quiet">Import / Open</button
-        ><button id="save-project" class="quiet">Save project</button
-        ><button
+        <button
           id="thread-library"
           aria-haspopup="dialog"
           aria-controls="thread-dialog"
           class="quiet"
-          data-help="Browse personal thread catalogs and assign physical spools to selected sewing actions. Optional; custom HEX colors remain available."
+          data-help="Browse thread catalogs and optionally track owned spools or assign threads to selected sewing actions. Custom HEX colors remain available."
         >
           Threads</button
+        ><button id="new-project" class="quiet">New</button
+        ><button id="open-file" class="quiet">Import / Open</button
+        ><button id="save-project" class="quiet">Save project</button
         ><button id="export" class="primary">Export <span>↗</span></button>
       </div>
     </header>
@@ -225,22 +225,21 @@
             ><span id="fit-status"></span>
           </summary>
           <div class="machine-settings" aria-label="Equipment selection">
-            <label
+            <label class="equipment-search"
               >Find a model<input
                 id="machine-search"
                 type="search"
                 list="machine-search-options"
                 placeholder="Search any brand or model"
-                autocomplete="off" /><datalist
-                id="machine-search-options"
-              ></datalist
-              ><span id="machine-search-status" role="status"></span
-            ></label>
+                autocomplete="off"
+              /><datalist id="machine-search-options"></datalist>
+            </label>
             <label>Brand<select id="machine-brand"></select></label>
             <label>Model<select id="machine"></select></label>
             <label
               >Hoop / design field<select id="machine-hoop"></select
             ></label>
+            <span id="machine-search-status" role="status"></span>
             <div class="equipment-actions">
               <button id="equipment-center" type="button" hidden>
                 Center design in hoop
@@ -634,7 +633,7 @@
     <footer class="status-bar">
       <span id="status">Ready</span
       ><span
-        >40 wt thread presets <i>·</i> v0.14.0 <i>·</i>
+        >40 wt thread presets <i>·</i> v0.14.1 <i>·</i>
         <a
           href="https://github.com/kircherlabs/embroidery-studio"
           target="_blank"

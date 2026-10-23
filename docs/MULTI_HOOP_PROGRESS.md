@@ -18,7 +18,14 @@ Protected `backup-before-creative-update` and `BACKUP-V0.17.0` verified; never m
 - D: opt-in paired registration, clear-area/field checks, mandatory post-mark
   operator pause, measured 1:1 SVG and tiled A4 HTML, orientation and 50 mm ruler
   implemented; 9 cumulative tests pass. No physical alignment claim.
-- E–F: next: independently validated ZIP; browser QA
+- E: per-section preflight, real writer/round-trip/field checks, complete-format
+  sets, numbered ZIP directories, shared-coordinate manifest, per-hoop thread
+  sequences, overview and measured templates implemented. 12 cumulative tests
+  pass, including actual six-format/two-hoop encoding, independent PES needles,
+  corrupt section omission and required registration-stop/VP3 rejection. Existing
+  writers and corrected origins are unchanged. VP3 header placement is excluded
+  from sewn-span measurement; every decoded needle still passes existing checks.
+- F: next: compact workspace integration; browser QA
   and release. Do not claim complete or deploy intermediate states.
 
 Research: Hatch documents distinct hoop placement, overlap and adjustable split

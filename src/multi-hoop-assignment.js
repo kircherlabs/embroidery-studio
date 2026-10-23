@@ -53,7 +53,12 @@ export function sectionProject(master,hoop,objects) {
   p.objects=structuredClone(objects);
   // Linked geometry is already resolved in world coordinates. Do not resolve it
   // a second time after changing to this section's local sewing coordinates.
-  for(const o of p.objects) {delete o.linkedGeometry;translate(o,-hoop.x,-hoop.y);}
+  for(const o of p.objects) {
+    delete o.linkedGeometry;
+    // A shared master grid must translate with the section's coordinate origin.
+    for(const action of [o,...(o.operations||[])])if(action.fillSettings)action.fillSettings.anchor='object';
+    translate(o,-hoop.x,-hoop.y);
+  }
   const needed=new Set(objects.flatMap(o=>ancestors(master,o).map(g=>g.id)));
   p.groups=(p.groups||[]).filter(g=>needed.has(g.id));
   return p;

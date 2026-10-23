@@ -8,8 +8,14 @@ Protected `backup-before-creative-update` and `BACKUP-V0.17.0` verified; never m
   passed (3 tests). No production interface is exposed yet.
 - B: whole-object and group preference, atomic construction dependencies, explicit
   assignments and independent local-coordinate sections pass 5 cumulative tests.
-- C–F: next: source splitting and
-  regeneration; registration/templates; independently validated ZIP; browser QA
+- C: source Tatami/Emboss partitioning, exact coverage, shared phase, seam-bounded
+  compensation, regenerated underlay/ties, source run/bean/triple splitting,
+  whole disconnected contours and overlapping-paint order checks implemented.
+  Unsupported satin/rail/construction/decorative interior cuts are explicitly
+  blocked; manual existing source/rail splitting remains available. 8 cumulative
+  multi-hoop tests plus 22 engine/Tatami/Emboss regressions pass. 120 legacy event
+  streams and compensation/stack baselines remain exact.
+- D–F: next: registration/templates; independently validated ZIP; browser QA
   and release. Do not claim complete or deploy intermediate states.
 
 Research: Hatch documents distinct hoop placement, overlap and adjustable split

@@ -1,4 +1,95 @@
 /* Docked panels reclaim their tracks; compact screens use accessible drawers. */
+.workspace-machine.multi-hoop-open .machine-settings {
+  display: none;
+}
+#multi-hoop-badge {
+  color: #87532c;
+  font-weight: 600;
+  font-size: 11px;
+}
+#multi-hoop-controls {
+  max-height: min(38vh, 240px);
+  overflow: auto;
+  padding: 10px 15px;
+  background: var(--panel);
+  color: var(--text, #dce4d6);
+  border-top: 1px solid #657254;
+}
+.multi-heading,
+.multi-row {
+  display: flex;
+  gap: 7px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 7px;
+}
+.multi-heading > span {
+  font-size: 11px;
+  color: #b3c2a5;
+  flex: 1;
+}
+.multi-row label {
+  font-size: 11px;
+  display: flex;
+  gap: 4px;
+  flex-direction: column;
+  min-width: 0;
+}
+.multi-row label.check {
+  flex-direction: row;
+  align-items: center;
+}
+.multi-row input[type="number"] {
+  width: 85px;
+  min-width: 0;
+}
+.multi-row select {
+  max-width: min(230px, 100%);
+}
+.multi-row button,
+.multi-heading button {
+  padding: 5px 9px;
+  font-size: 11px;
+  min-height: 32px;
+}
+.multi-advanced {
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+.multi-advanced summary {
+  cursor: pointer;
+  padding: 4px 0;
+}
+.multi-issue {
+  display: block;
+  width: 100%;
+  text-align: left;
+  font-size: 11px;
+  color: #f1b3a3;
+  margin: 4px 0;
+  white-space: normal;
+}
+#multi-hoop-controls p {
+  font-size: 11px;
+  line-height: 1.5;
+  margin: 6px 0;
+}
+@media (max-width: 680px) {
+  #multi-hoop-controls {
+    max-height: 30vh;
+    padding: 8px;
+  }
+  .multi-row button,
+  .multi-heading button {
+    min-height: 36px;
+  }
+  .multi-row label {
+    max-width: 100%;
+  }
+  .multi-row input[type="number"] {
+    width: 80px;
+  }
+}
 .workspace {
   position: relative;
   grid-template-columns: var(--left-track, 300px) minmax(0, 1fr) var(

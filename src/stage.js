@@ -28,6 +28,7 @@ import { objectBounds, pointsOf, bounds } from "./model.js";
 import { inside, distance } from "./engine.js";
 import { movementSegments } from "./preview.js";
 import { drawCleanupOverlay } from "./manual-cleanup.js";
+import { drawHoopingOverlay } from "./multi-hoop-overlay.js";
 import { closedOutlinePreview, drawClosedOutline } from "./outline-preview.js";
 import {
   EDITING_STYLE,
@@ -363,80 +364,107 @@ export class Stage {
     ctx.fillRect(0, 0, this.w, this.h);
     ctx.translate(c.x, c.y);
     ctx.scale(scale, scale);
-    ctx.fillStyle = "#b2bca3";
-    ctx.strokeStyle = "#a4b195";
-    ctx.lineWidth = 1 / scale;
-    this.roundRect(
-      ctx,
-      -m.width / 2 - 6,
-      -m.height / 2 - 6,
-      m.width + 12,
-      m.height + 12,
-      9,
-    );
-    ctx.fill();
-    ctx.stroke();
-    ctx.fillStyle = "#f3f0e1";
-    this.roundRect(
-      ctx,
-      -m.width / 2 - 1.5,
-      -m.height / 2 - 1.5,
-      m.width + 3,
-      m.height + 3,
-      4,
-    );
-    ctx.fill();
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(-m.width / 2, -m.height / 2, m.width, m.height);
-    ctx.clip();
-    // Subtle woven substrate, kept at a fixed physical spacing.
-    ctx.strokeStyle = "#e6e3d3";
-    ctx.lineWidth = 0.4 / scale;
-    ctx.beginPath();
-    for (let x = -m.width / 2; x <= m.width / 2; x += 1) {
-      ctx.moveTo(x, -m.height / 2);
-      ctx.lineTo(x, m.height / 2);
-    }
-    for (let y = -m.height / 2; y <= m.height / 2; y += 1) {
-      ctx.moveTo(-m.width / 2, y);
-      ctx.lineTo(m.width / 2, y);
-    }
-    ctx.stroke();
-    ctx.strokeStyle = "#c7cbb9";
-    ctx.lineWidth = 0.6 / scale;
-    ctx.beginPath();
-    for (let x = -m.width / 2; x <= m.width / 2; x += 10) {
-      ctx.moveTo(x, -m.height / 2);
-      ctx.lineTo(x, m.height / 2);
-    }
-    for (let y = -m.height / 2; y <= m.height / 2; y += 10) {
-      ctx.moveTo(-m.width / 2, y);
-      ctx.lineTo(m.width / 2, y);
-    }
-    ctx.stroke();
-    ctx.restore();
-    ctx.strokeStyle = "#a0aa92";
-    ctx.lineWidth = 0.7 / scale;
-    ctx.setLineDash([3 / scale, 4 / scale]);
-    ctx.strokeRect(-m.width / 2, -m.height / 2, m.width, m.height);
-    ctx.setLineDash([]);
-    ctx.fillStyle = "#7c896f";
-    ctx.font = `${8 / scale}px system-ui`;
-    ctx.textAlign = "center";
-    for (let x = -m.width / 2; x <= m.width / 2; x += 20)
-      ctx.fillText(
-        String(Math.round(x + m.width / 2)),
-        x,
-        -m.height / 2 - 8 / scale,
+    if (!s.project.multiHoop?.enabled) {
+      ctx.fillStyle = "#b2bca3";
+      ctx.strokeStyle = "#a4b195";
+      ctx.lineWidth = 1 / scale;
+      this.roundRect(
+        ctx,
+        -m.width / 2 - 6,
+        -m.height / 2 - 6,
+        m.width + 12,
+        m.height + 12,
+        9,
       );
-    ctx.textAlign = "right";
-    for (let y = -m.height / 2; y <= m.height / 2; y += 20)
-      ctx.fillText(
-        String(Math.round(y + m.height / 2)),
-        -m.width / 2 - 9 / scale,
-        y + 3 / scale,
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = "#f3f0e1";
+      this.roundRect(
+        ctx,
+        -m.width / 2 - 1.5,
+        -m.height / 2 - 1.5,
+        m.width + 3,
+        m.height + 3,
+        4,
       );
+      ctx.fill();
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(-m.width / 2, -m.height / 2, m.width, m.height);
+      ctx.clip();
+      // Subtle woven substrate, kept at a fixed physical spacing.
+      ctx.strokeStyle = "#e6e3d3";
+      ctx.lineWidth = 0.4 / scale;
+      ctx.beginPath();
+      for (let x = -m.width / 2; x <= m.width / 2; x += 1) {
+        ctx.moveTo(x, -m.height / 2);
+        ctx.lineTo(x, m.height / 2);
+      }
+      for (let y = -m.height / 2; y <= m.height / 2; y += 1) {
+        ctx.moveTo(-m.width / 2, y);
+        ctx.lineTo(m.width / 2, y);
+      }
+      ctx.stroke();
+      ctx.strokeStyle = "#c7cbb9";
+      ctx.lineWidth = 0.6 / scale;
+      ctx.beginPath();
+      for (let x = -m.width / 2; x <= m.width / 2; x += 10) {
+        ctx.moveTo(x, -m.height / 2);
+        ctx.lineTo(x, m.height / 2);
+      }
+      for (let y = -m.height / 2; y <= m.height / 2; y += 10) {
+        ctx.moveTo(-m.width / 2, y);
+        ctx.lineTo(m.width / 2, y);
+      }
+      ctx.stroke();
+      ctx.restore();
+      ctx.strokeStyle = "#a0aa92";
+      ctx.lineWidth = 0.7 / scale;
+      ctx.setLineDash([3 / scale, 4 / scale]);
+      ctx.strokeRect(-m.width / 2, -m.height / 2, m.width, m.height);
+      ctx.setLineDash([]);
+      ctx.fillStyle = "#7c896f";
+      ctx.font = `${8 / scale}px system-ui`;
+      ctx.textAlign = "center";
+      for (let x = -m.width / 2; x <= m.width / 2; x += 20)
+        ctx.fillText(
+          String(Math.round(x + m.width / 2)),
+          x,
+          -m.height / 2 - 8 / scale,
+        );
+      ctx.textAlign = "right";
+      for (let y = -m.height / 2; y <= m.height / 2; y += 20)
+        ctx.fillText(
+          String(Math.round(y + m.height / 2)),
+          -m.width / 2 - 9 / scale,
+          y + 3 / scale,
+        );
+    } else {
+      ctx.fillStyle = "#f3f0e1";
+      ctx.fillRect(-c.x / scale, -c.y / scale, this.w / scale, this.h / scale);
+      if (s.grid) {
+        ctx.strokeStyle = "#9fac8d35";
+        ctx.lineWidth = 0.5 / scale;
+        ctx.beginPath();
+        for (
+          let x = Math.floor(-c.x / scale / 10) * 10;
+          x < (this.w - c.x) / scale;
+          x += 10
+        ) {
+          ctx.moveTo(x, -c.y / scale);
+          ctx.lineTo(x, (this.h - c.y) / scale);
+        }
+        for (
+          let y = Math.floor(-c.y / scale / 10) * 10;
+          y < (this.h - c.y) / scale;
+          y += 10
+        ) {
+          ctx.moveTo(-c.x / scale, y);
+          ctx.lineTo((this.w - c.x) / scale, y);
+        }
+        ctx.stroke();
+      }
+    }
     if (s.mode === "design") this.drawReferences(ctx);
     if (s.mode === "design")
       for (const o of s.project.objects.filter(
@@ -882,6 +910,7 @@ export class Stage {
         { width: 1.1, dash: [3, 2] },
       );
     }
+    drawHoopingOverlay(ctx, s, scale, this.drag?.type === "multi-hoop");
     document.getElementById("zoom-value").textContent =
       Math.round(this.zoom * 100) + "%";
     document.getElementById("navigation-hint").textContent =
@@ -1045,6 +1074,21 @@ export class Stage {
         }
       });
       if (index >= 0) this.actions.scrub(index + 1);
+      return;
+    }
+    if (s.multiHoopMode && s.tool === "select") {
+      const id = this.actions.hoopPick?.(p),
+        h = s.project.multiHoop?.hoops.find((h) => h.id === id);
+      if (h)
+        this.drag = {
+          type: "multi-hoop",
+          id,
+          start: p,
+          x: h.x,
+          y: h.y,
+          before: JSON.stringify(s.project),
+        };
+      this.render();
       return;
     }
     const guideTarget = this.satinGuideTarget();
@@ -1337,6 +1381,20 @@ export class Stage {
       return;
     }
     const d = this.drag;
+    if (d?.type === "multi-hoop") {
+      const h = this.state.project.multiHoop?.hoops.find((h) => h.id === d.id);
+      if (h) {
+        const value = (v) => (e.altKey ? v : Math.round(v * 10) / 10);
+        h.x = value(d.x + p.x - d.start.x);
+        h.y = value(d.y + p.y - d.start.y);
+        this.render();
+        const note = document.getElementById("multi-summary");
+        if (note)
+          note.textContent =
+            "Moving field · release to regenerate sections. Master artwork stays unchanged.";
+      }
+      return;
+    }
     if (!d) {
       if (this.state.tool === "select" && !this.state.space) {
         // Reuse the last rendered frame: hovering must not walk every vertex of

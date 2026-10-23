@@ -119,7 +119,7 @@ export function fillRows(
     rs = rings.map((r) => r.map((p) => rotate(p, -a))),
     b = bounds(rs.flat()),
     rows = [],
-    clip = coverageClip?.map(r => r.map(p => rotate(p, -a)));
+    clip = coverageClip?.map((r) => r.map((p) => rotate(p, -a)));
   const first = textureOptions?.fixed
     ? Math.ceil((b.minY - spacing / 2) / spacing) * spacing + spacing / 2
     : b.minY + spacing / 2;
@@ -173,14 +173,27 @@ export function fillRows(
                     ? (cuts[cutIndex + 1].x - c.x) / 3
                     : Infinity,
                 )),
-          limits = clip ? clip.flatMap(r => r.flatMap((p,i) => {
-            const q=r[(i+1)%r.length];
-            return (p.y<=y&&q.y>y)||(q.y<=y&&p.y>y) ? [p.x+(q.x-p.x)*(y-p.y)/(q.y-p.y)] : [];
-          })).sort((p,q)=>p-q) : null,
-          middle = (start+c.x)/2,
-          at = limits?.findIndex((x,i) => i%2===0 && x<=middle+1e-7 && limits[i+1]>=middle-1e-7),
-          x1 = at>=0 ? Math.max(rawX1,limits[at]) : rawX1,
-          x2 = at>=0 ? Math.min(rawX2,limits[at+1]) : rawX2,
+          limits = clip
+            ? clip
+                .flatMap((r) =>
+                  r.flatMap((p, i) => {
+                    const q = r[(i + 1) % r.length];
+                    return (p.y <= y && q.y > y) || (q.y <= y && p.y > y)
+                      ? [p.x + ((q.x - p.x) * (y - p.y)) / (q.y - p.y)]
+                      : [];
+                  }),
+                )
+                .sort((p, q) => p - q)
+            : null,
+          middle = (start + c.x) / 2,
+          at = limits?.findIndex(
+            (x, i) =>
+              i % 2 === 0 &&
+              x <= middle + 1e-7 &&
+              limits[i + 1] >= middle - 1e-7,
+          ),
+          x1 = at >= 0 ? Math.max(rawX1, limits[at]) : rawX1,
+          x2 = at >= 0 ? Math.min(rawX2, limits[at + 1]) : rawX2,
           pts = [{ x: x1, y }],
           phase = textureOptions?.phase
             ? textureOptions.phase(row) * length

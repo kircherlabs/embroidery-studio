@@ -8,6 +8,12 @@ import { installThreads } from "./thread-ui.js";
 import { estimateCleanup } from "./manual-cleanup.js";
 import { installSequenceTimeline } from "./sequence-timeline.js";
 import { installArtworkLibrary } from "./artwork-ui.js";
+import { installMultiHoop } from "./multi-hoop-ui.js";
+import { hoopingRevision } from "./multi-hoop-layout.js";
+import {
+  prepareMultiHoopPackage,
+  multiHoopArchive,
+} from "./multi-hoop-export.js";
 import { stampFillFeatures } from "./fills/schema.js";
 import { LatestGenerationWorker } from "./generation-worker.js";
 import { threadTargets } from "./thread-assignment.js";
@@ -150,6 +156,12 @@ const state = {
   cleanupReport: null,
   cleanupSelected: null,
   previewFormat: null,
+  multiHoopMode: false,
+  multiHoopView: "all",
+  multiHoopSelected: null,
+  multiHoopBundle: null,
+  fullPlan: null,
+  generatedSource: "",
   showUnderlay: true,
   showEvents: false,
   space: false,
@@ -185,7 +197,7 @@ let history = [],
 const pendingFormats = new Map();
 let clipboard = null;
 let sewingStyleClipboard = null;
-let workspaceLayout, arrangeMenu, equipmentUI, threadUI, artworkUI;
+let workspaceLayout, arrangeMenu, equipmentUI, threadUI, artworkUI, multiHoopUI;
 const worker = new LatestGenerationWorker(
   () =>
     new Worker(new URL("./digitize-worker.js", import.meta.url), {
@@ -205,6 +217,7 @@ const stage = new Stage($("stage"), state, {
   sculptChanged,
   scrub,
   contextMenu: ({ x, y }) => arrangeMenu?.open(x, y),
+  hoopPick: (p) => multiHoopUI?.pick(p),
 });
 const sequenceTimeline = installSequenceTimeline({
   state,
@@ -322,10 +335,20 @@ function autosave() {
 }
 function scheduleGenerate() {
   const id = ++generation;
+  const repaintMulti =
+    !!state.multiHoopBundle || !!state.project.multiHoop?.enabled;
   state.plan = null;
+  state.fullPlan = state.multiHoopBundle = null;
+  state.generatedSource = "";
+  multiHoopUI?.render();
   state.cleanupReport = null;
   state.cleanupSelected = null;
   sequenceTimeline.update(null);
+  if (repaintMulti) {
+    renderTimeline();
+    renderPlayback();
+    stage.render();
+  }
   $("status").textContent = "Generating stitch sequence…";
   $("export").disabled = true;
   clearTimeout(generationTimer);
@@ -338,6 +361,9 @@ function scheduleGenerate() {
       ),
     };
     delete project.referenceAssets;
+    state.generatedSource = project.multiHoop?.enabled
+      ? hoopingRevision(state.project)
+      : "";
     worker.postMessage({ id, project });
   }, 100);
 }
@@ -349,10 +375,13 @@ worker.onmessage = ({ data }) => {
     $("status").textContent = data.error;
     toast(data.error);
     renderStats();
+    multiHoopUI?.render();
     return;
   }
   state.generationError = null;
-  state.plan = data;
+  state.fullPlan = data.multiHoop ? data : null;
+  state.multiHoopBundle = data.multiHoop || null;
+  state.plan = multiHoopView(data);
   state.previewFormat = null;
   const satinStatus = $("satin-analysis");
   if (satinStatus?.dataset.object)
@@ -363,7 +392,7 @@ worker.onmessage = ({ data }) => {
           d.operationId === satinStatus.dataset.operation,
       ),
     );
-  state.cursor = data.events.length;
+  state.cursor = state.plan.events.length;
   $("export").disabled =
     data.issues?.some((i) => i.severity === "error") || false;
   renderStats();
@@ -371,9 +400,66 @@ worker.onmessage = ({ data }) => {
   renderPlayback();
   markSourceRows();
   stage.render();
+  multiHoopUI?.render();
+  updateMultiHoopSource();
   $("status").textContent =
     `Ready · ${fmt(data.stats.stitches)} stitches · ${num(data.stats.bounds.width)} × ${num(data.stats.bounds.height)} mm`;
 };
+function multiHoopView(data) {
+  const bundle = data.multiHoop;
+  if (!bundle || state.multiHoopView !== "selected") return data;
+  const s =
+    bundle.sections.find((s) => s.hoop.id === state.multiHoopSelected) ||
+    bundle.sections[0];
+  if (!s) return data;
+  const h = s.hoop,
+    b = s.plan.stats.bounds;
+  return {
+    ...s.plan,
+    events: s.plan.events.map((e, i) => ({
+      ...e,
+      x: e.x + h.x,
+      y: e.y + h.y,
+      hoopingId: h.id,
+      ...(i === 0 ? { hoopStart: { x: h.x, y: h.y } } : {}),
+    })),
+    stats: {
+      ...s.plan.stats,
+      bounds: {
+        ...b,
+        minX: b.minX + h.x,
+        maxX: b.maxX + h.x,
+        minY: b.minY + h.y,
+        maxY: b.maxY + h.y,
+      },
+    },
+  };
+}
+function updateMultiHoopSource() {
+  const b = state.multiHoopBundle;
+  if (!b) return;
+  const selected =
+    b.sections.find((s) => s.hoop.id === state.multiHoopSelected) ||
+    b.sections[0];
+  $("sequence-source").textContent =
+    state.multiHoopView === "selected"
+      ? `Hooping ${selected?.number || 1} · generated`
+      : `${b.sections.length} hoopings · assembled`;
+}
+function changeMultiHoopView() {
+  if (!state.fullPlan) return;
+  pause();
+  state.plan = multiHoopView(state.fullPlan);
+  state.cursor = state.plan.events.length;
+  machinePlan = false;
+  state.previewFormat = null;
+  renderStats();
+  renderTimeline();
+  renderPlayback();
+  updateMultiHoopSource();
+  multiHoopUI?.render();
+  stage.render();
+}
 worker.onerror = (e) => {
   toast("Stitch engine error. Reload the page to restart.");
   $("status").textContent = e.message;
@@ -1020,6 +1106,7 @@ function renderPanels() {
   if (document.activeElement !== $("project-name"))
     $("project-name").value = state.project.name;
   equipmentUI?.render();
+  multiHoopUI?.render();
   $("object-count").textContent = state.project.objects.length;
   const selectedIds = new Set(selectionIds(state)),
     affected = new Set(selectedLeaves(state).map((o) => o.id));
@@ -1101,6 +1188,11 @@ function renderOrderMode() {
         ? "Linked to tree layers"
         : "Independent of tree layers"
       : "Safe color & travel optimization";
+  if (state.multiHoopBundle)
+    $("order-relationship").textContent =
+      state.multiHoopView === "selected"
+        ? "Master object order · changes regenerate all files"
+        : "Assembled file order · reorder hoopings in Multi-Hoop; select one to edit object order";
   $("optimize-colors").disabled = manual;
 }
 function markSourceRows() {
@@ -1112,7 +1204,14 @@ function markSourceRows() {
     const id = row.querySelector("[data-select]")?.dataset.select,
       sourceOnly = !leaves(state.project, [id]).some((o) => active.has(o.id));
     row.classList.toggle("source-only", sourceOnly);
-    if (sourceOnly)
+    if (
+      sourceOnly &&
+      state.multiHoopBundle &&
+      state.multiHoopView === "selected"
+    )
+      row.dataset.help =
+        "Outside this hooping preview. Source artwork and its visibility are retained; choose Assembled design to inspect all hoopings.";
+    else if (sourceOnly)
       row.dataset.help =
         "Source artwork retained. This object currently produces no sewing stitches; check digitizing settings or its geometry.";
     else delete row.dataset.help;
@@ -1357,6 +1456,12 @@ function renderStats() {
       : "! Design exceeds hoop"
     : "Generate a design to check fit";
   $("fit-status").classList.toggle("bad", !!stats && !stats.fits);
+  if (state.project.multiHoop?.enabled)
+    $("fit-status").textContent = state.multiHoopBundle
+      ? state.multiHoopBundle.problems.length
+        ? "! Review Multi-Hoop issues"
+        : `✓ ${state.multiHoopBundle.sections.length} field placements checked`
+      : "Regenerating hoopings…";
   const issues = state.generationError
     ? [
         {
@@ -1420,14 +1525,19 @@ function renderTimeline() {
   sequenceTimeline.update(state.cleanupReport);
   let groups = [];
   ev.forEach((e, i) => {
-    if (!groups.length || e.cmd === "color")
-      groups.push({ color: e.color, start: i, count: 0 });
+    if (!groups.length || e.cmd === "color" || e.hoopStart)
+      groups.push({
+        color: e.color,
+        start: i,
+        count: 0,
+        hoopingId: e.hoopingId,
+      });
     groups.at(-1).count++;
   });
   $("color-timeline").innerHTML = groups
     .map(
       (g, i) =>
-        `<button title="Color block ${i + 1}: ${g.count} commands" aria-label="Jump to color block ${i + 1}" style="background:${g.color};flex:${g.count}" data-start="${g.start}"></button>`,
+        `<button title="${g.hoopingId ? `Hooping ${state.multiHoopBundle?.sections.find((s) => s.hoop.id === g.hoopingId)?.number} · ` : ""}Color block ${i + 1}: ${g.count} commands" aria-label="Jump to color block ${i + 1}" style="background:${g.color};flex:${g.count}" data-start="${g.start}"></button>`,
     )
     .join("");
   document.querySelectorAll("[data-start]").forEach(
@@ -1445,12 +1555,21 @@ function renderTimeline() {
     : "";
   const names = new Map(state.project.objects.map((o) => [o.id, o.name])),
     runs = [];
+  if (state.multiHoopBundle)
+    for (const s of state.multiHoopBundle.sections)
+      for (const o of s.project.objects)
+        if (!names.has(o.id)) names.set(o.id, o.name);
+  const hoopLabel = (r) =>
+    r.hoopingId
+      ? `H${state.multiHoopBundle?.sections.find((s) => s.hoop.id === r.hoopingId)?.number} · `
+      : "";
   ev.forEach((e, i) => {
     if (
       ["stitch", "stop", "trim"].includes(e.cmd) &&
       e.objectId &&
       (runs.at(-1)?.id !== e.objectId ||
-        runs.at(-1)?.operationId !== e.operationId)
+        runs.at(-1)?.operationId !== e.operationId ||
+        runs.at(-1)?.hoopingId !== e.hoopingId)
     )
       runs.push({
         id: e.objectId,
@@ -1458,18 +1577,23 @@ function renderTimeline() {
         name: e.operationName,
         start: i + 1,
         color: e.color,
+        hoopingId: e.hoopingId,
       });
   });
   const objects = [];
   for (const r of runs) {
-    if (objects.at(-1)?.id !== r.id) objects.push({ ...r, steps: [] });
+    if (
+      objects.at(-1)?.id !== r.id ||
+      objects.at(-1)?.hoopingId !== r.hoopingId
+    )
+      objects.push({ ...r, steps: [] });
     objects.at(-1).steps.push(r);
   }
   $("sewing-order").innerHTML = objects.length
     ? objects
         .map(
           (r, i) =>
-            `<div class="sewing-object" data-reorder-id="${esc(r.id)}" style="--thread:${r.color}">${state.project.objects.find((o) => o.id === r.id)?.constructionArtworkIds?.length && objects.findIndex((o) => o.id === r.id) !== i ? '<span class="construction-phase" aria-label="Finishing depends on decorative artwork">↳</span>' : `<button class="drag-grip" data-sew-grip aria-label="Reorder ${esc(names.get(r.id) || "Object")}" ${state.project.objects.find((o) => o.id === r.id)?.constructionArtworkIds?.length ? 'data-help="Move this entire patch construction, including its linked artwork. Preparation stays before artwork and finishing stays after it."' : ""}>${icon("grip")}</button>`}<button data-object-step="${r.start}"><strong>${i + 1}. ${esc(names.get(r.id) || "Object")}</strong><small>${state.project.objects.find((o) => o.id === r.id)?.constructionArtworkIds?.length ? (objects.findIndex((o) => o.id === r.id) === i ? "Prepare fabric · " : "Finish patch · ") + r.steps.length + " steps" : r.steps.length > 1 ? `${r.steps.length} ordered steps` : r.name ? esc(r.name) : "Complete object"}</small></button><span class="object-color-key">${[...new Set(r.steps.map((s) => s.color))].map((c) => `<i style="background:${c}"></i>`).join("")}</span></div>`,
+            `<div class="sewing-object" data-reorder-id="${esc(r.id)}" style="--thread:${r.color}">${state.project.objects.find((o) => o.id === r.id)?.constructionArtworkIds?.length && objects.findIndex((o) => o.id === r.id) !== i ? '<span class="construction-phase" aria-label="Finishing depends on decorative artwork">↳</span>' : `<button class="drag-grip" data-sew-grip ${r.id.startsWith("@registration:") || (state.multiHoopBundle && state.multiHoopView !== "selected") ? "disabled" : ""} aria-label="Reorder ${esc(names.get(r.id) || "Object")}" ${state.project.objects.find((o) => o.id === r.id)?.constructionArtworkIds?.length ? 'data-help="Move this entire patch construction, including its linked artwork. Preparation stays before artwork and finishing stays after it."' : ""}>${icon("grip")}</button>`}<button data-object-step="${r.start}"><strong>${hoopLabel(r)}${i + 1}. ${esc(names.get(r.id) || "Object")}</strong><small>${state.project.objects.find((o) => o.id === r.id)?.constructionArtworkIds?.length ? (objects.findIndex((o) => o.id === r.id) === i ? "Prepare fabric · " : "Finish patch · ") + r.steps.length + " steps" : r.steps.length > 1 ? `${r.steps.length} ordered steps` : r.name ? esc(r.name) : "Complete object"}</small></button><span class="object-color-key">${[...new Set(r.steps.map((s) => s.color))].map((c) => `<i style="background:${c}"></i>`).join("")}</span></div>`,
         )
         .join("")
     : '<span class="property-note">Machine files do not retain source object boundaries.</span>';
@@ -1478,7 +1602,7 @@ function renderTimeline() {
     .filter((r) => r.operationId)
     .map(
       (r) =>
-        `<button data-object-step="${r.start}" style="border-left:3px solid ${r.color}" data-help="Inspect this operation's first machine command. Reorder its complete object with the grip above; edit step order in object properties.">${esc(names.get(r.id))} · ${esc(r.name)}</button>`,
+        `<button data-object-step="${r.start}" style="border-left:3px solid ${r.color}" data-help="Inspect this operation's first machine command. Reorder its complete object with the grip above; edit step order in object properties.">${hoopLabel(r)}${esc(names.get(r.id))} · ${esc(r.name)}</button>`,
     )
     .join("");
   $("simulator")
@@ -1712,6 +1836,18 @@ function formatRequest(data) {
 }
 async function exportDialog() {
   if (busy || !state.plan) return;
+  if (state.project.multiHoop?.enabled) return multiHoopExportDialog();
+  if (!state.plan.stats.fits) {
+    if (
+      await ask(
+        "Design exceeds one sewing field",
+        "<p>Keep the full editable design and set up separate, aligned hoopings. Each machine file must fit the selected machine’s continuous sewing field.</p>",
+        "Set up Multi-Hoop",
+      )
+    )
+      multiHoopUI.enter();
+    return;
+  }
   const plan = state.plan,
     exportProject = structuredClone(state.project);
   if (plan?.issues?.some((i) => i.severity === "error")) {
@@ -1741,6 +1877,14 @@ async function exportDialog() {
     "Export machine file",
   );
   $("export-format").value = selectedFormat;
+  $("export-format").insertAdjacentHTML(
+    "afterend",
+    '<button type="button" id="export-multi-hoop">Set up Multi-Hoop…</button>',
+  );
+  $("export-multi-hoop").onclick = () => {
+    $("dialog").close("cancel");
+    multiHoopUI.enter();
+  };
   $("export-format").insertAdjacentHTML(
     "afterend",
     '<p class="property-note" id="export-format-guidance"></p>',
@@ -1890,6 +2034,90 @@ async function exportDialog() {
   } catch (e) {
     toast("Export failed: " + e.message);
     $("status").textContent = "Export failed · " + e.message;
+  } finally {
+    busy = false;
+    $("export").disabled = false;
+  }
+}
+async function multiHoopExportDialog() {
+  const bundle = state.multiHoopBundle,
+    master = structuredClone(state.project),
+    revision = hoopingRevision(master);
+  if (!bundle || revision !== state.generatedSource) {
+    toast(
+      "Finish the current edit and wait for hooping regeneration before exporting.",
+    );
+    return;
+  }
+  if (bundle.problems.length) {
+    multiHoopUI.enter();
+    toast("Resolve Multi-Hoop issues before exporting.");
+    return;
+  }
+  let preferences = {};
+  try {
+    preferences = JSON.parse(
+      localStorage.getItem(EXPORT_PREFERENCE_KEY) || "{}",
+    );
+  } catch {}
+  const preferred = preferredExport(master, preferences);
+  const pending = ask(
+    "Export Multi-Hoop package",
+    `<p>${esc(master.name)} · ${bundle.sections.length} numbered fields · ${esc(getMachine(master).name)}</p><label>Machine format<select id="multi-export-format">${packageFormats()
+      .map((f) => `<option value="${f}">${f.toUpperCase()}</option>`)
+      .join(
+        "",
+      )}<option value="all">All tested formats · separate directories</option></select></label><p>Separate files for standard physical rehooping. All sections are independently encoded, decoded and field-checked. A format is omitted entirely if any section fails. Each exact model retains its format restrictions; all-format output is for conversion/distribution, not universal machine compatibility.</p><p>ZIP includes numbered files, overview, thread sequences, shared-coordinate guide and measured 1:1 alignment templates. Print at Actual size and measure the 50 mm ruler. Keep the editable master project separately.</p><p id="multi-format-guidance" class="property-note"></p>`,
+    "Prepare hooping package",
+  );
+  $("multi-export-format").value = preferred;
+  const guidance = () => {
+    $("multi-format-guidance").textContent =
+      $("multi-export-format").value === "all"
+        ? "Choose one compatible directory; never sew every format. Incomplete format sets will be omitted with reasons."
+        : exportGuidance(master, $("multi-export-format").value);
+  };
+  $("multi-export-format").onchange = guidance;
+  guidance();
+  if (!(await pending)) return;
+  const selected = $("multi-export-format").value;
+  busy = true;
+  $("export").disabled = true;
+  try {
+    const formats = selected === "all" ? packageFormats() : [selected];
+    const result = await prepareMultiHoopPackage(
+      master,
+      bundle,
+      formatRequest,
+      formats,
+      (f, n) => {
+        $("status").textContent =
+          `Validating hooping ${n} · ${f.toUpperCase()}…`;
+      },
+    );
+    if (hoopingRevision(state.project) !== revision)
+      throw Error(
+        "The master changed during preparation. Regenerate and export again.",
+      );
+    const approved = await ask(
+      "Review Multi-Hoop package",
+      `<p>${result.files.length} verified machine files · ${result.sections.length} sewing sections. Numeric order, 1:1 templates and per-hoop thread lists included.</p>${result.files.map((f) => `<details><summary>Hooping ${f.number} · ${f.format.toUpperCase()} · ${f.stats.stitches.toLocaleString()} stitches</summary>${f.warnings.map((w) => `<p class="property-note">${esc(w)}</p>`).join("")}</details>`).join("")}<h3>Omitted complete format sets</h3>${result.omitted.length ? result.omitted.map((o) => `<p class="export-error">${o.format.toUpperCase()}: ${esc(o.reasons.join(" "))}</p>`).join("") : "<p>None.</p>"}<p>Keep scale and TOP orientation. Some machines center files on load; restore planned placement with templates, the guide’s sewn-center offset and two dry-needle alignment points. Software checks do not establish physical rehooping accuracy; test joins on scrap.</p>`,
+      result.files.length ? "Download Multi-Hoop ZIP" : "Close",
+    );
+    if (!approved || !result.files.length) return;
+    if (hoopingRevision(state.project) !== revision)
+      throw Error("The master changed. Regenerate before exporting.");
+    download(
+      multiHoopArchive(master, bundle, result),
+      packageName(master.name) + "-multi-hoop.zip",
+      "application/zip",
+    );
+    $("status").textContent =
+      `Multi-Hoop ZIP exported · ${result.files.length} validated files`;
+    toast("Unzip and follow START-HERE.txt and the numbered hooping guide.");
+  } catch (e) {
+    toast("Multi-Hoop export failed: " + e.message);
+    $("status").textContent = "Multi-Hoop export failed · " + e.message;
   } finally {
     busy = false;
     $("export").disabled = false;
@@ -2070,6 +2298,18 @@ equipmentUI = installEquipment({
   command: editCommand,
 });
 if (!restored) equipmentUI.applyDefault(state.project);
+multiHoopUI = installMultiHoop({
+  state,
+  stage,
+  mutate,
+  ask,
+  toast,
+  select,
+  setTool,
+  setMode,
+  viewChanged: changeMultiHoopView,
+  exportPackage: multiHoopExportDialog,
+});
 $("project-name").onchange = (e) =>
   mutate(
     () => (state.project.name = e.target.value.trim() || "Untitled design"),
@@ -3022,6 +3262,13 @@ window.studio = {
   getWorkspace: () => workspaceLayout.getState(),
   getProject: () => structuredClone(state.project),
   getPlan: () => structuredClone(state.plan),
+  getMultiHoop: () =>
+    structuredClone({
+      mode: state.multiHoopMode,
+      view: state.multiHoopView,
+      selected: state.multiHoopSelected,
+      bundle: state.multiHoopBundle,
+    }),
   getCleanup: () => structuredClone(state.cleanupReport),
   getSequenceView: () => sequenceTimeline.getView(),
   getDrawing: () => ({

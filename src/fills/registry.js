@@ -18,12 +18,15 @@ export function generateFill(o, helpers, from, to) {
   // underlay, tie handling and machine command generation. Ordinary fills keep
   // their exact historical path through this code.
   if (o.multiHoopDomain) {
-    const clip=o.multiHoopDomain.map(r=>r.map(ctx.local));
-    ctx.helpers={...helpers,fillRows:(...args)=>{
-      while(args.length<10) args.push(undefined);
-      args[10]=clip;
-      return helpers.fillRows(...args);
-    }};
+    const clip = o.multiHoopDomain.map((r) => r.map(ctx.local));
+    ctx.helpers = {
+      ...helpers,
+      fillRows: (...args) => {
+        while (args.length < 10) args.push(undefined);
+        args[10] = clip;
+        return helpers.fillRows(...args);
+      },
+    };
   }
   if (!generate)
     throw Error(

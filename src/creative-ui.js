@@ -3,6 +3,7 @@ import { installEffectInspector } from "./artwork-tools-ui.js";
 import { installPathTextInspector } from "./text-path-ui.js";
 import { letteringCurve, updateLetteringCurve } from "./text-path.js";
 import { setNodeMode } from "./path-editing.js";
+import { closedCurveEditable } from "./closed-curve-editing.js";
 import { refitPatch } from "./construction.js";
 import { FONTS, updateLettering } from "./importers.js";
 import {
@@ -140,7 +141,16 @@ export function creativeInspector(api, leaf, objects, targets) {
        `<button data-reference-align="${key}" data-help="Align actual selected geometry to the chosen reference. A specific reference remains stationary. Groups move together; locked descendants stay unchanged.">${label}</button>`,
    )
    .join("")}</div></details>`;
-  if (leaf?.curve || leaf?.satinRails || leaf?.textSource?.path)
+  if (closedCurveEditable(leaf)) {
+    box.insertAdjacentHTML(
+      "beforeend",
+      `<details data-section="closed-curve"><summary>Closed Shape node controls</summary><p class="property-note">Edit Points: double-click an anchor for Corner / Smooth, an edge for Straight / Curved, or empty shape interior to smooth/restore its contour. Break Handles is a separate action. Anchors stay in place; invalid curves are rejected. Insert anchors remains available below.</p><label>Contour<select id="closed-contour">${leaf.rings.map((_, i) => `<option value="${i}">Contour ${i + 1}</option>`).join("")}</select></label><div class="creative-grid"><button id="node-corner">Change to Corner</button><button id="node-smooth">Change to Smooth</button><button id="node-break">Break Handles</button><button id="node-segment">Straight / Curved Segment</button><button id="node-whole">${(api.contour() ? leaf.curve?.contours?.[api.contour() - 1] : leaf.curve)?.wholeMemory ? "Restore" : "Smooth"} Selected Contour</button><button id="node-insert">Insert anchor on selected edge</button></div></details>`,
+    );
+  }
+  if (
+    !closedCurveEditable(leaf) &&
+    (leaf?.curve || leaf?.satinRails || leaf?.textSource?.path)
+  )
     box.insertAdjacentHTML(
       "beforeend",
       '<details><summary>Bézier node controls</summary><p class="property-note">Select an anchor with the Node tool. Drag tangent handles to reshape curves; double-click a curve to split it. Delete removes an anchor.</p><button id="node-smooth">Smooth active anchor</button><button id="node-corner">Make active anchor a corner</button><button id="node-symmetric">Symmetric active anchor</button></details>',
@@ -148,6 +158,21 @@ export function creativeInspector(api, leaf, objects, targets) {
   const panel = document.getElementById("properties");
   panel.prepend(box);
   const $ = (id) => document.getElementById(id);
+  if ($("closed-contour")) {
+    const symmetric = document.createElement("button");
+    symmetric.id = "node-symmetric";
+    symmetric.textContent = "Symmetric handles · equal lengths";
+    box
+      .querySelector('[data-section="closed-curve"] .creative-grid')
+      .append(symmetric);
+    $("closed-contour").value = api.contour();
+    $("closed-contour").onchange = (e) =>
+      api.setContour(Number(e.target.value));
+    $("node-break").onclick = () => api.closedAction("break");
+    $("node-segment").onclick = () => api.closedAction("toggle-segment");
+    $("node-whole").onclick = () => api.closedAction("toggle-whole");
+    $("node-insert").onclick = () => api.insertAnchor();
+  }
   if ($("patch-refit"))
     $("patch-refit").onclick = () => {
       const input = $("patch-refit-margin");
@@ -261,6 +286,10 @@ export function creativeInspector(api, leaf, objects, targets) {
   for (const action of ["smooth", "corner", "symmetric"])
     if ($("node-" + action))
       $("node-" + action).onclick = () => {
+        if (closedCurveEditable(leaf)) {
+          api.closedAction(action);
+          return;
+        }
         const i = api.node(),
           c =
             leaf.satinRails?.[state.railSide || "a"] ||

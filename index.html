@@ -383,6 +383,24 @@
                 step="0.1"
                 value="2"
             /></label>
+            <label data-vector-option="node" id="closed-curve-actions"
+              >Closed Shape<select
+                id="closed-curve-action"
+                aria-label="Closed Shape node action"
+              >
+                <option value="">Node / edge action…</option>
+                <option value="corner">Change to Corner</option>
+                <option value="smooth">Change to Smooth</option>
+                <option value="break">Break Handles</option>
+                <option value="toggle-segment">
+                  Straight / Curved Segment
+                </option>
+                <option value="toggle-whole">
+                  Smooth / Restore Selected Contour
+                </option>
+                <option value="insert">Insert anchor on selected edge</option>
+              </select></label
+            >
             <label class="check" data-vector-option="node knife eraser"
               ><input id="allow-open-run" type="checkbox" />Convert incompatible
               actions on open pieces to Running</label

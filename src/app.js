@@ -117,6 +117,7 @@ import { installReordering } from "./reorder-ui.js";
 import { installHelp } from "./help.js";
 import { installWorkspace } from "./workspace-layout.js";
 import { closedOutlinePreview } from "./outline-preview.js";
+import { closedCurveEditable } from "./closed-curve-editing.js";
 import { arrangeArtwork, installArrangeMenu } from "./arrange.js";
 installDesignToolbar();
 const icon = (name) =>
@@ -480,6 +481,8 @@ function select(id, options = {}) {
   state.methodRequest = null;
   state.satinMethodRequest = null;
   stage.node = null;
+  stage.contour = 0;
+  stage.segment = null;
   state.manualIndex = 0;
   renderPanels();
   stage.render();
@@ -538,7 +541,7 @@ function setTool(tool) {
     ?.scrollIntoView({ block: "nearest", inline: "nearest" });
   const hints = {
     select: "Drag objects to position them in the hoop",
-    node: "Drag anchors or pull a curve · double-click adds a node",
+    node: "Drag anchors/handles · closed outline: double-click anchor, edge or interior to toggle geometry",
     pencil:
       "Drag to trace · Finish path or Closed fill · editable Bézier artwork",
     knife:
@@ -629,6 +632,8 @@ function updateVectorOptions() {
       (e) => (e.hidden = !e.dataset.vectorOption.split(" ").includes(tool)),
     );
   const objects = vectorTargets();
+  $("closed-curve-actions").hidden =
+    tool !== "node" || objects.length !== 1 || !closedCurveEditable(objects[0]);
   $("sculpt-radius").closest("label").hidden =
     tool !== "node" || !objects.some((o) => !stage.activeCurve(o));
   const railTarget =
@@ -662,7 +667,9 @@ function updateVectorOptions() {
           : tool === "pencil"
             ? "Smoothing controls trace tolerance in millimeters. Start a new stroke to finish the previous one."
             : tool === "node"
-              ? "Pull a segment to sculpt; drag handles for precision. Imported contours use a local influence with automatic node compaction. Vector edits convert Smart Shapes/text to paths; Undo restores them."
+              ? closedCurveEditable(selected())
+                ? "Double-click an anchor: Corner / Smooth; an edge: Straight / Curved; empty interior: Smooth / Restore Contour. Break Handles and Insert anchor are explicit node actions. Drag handles or sculpt segments; Undo restores edits."
+                : "Pull a segment to sculpt; drag handles for precision. Imported contours use a local influence with automatic node compaction. Vector edits convert Smart Shapes/text to paths; Undo restores them."
               : "Pieces retain sewing actions; construction stops repeat per piece. Parametric shapes/text become paths; Undo restores them. Erasing keeps small fragments for review.";
   state.pencilSmoothing = $("pencil-smoothing").checkValidity()
     ? Number($("pencil-smoothing").value)
@@ -1251,6 +1258,21 @@ function renderProperties() {
       draw: () => stage.render(),
       selectTool: () => setTool("select"),
       node: () => stage.node,
+      closedAction: (action) => stage.closedAction(action),
+      insertAnchor: () => {
+        if (stage.segment) {
+          stage.contour = stage.segment.ring;
+          stage.insertNode(stage.segment.point);
+        } else toast("Click an edge first.");
+      },
+      contour: () => stage.contour || 0,
+      setContour: (i) => {
+        stage.contour = i;
+        stage.node = null;
+        stage.segment = null;
+        renderProperties();
+        stage.render();
+      },
       editCurve: () => setTool("node"),
       splitRails: splitManualRails,
       retrace: async (group) => {
@@ -2905,6 +2927,16 @@ for (const [id, action] of [
 ])
   $(id).onclick = () => repairPath(action);
 $("rails-from-selection").onclick = createRailsFromSelection;
+$("closed-curve-action").onchange = (e) => {
+  const action = e.target.value;
+  e.target.value = "";
+  if (action === "insert") {
+    if (stage.segment) {
+      stage.contour = stage.segment.ring;
+      stage.insertNode(stage.segment.point);
+    } else toast("Click an edge first.");
+  } else if (action) stage.closedAction(action);
+};
 $("rails-closed").onchange = () => {
   updateVectorOptions();
   stage.render();

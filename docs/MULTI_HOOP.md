@@ -50,6 +50,9 @@ The underlying single-hoop fill paths retain their historical behavior.
 Running, Bean and Triple source paths can also be cut and regenerated as open
 fragments, preserving the intended repetition and avoiding artificial closing
 edges. No finished machine sequence is clipped to manufacture sections.
+Master-suppressed objects, including redundant SVG outlines, remain suppressed.
+Per-section small-detail filtering is disabled after partitioning so a thin cut
+fragment cannot silently disappear at a seam; inspect small islands in the preview.
 
 Automatic interior cuts through satin columns/bands, paired rails, connected
 lettering, appliqué, or contour/meander/cross/ripple/spiral fills are **blocked**

@@ -7,6 +7,7 @@ import {
 import { getMachine } from "./equipment.js";
 import { uid } from "./model.js";
 import { xml } from "./multi-hoop-templates.js";
+import { preparePlan } from "./planning.js";
 const $ = (id) => document.getElementById(id);
 export function installMultiHoop(api) {
   const { state, mutate, stage } = api;
@@ -24,6 +25,13 @@ export function installMultiHoop(api) {
     });
   const field = (id, value) => {
     if (document.activeElement !== $(id)) $(id).value = value;
+  };
+  const suggest = () => {
+    const ids = new Set(preparePlan(state.project).units.map((u) => u.id));
+    return suggestHoops(
+      state.project,
+      artworkForHooping(state.project).filter((o) => ids.has(o.id)),
+    );
   };
   function fit() {
     const m = getMachine(state.project),
@@ -54,7 +62,7 @@ export function installMultiHoop(api) {
       state.project.multiHoop ||= newLayout(state.project);
       state.project.multiHoop.enabled = true;
       if (!state.project.multiHoop.hoops.length)
-        state.project.multiHoop.hoops = suggestHoops(state.project);
+        state.project.multiHoop.hoops = suggest();
     });
     state.multiHoopMode = true;
     render();
@@ -76,7 +84,7 @@ export function installMultiHoop(api) {
   };
   $("multi-auto").onclick = () => {
     edit((l) => {
-      l.hoops = suggestHoops(state.project);
+      l.hoops = suggest();
       l.assignments = {};
     });
     fit();

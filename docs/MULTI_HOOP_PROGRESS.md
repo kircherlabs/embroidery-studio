@@ -43,6 +43,14 @@ Protected `backup-before-creative-update` and `BACKUP-V0.17.0` verified; never m
   two dry-needle alignment points. No unverified absolute placement is promised.
   Do not deploy until those gates pass.
 
+Final review follow-up: splitting had restored a master-suppressed duplicate SVG
+outline because its fragments were now open paths. A new regression reproduced
+the extra sewing. Derivation and automatic suggestions now honor planned source
+IDs before partitioning; both suppression and explicit enabling pass. 19 focused
+multi-hoop/export tests and the complete Chrome feature workflow pass. Expected
+full Node total is now 373. PR #29 is open; rerun exact-head CI after this fix.
+The ordinary 47-suite browser regression is still completing without failures.
+
 Research: Hatch documents distinct hoop placement, overlap and adjustable split
 guides: https://hatch.embroideryhelp.net/v4/en/OnlineHelp/Hints/hints_hoops/Add_splitting_lines.htm
 and https://hatch.embroideryhelp.net/v3/en/OnlineHelp/References/quick_reference/Multi-Hooping_toolbox.htm.

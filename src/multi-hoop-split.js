@@ -149,7 +149,13 @@ function clipPath(ring, closed, p, hoops) {
   return { paths, missing: missing.reduce((a, b) => a + b, 0) };
 }
 export function deriveSections(master) {
-  const assigned = assignWholeObjects(master),
+  const prepared = preparePlan(master),
+    plannedIds = new Set(prepared.units.map((u) => u.id));
+  const production = {
+    ...prepared.project,
+    objects: prepared.project.objects.filter((o) => plannedIds.has(o.id)),
+  };
+  const assigned = assignWholeObjects(production),
     p = assigned.project,
     hoops = p.multiHoop.hoops;
   const buckets = hoops.map((h) =>
@@ -158,7 +164,7 @@ export function deriveSections(master) {
     domains = splitDomains(p),
     problems = [...assigned.problems],
     splits = [];
-  const order = [...new Set(preparePlan(p).units.map((u) => u.id))];
+  const order = [...new Set(prepared.units.map((u) => u.id))];
   for (const o of assigned.unassigned) {
     if (problems.some((q) => q.objectId === o.id)) continue;
     const ops = operationsOf(o).filter((op) => op.enabled !== false),

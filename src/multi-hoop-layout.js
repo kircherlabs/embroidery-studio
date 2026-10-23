@@ -62,14 +62,14 @@ export function hoopRect(p, h, inset = 0) {
     ],
   ]);
 }
-export function suggestHoops(p) {
+export function suggestHoops(p, objects = artworkForHooping(p)) {
   const layout = p.multiHoop || newLayout(p),
     m = getMachine(p),
-    b = masterBounds(p);
+    b = bounds(objects.flatMap(pointsOf));
   const padding =
     Math.max(
       0,
-      ...artworkForHooping(p).flatMap((o) =>
+      ...objects.flatMap((o) =>
         operationsOf(o)
           .filter(isSewing)
           .map((op) => {

@@ -481,3 +481,36 @@ test("F: disabled artwork is retained but does not require extra hoopings; contr
     r.problems.some((p) => /control actions without sewing/.test(p.message)),
   );
 });
+
+test("F: master-suppressed duplicate SVG outlines remain suppressed after source splitting", () => {
+  const p = project(rect(-110, -20, 220, 40)),
+    fill = p.objects[0],
+    outline = object("SVG duplicate outline", structuredClone(fill.rings), {
+      type: "run",
+      closed: true,
+      color: fill.color,
+      svgSource: true,
+      svgStrokeWidth: 0.1,
+      svgFillId: fill.id,
+    });
+  p.objects.push(outline);
+  p.planning = { skipSvgOutlines: true, smallDetail: 0, optimizeColors: true };
+  p.multiHoop.hoops = [
+    { id: "a", x: -65, y: 0 },
+    { id: "b", x: 0, y: 0 },
+    { id: "c", x: 65, y: 0 },
+  ];
+  assert(!generate(p).events.some((e) => e.objectId === outline.id));
+  const r = generateMultiHoop(p);
+  assert.deepEqual(r.problems, []);
+  assert(
+    !r.assembled.events.some((e) => e.objectId === outline.id),
+    "split export must not restore intentionally suppressed duplicate outlines",
+  );
+  p.planning.skipSvgOutlines = false;
+  assert(
+    generateMultiHoop(p).assembled.events.some(
+      (e) => e.objectId === outline.id,
+    ),
+  );
+});

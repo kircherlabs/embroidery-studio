@@ -23,6 +23,7 @@ import {
 import { preparePlan } from "./planning.js";
 import { generate, analyze } from "./engine.js";
 import { getMachine } from "./equipment.js";
+import { splitEligibility } from "./multi-hoop-inspection.js";
 import {
   registrationFor,
   registrationObjects,
@@ -217,19 +218,9 @@ export function deriveSections(master) {
         continue;
       }
     }
-    const fill =
-      active.length &&
-      active.every(
-        (op) =>
-          op.type === "fill" &&
-          ["tatami", "emboss"].includes(op.fillSettings?.method || "tatami") &&
-          !(op.fillSettings?.inset > 0),
-      );
-    const run =
-      active.length &&
-      active.every(
-        (op) => ["run", "bean", "triple"].includes(op.type) && !op.offset,
-      );
+    const eligibility = splitEligibility(o),
+      fill = eligibility.kind === "fill",
+      run = eligibility.kind === "path";
     if (fill && closed) {
       const clips = domains.map((domain) =>
           domain.length ? clipping.intersection(polygons, domain) : [],
@@ -312,7 +303,7 @@ export function deriveSections(master) {
       });
     } else
       fail(
-        "this satin, lettering, construction or decorative fill cannot be cut automatically without changing its construction. Move the seam between complete contours, split it with existing editing tools, or revise its sewing action explicitly. No stitches have been silently clipped.",
+        `${eligibility.reason} Affected fields: ${hoops.map((h, i) => i + 1).join(", ")}. Move the hooping, adjust split balance or use manual source/rail split tools. No stitches have been silently clipped.`,
       );
   }
   const sections = hoops.map((h, i) => {

@@ -23,7 +23,9 @@ export function generateFill(o, helpers, from, to) {
       ...helpers,
       fillRows: (...args) => {
         while (args.length < 10) args.push(undefined);
-        args[10] = clip;
+        // Dense underlay uses world rings; top/emboss rows use fill-local rings.
+        // Applying a local domain to world rows can truncate one side of a join.
+        args[10] = args[0] === ctx.rings ? o.multiHoopDomain : clip;
         return helpers.fillRows(...args);
       },
     };

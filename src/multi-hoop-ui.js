@@ -8,12 +8,26 @@ import { getMachine } from "./equipment.js";
 import { uid } from "./model.js";
 import { xml } from "./multi-hoop-templates.js";
 import { preparePlan } from "./planning.js";
+import { seamInspections } from "./multi-hoop-inspection.js";
 const $ = (id) => document.getElementById(id);
 export function installMultiHoop(api) {
   const { state, mutate, stage } = api;
   const panel = $("multi-hoop-controls");
   panel.innerHTML = `<div class="multi-heading"><strong>Multi-Hoop</strong><span>Standard rehooping · separate files</span><button id="multi-done">Done positioning</button><button id="multi-single">Use single hoop</button></div><div class="multi-row"><button id="multi-auto">Auto place fields</button><select id="multi-direction" aria-label="Add hoop direction"><option value="right">Right</option><option value="down">Below</option><option value="left">Left</option><option value="up">Above</option><option value="center">Design center</option></select><button id="multi-add">+ Add hoop</button><label>Overlap · mm<input id="multi-overlap" type="number" min="0" max="500" step="1"></label><label class="check"><input id="multi-registration" type="checkbox">Stitch registration marks</label></div><div class="multi-row"><label>Hooping<select id="multi-selected"></select></label><label>Center X · mm<input id="multi-x" type="number" step="0.1" min="-10000" max="10000"></label><label>Center Y · mm<input id="multi-y" type="number" step="0.1" min="-10000" max="10000"></label><button id="multi-up" aria-label="Sew hooping earlier">↑</button><button id="multi-down" aria-label="Sew hooping later">↓</button><button id="multi-remove">Remove</button><label>Stitch view<select id="multi-view"><option value="all">Assembled design</option><option value="selected">Selected hooping</option></select></label><button id="multi-preview">Stitch preview</button><button id="multi-export">Export hoopings…</button></div><details class="multi-advanced"><summary>Seams, assignments &amp; clearance</summary><div class="multi-row"><label>Split balance X · mm<input id="multi-seam-x" type="number" step="1" min="-500" max="500"></label><label>Split balance Y · mm<input id="multi-seam-y" type="number" step="1" min="-500" max="500"></label><label>Safety margin · mm<input id="multi-margin" type="number" step="0.5" min="0.5" max="20"></label><label>Whole artwork<select id="multi-object"></select></label><label>Assignment<select id="multi-assignment"></select></label></div><p class="property-note">Split balance moves the selected field’s ownership center without moving the physical hoop. Inspect regenerated stitches at joins. Overlap controls Auto place/Add only; it never duplicates embroidery. Margin reserves field clearance. Complete actions stay together; unsupported satin/rail or construction cuts require manual source editing.</p></details><p class="property-note" id="multi-summary" role="status"></p><div id="multi-issues"></div><p class="property-note">Drag numbered fields with Select; Alt bypasses 0.1 mm positioning. Done positioning restores normal artwork editing. Blue/green dashed outlines are actual fields; fine dashed lines are exclusive split domains. Red areas are uncovered source. Registration is temporary thread followed by a required operator pause. Templates and machine files are software-validated; physical rehooping needs a test sew-out.</p>`;
   let objectId = null;
+  const inspection = document.createElement("div");
+  inspection.id = "multi-inspection";
+  inspection.className = "multi-row";
+  panel.querySelector("#multi-summary").after(inspection);
+  const inspect = (box) => {
+    state.multiHoopView = "all";
+    api.select([]);
+    api.viewChanged();
+    api.setMode("preview");
+    const frame = () => (box ? stage.fitBounds(box) : fit());
+    frame();
+    requestAnimationFrame(() => requestAnimationFrame(frame));
+  };
   const selected = () =>
     state.project.multiHoop?.hoops.find(
       (h) => h.id === state.multiHoopSelected,
@@ -249,6 +263,23 @@ export function installMultiHoop(api) {
         ? "Cannot regenerate: " + state.generationError
         : "Regenerating source sections…";
     $("multi-issues").replaceChildren();
+    inspection.replaceChildren();
+    if (bundle) {
+      const complete = document.createElement("button");
+      complete.id = "multi-complete";
+      complete.textContent = "Show complete stitched result";
+      complete.onclick = () => inspect();
+      inspection.append(complete);
+      for (const join of seamInspections(bundle)) {
+        const b = document.createElement("button");
+        b.dataset.inspectJoin = join.numbers.join("-");
+        b.textContent = `Inspect join · Hooping ${join.numbers.join(" / ")}`;
+        b.title =
+          "Zoom to the regenerated stitches at this source join, with the full sequence displayed.";
+        b.onclick = () => inspect(join.bounds);
+        inspection.append(b);
+      }
+    }
     for (const issue of bundle?.problems || []) {
       const b = document.createElement("button");
       b.className = "multi-issue";

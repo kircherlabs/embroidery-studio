@@ -6,6 +6,7 @@ import { containsBounds, hoopRect, splitDomains } from './multi-hoop-layout.js';
 import { preparePlan } from './planning.js';
 import { generate, analyze } from './engine.js';
 import { getMachine } from './equipment.js';
+import { registrationFor, registrationObjects } from './multi-hoop-registration.js';
 
 const areaTolerance = 0.002; // mm²; clipping uses the existing 0.001 mm grid.
 function sharedFill(op,o) {
@@ -117,8 +118,15 @@ export function deriveSections(master) {
 }
 export function generateMultiHoop(master) {
   const result=deriveSections(master),events=[];
+  result.registration=registrationFor(master);
+  result.problems.push(...result.registration.problems);
   let total=0;
   for(const s of result.sections) {
+    if(s.project.objects.length) {
+      const marks=registrationObjects(result.registration,s.hoop);
+      s.project.objects.unshift(...marks);
+      s.project.sequencing.order.unshift(...marks.map(o=>o.id));
+    }
     s.plan=generate(s.project);total+=s.plan.events.length;
     if(total>1000000)throw Error('Multi-hoop preview exceeds one million commands. Simplify the master or use wider spacing.');
     if(!s.plan.stats.fits)result.problems.push({hoopId:s.hoop.id,message:`Hooping ${s.number}: regenerated stitches exceed its sewing field. Move the hoop or adjust the source settings.`});

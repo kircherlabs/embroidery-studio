@@ -7,6 +7,8 @@ import {assignWholeObjects,sectionProject} from '../src/multi-hoop-assignment.js
 import {generate} from '../src/engine.js';
 import {deriveSections,generateMultiHoop} from '../src/multi-hoop-split.js';
 import {inside} from '../src/geometry.js';
+import {registrationFor,registrationObjects} from '../src/multi-hoop-registration.js';
+import {hoopTemplate,printTemplates} from '../src/multi-hoop-templates.js';
 const rect=(x,y,w,h)=>[[{x,y},{x:x+w,y},{x:x+w,y:y+h},{x,y:y+h}]];
 const project=(rings=rect(-125,-30,250,60))=>({version:1,name:'Rehoop',machine:'se700',objects:[object('Area',rings,{compensation:0,underlay:false})],multiHoop:newLayout()});
 test('A: field-aware horizontal and vertical suggestions, persistence and validation',()=>{
@@ -56,4 +58,13 @@ test('C: unsupported oversized rails/satin/decorative fills are blocked; complet
  const p=project();p.objects[0].operations=[{id:'s',type:'column'}];p.multiHoop.hoops=[{id:'a',x:-70,y:0},{id:'b',x:0,y:0},{id:'c',x:70,y:0}];assert.match(deriveSections(p).problems[0].message,/cannot be cut automatically/);
  p.objects[0].rings=[...rect(-92,-10,20,20),...rect(72,-10,20,20)];p.objects[0].textSource={text:'AB'};const r=deriveSections(p);assert.equal(r.problems.length,0);assert.equal(r.splits[0].kind,'islands');assert.equal(r.sections.filter(s=>s.objectIds.length).length,2);assert.equal(p.objects[0].textSource.text,'AB');
  p.objects[0].rings=rect(-110,-10,220,20);p.objects[0].operations=[{id:'c',type:'fill',fillSettings:{version:1,method:'cross'}}];assert.match(deriveSections(p).problems[0].message,/decorative fill/);
+});
+test('D: common registration is inside both real fields and avoids artwork; optional marks are explicit',()=>{
+ const p=project(rect(-65,-10,130,20));p.multiHoop.hoops=[{id:'a',x:-35,y:0},{id:'b',x:35,y:0}];assert.equal(registrationFor(p).pairs.length,0);p.multiHoop.registration=true;const r=registrationFor(p);assert.deepEqual(r.problems,[]);assert.equal(r.pairs.length,1);
+ const objects=p.multiHoop.hoops.map(h=>registrationObjects(r,h));
+ for(let i=0;i<2;i++)for(const o of objects[i])for(const q of o.rings.flat()){assert(Math.abs(q.x)<50);assert(Math.abs(q.y)<50);assert(!inside({x:q.x+p.multiHoop.hoops[i].x,y:q.y},p.objects[0].rings));}
+ assert(Math.abs(objects[0][0].rings[0][0].x-objects[1][0].rings[0][0].x-70)<1e-8);
+ const multi=generateMultiHoop(p);assert(multi.sections.every(s=>s.project.objects[0].id.startsWith('@registration:')));
+ const s=multi.sections[0],svg=hoopTemplate(p,s,r),html=printTemplates(p,multi.sections,r);assert.match(svg,/width="100mm" height="100mm"/);assert.match(html,/width="190mm" height="250mm"/);assert.match(html,/width="50mm"/);assert.match(html,/@page\{size:A4/);
+ p.objects[0].rings=rect(-100,-100,200,200);assert(registrationFor(p).problems.length); // No hidden placement through finished fill.
 });

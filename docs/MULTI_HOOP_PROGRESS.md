@@ -15,7 +15,10 @@ Protected `backup-before-creative-update` and `BACKUP-V0.17.0` verified; never m
   blocked; manual existing source/rail splitting remains available. 8 cumulative
   multi-hoop tests plus 22 engine/Tatami/Emboss regressions pass. 120 legacy event
   streams and compensation/stack baselines remain exact.
-- D–F: next: registration/templates; independently validated ZIP; browser QA
+- D: opt-in paired registration, clear-area/field checks, mandatory post-mark
+  operator pause, measured 1:1 SVG and tiled A4 HTML, orientation and 50 mm ruler
+  implemented; 9 cumulative tests pass. No physical alignment claim.
+- E–F: next: independently validated ZIP; browser QA
   and release. Do not claim complete or deploy intermediate states.
 
 Research: Hatch documents distinct hoop placement, overlap and adjustable split

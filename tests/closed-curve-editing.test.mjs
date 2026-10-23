@@ -202,11 +202,31 @@ test("restored contours remain aligned in existing world-space and reverse editi
   reverseArtwork(o);
   assert.deepEqual(bounds(o.rings[0]), bounds(curveRings(o.curve)[0]));
 });
-test('collapsed Pen handles initialize real curves and smooth tangents without losing their saved corner',()=>{
- let o=editClosedCurve(editClosedCurve(fixture(),'toggle-whole'),'toggle-whole');
- o.curve.nodes[0].out={...rect[0]};o.curve.nodes[0].in={...rect[0]};o.curve.nodes[1].in={...rect[1]};
- const edge=editClosedCurve(o,'toggle-segment');assert.notDeepEqual(edge.curve.nodes[0].out,rect[0]);
- const smooth=editClosedCurve(o,'smooth');const n=smooth.curve.nodes[0];assert(Math.hypot(n.in.x-n.x,n.in.y-n.y)>0);assert(Math.hypot(n.out.x-n.x,n.out.y-n.y)>0);
- const restored=editClosedCurve(smooth,'toggle-node');assert.deepEqual(restored.curve.nodes[0].in,rect[0]);assert.deepEqual(restored.curve.nodes[0].out,rect[0]);
- const symmetric=editClosedCurve(o,'symmetric').curve.nodes[0];assert(Math.abs(Math.hypot(symmetric.in.x-symmetric.x,symmetric.in.y-symmetric.y)-Math.hypot(symmetric.out.x-symmetric.x,symmetric.out.y-symmetric.y))<1e-9);
+test("collapsed Pen handles initialize real curves and smooth tangents without losing their saved corner", () => {
+  let o = editClosedCurve(
+    editClosedCurve(fixture(), "toggle-whole"),
+    "toggle-whole",
+  );
+  o.curve.nodes[0].out = { ...rect[0] };
+  o.curve.nodes[0].in = { ...rect[0] };
+  o.curve.nodes[1].in = { ...rect[1] };
+  const edge = editClosedCurve(o, "toggle-segment");
+  assert.notDeepEqual(edge.curve.nodes[0].out, rect[0]);
+  const smooth = editClosedCurve(o, "smooth");
+  const n = smooth.curve.nodes[0];
+  assert(Math.hypot(n.in.x - n.x, n.in.y - n.y) > 0);
+  assert(Math.hypot(n.out.x - n.x, n.out.y - n.y) > 0);
+  const restored = editClosedCurve(smooth, "toggle-node");
+  assert.deepEqual(restored.curve.nodes[0].in, rect[0]);
+  assert.deepEqual(restored.curve.nodes[0].out, rect[0]);
+  const symmetric = editClosedCurve(o, "symmetric").curve.nodes[0];
+  assert(
+    Math.abs(
+      Math.hypot(symmetric.in.x - symmetric.x, symmetric.in.y - symmetric.y) -
+        Math.hypot(
+          symmetric.out.x - symmetric.x,
+          symmetric.out.y - symmetric.y,
+        ),
+    ) < 1e-9,
+  );
 });

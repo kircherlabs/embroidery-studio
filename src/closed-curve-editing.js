@@ -90,7 +90,9 @@ export function editClosedCurve(original, action, ring = 0, index = 0) {
   if (action === "toggle-segment") {
     if (!n) throw Error("Select an edge first.");
     const b = part.nodes[(index + 1) % count];
-    const curved = (n.out && distance(n,n.out)>1e-8) || (b.in && distance(b,b.in)>1e-8);
+    const curved =
+      (n.out && distance(n, n.out) > 1e-8) ||
+      (b.in && distance(b, b.in) > 1e-8);
     const save = {
       ...(n.out ? { out: copy(n.out) } : {}),
       ...(b.in ? { in: copy(b.in) } : {}),
@@ -128,7 +130,8 @@ export function editClosedCurve(original, action, ring = 0, index = 0) {
     } else if (action === "smooth" || action === "symmetric") {
       if (n.mode !== "smooth" && n.mode !== "symmetric")
         n.cornerMemory = state(n);
-      for(const key of ['in','out'])if(n[key] && distance(n,n[key])<1e-8)delete n[key];
+      for (const key of ["in", "out"])
+        if (n[key] && distance(n, n[key]) < 1e-8) delete n[key];
       setNodeMode(part, index, action);
       delete n.broken;
     } else {

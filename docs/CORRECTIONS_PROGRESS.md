@@ -17,7 +17,7 @@ Protected backup branches must remain unchanged.
 3. Closed Shape: independent edge controls, reversible Corner/Smooth states,
    explicit Break Handles, retained Symmetric handles, per-contour smooth/restore,
    node styling, contextual mouse/touch actions and compound editable sources.
-   Verified 6 new unit tests, legacy path/creative units, the new Chrome workflow
+   Verified 7 new unit tests, legacy path/creative units, the new Chrome workflow
    (including independent PES needles), nested Focus, path editing and effects
    browser regressions. Workstream 3 complete. Final full regression/CI, merge,
    Pages and live verification pending. No physical sew-out is claimed.
@@ -27,7 +27,7 @@ Protected backup branches must remain unchanged.
 The original Tatami screenshot/project was not supplied with this corrective
 request, so its exact sparse-view cause cannot be asserted. A coordinate-frame
 mismatch in seam-limited underlay was confirmed and fixed. Top coverage remains
-consistent in 27 two/three-field angle/seam cases. Join/full-result actions show
+consistent in 18 two/three-field angle/seam cases. Join/full-result actions show
 the complete generated sequence rather than a partial playback position.
 
 A generated flower fixture reproduces the cleanup inflation: 139 jumps / 138

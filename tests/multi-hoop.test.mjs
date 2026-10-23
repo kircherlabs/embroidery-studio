@@ -3,6 +3,8 @@ import {test} from 'node:test';
 import {object,validateProject} from '../src/model.js';
 import {newLayout,suggestHoops,splitDomains,hoopRect,coverage} from '../src/multi-hoop-layout.js';
 import {clipping,polygonArea} from '../src/geometry.js';
+import {assignWholeObjects,sectionProject} from '../src/multi-hoop-assignment.js';
+import {generate} from '../src/engine.js';
 const rect=(x,y,w,h)=>[[{x,y},{x:x+w,y},{x:x+w,y:y+h},{x,y:y+h}]];
 const project=(rings=rect(-125,-30,250,60))=>({version:1,name:'Rehoop',machine:'se700',objects:[object('Area',rings,{compensation:0,underlay:false})],multiHoop:newLayout()});
 test('A: field-aware horizontal and vertical suggestions, persistence and validation',()=>{
@@ -19,4 +21,15 @@ test('A: irregular and manually balanced domains partition union without holes o
 test('A: uncovered holes and references never expand coverage',()=>{
  const p=project();p.multiHoop.hoops=[{id:'a',x:0,y:0}];assert(coverage(p).uncovered[0].area>1000);
  p.objects=[object('Reference',rect(900,900,30,30),{type:'reference'})];assert.equal(coverage(p).uncovered.length,0);
+});
+test('B: complete objects/actions keep source, colors, threads, groups and physical size',()=>{
+ const p=project();p.objects=[object('Left',rect(-100,-15,20,30),{operations:[{id:'f',type:'fill',color:'#123456'},{id:'b',type:'border',color:'#654321',width:2}] }),object('Right',rect(70,-15,20,30))];p.multiHoop.hoops=[{id:'l',x:-90,y:0},{id:'r',x:80,y:0}];
+ const before=JSON.stringify(p),a=assignWholeObjects(p);assert.equal(a.unassigned.length,0);assert.equal(a.assignments.get(p.objects[0].id),'l');
+ const s=sectionProject(p,p.multiHoop.hoops[0],[p.objects[0]]),plan=generate(s);assert(plan.stats.fits);assert.equal(plan.stats.uniqueColors,2);assert.equal(JSON.stringify(p),before);assert.equal(s.objects[0].rings[0][1].x-s.objects[0].rings[0][0].x,20);
+ s.objects[0].operations[0].color='#ffffff';assert.equal(p.objects[0].operations[0].color,'#123456');
+});
+test('B: construction dependencies are atomic; invalid manual assignment is actionable',()=>{
+ const p=project();p.objects=[object('Fabric',rect(-60,-20,120,40)),object('Decoration',rect(-4,-4,8,8))];p.objects[0].constructionArtworkIds=[p.objects[1].id];p.multiHoop.hoops=[{id:'l',x:-40,y:0},{id:'r',x:40,y:0}];
+ const a=assignWholeObjects(p);assert.equal(a.assignments.size,0);assert.match(a.problems[0].message,/construction must fit/);
+ delete p.objects[0].constructionArtworkIds;p.multiHoop.assignments={[p.objects[1].id]:'missing'};assert.match(assignWholeObjects(p).problems.at(-1).message,/assigned hooping/);
 });

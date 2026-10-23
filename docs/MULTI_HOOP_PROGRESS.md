@@ -6,7 +6,9 @@ Protected `backup-before-creative-update` and `BACKUP-V0.17.0` verified; never m
 - A: persistent versioned layout validation, field-aware 2D suggestions, exact
   coverage and exclusive irregular split domains implemented. Unit verification
   passed (3 tests). No production interface is exposed yet.
-- B–F: next: whole-object/construction assignment; source splitting and
+- B: whole-object and group preference, atomic construction dependencies, explicit
+  assignments and independent local-coordinate sections pass 5 cumulative tests.
+- C–F: next: source splitting and
   regeneration; registration/templates; independently validated ZIP; browser QA
   and release. Do not claim complete or deploy intermediate states.
 

@@ -35,14 +35,22 @@ try {
     },
     project = () => page.evaluate(() => window.studio.getProject());
   const load = async (p) => {
-    await page
-      .locator("#file-input")
-      .setInputFiles({
-        name: "curves.embstudio",
-        mimeType: "application/json",
-        buffer: Buffer.from(JSON.stringify(p)),
-      });
+    await page.locator("#file-input").setInputFiles({
+      name: "curves.embstudio",
+      mimeType: "application/json",
+      buffer: Buffer.from(JSON.stringify(p)),
+    });
     await page.locator("#dialog-submit").click();
+    await page.waitForFunction(
+      ({ name, ids }) =>
+        window.studio.getProject().name === name &&
+        window.studio
+          .getProject()
+          .objects.map((o) => o.id)
+          .join(",") === ids &&
+        window.studio.getPlan(),
+      { name: p.name, ids: p.objects.map((o) => o.id).join(",") },
+    );
     await ready();
   };
   const o = object(
@@ -268,7 +276,15 @@ try {
   );
   await load({ ...saved, objects: [saved.objects[0], other] });
   await pick();
-  await dbl({ x: 33, y: 0 });
+  const otherPoint = await world({ x: 33, y: 0 });
+  await page.mouse.click(otherPoint.x, otherPoint.y);
+  // A slow render between native click 1 and click 2 must not change the
+  // selection that owned the double-click gesture (Linux CI regression).
+  await page.waitForTimeout(650);
+  await page.mouse.move(otherPoint.x, otherPoint.y);
+  await page.mouse.down({ clickCount: 2 });
+  await page.mouse.up({ clickCount: 2 });
+  await ready();
   assert(
     !(await project()).objects[1].curve,
     "Double-clicking a different object must not smooth it",

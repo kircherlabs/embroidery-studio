@@ -41,6 +41,11 @@ caught preserved flat geometry being misread by the existing world-curve helper;
 that helper now materializes world controls without stale local restoration data.
 Whole-contour reversal restores nodes/handles and the original flat contour.
 
+Linux CI caught a delayed native double-click retargeting another object. The
+timing heuristic was replaced by native mousedown click-count context captured
+before selection changes. The regression intentionally delays the second click;
+the newly selected object must remain untouched. Navigation gestures are ignored.
+
 ## Interior split audit
 
 Whole objects/action stacks and disconnected complete contours remain preferred,

@@ -122,6 +122,10 @@ export class Stage {
     canvas.addEventListener("pointermove", (e) => this.move(e));
     canvas.addEventListener("pointerup", (e) => this.up(e));
     canvas.addEventListener("pointercancel", () => this.cancelDrag());
+    canvas.addEventListener("mousedown", (e) => {
+      if (this.state.tool === "node" && e.detail === 1)
+        this.nodeDoubleContextId = this.nodePointerSelection;
+    });
     canvas.addEventListener(
       "wheel",
       (e) => {
@@ -150,6 +154,7 @@ export class Stage {
       { passive: false },
     );
     canvas.addEventListener("dblclick", (e) => {
+      if (this.state.space || this.gesture || e.button !== 0) return;
       if (this.satinGuideTarget()) return;
       if (this.draft.length) {
         this.draft.pop();
@@ -1053,16 +1058,7 @@ export class Stage {
     this.canvas.focus();
     const s = this.state,
       p = this.toWorld(e);
-    if (s.tool === "node") {
-      const previous = this.nodeClickContext,
-        now = performance.now();
-      if (
-        !previous ||
-        now - previous.time > 500 ||
-        distance(p, previous.point) > 5 / this.scale
-      )
-        this.nodeClickContext = { id: s.selection, time: now, point: p };
-    }
+    this.nodePointerSelection = s.selection;
     this.canvas.setPointerCapture(e.pointerId);
     if (e.pointerType === "touch") {
       if (!this.pointers.size) {
@@ -1782,7 +1778,11 @@ export class Stage {
       o = s.project.objects.find((o) => o.id === s.selection);
     if (s.space || !closedCurveEditable(o) || selectionIds(s).length !== 1)
       return false;
-    if (this.nodeClickContext && this.nodeClickContext.id !== o.id) return true;
+    if (
+      this.nodeDoubleContextId !== undefined &&
+      this.nodeDoubleContextId !== o.id
+    )
+      return true;
     if (isLocked(s.project, o) || !isVisible(s.project, o)) return true;
     const parts = o.curve
       ? curveContours(o.curve)

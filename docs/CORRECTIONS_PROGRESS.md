@@ -35,6 +35,8 @@ connections are now separately reported as 2 external estimates, 132 short inter
 pattern connections and 4 trim-dependent connections. Internal does not mean
 physically hidden; every connection remains inspectable. Genuine bridges across
 holes and unknown/imported paths remain conservative. Exports are unchanged.
+The collapsed summary also displays internal and trim-dependent counts; a low
+external estimate must never imply those other connections are guaranteed hidden.
 
 Closed contour snapshots remain in source-local coordinates. A regression also
 caught preserved flat geometry being misread by the existing world-curve helper;

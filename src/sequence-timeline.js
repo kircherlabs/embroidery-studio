@@ -223,7 +223,7 @@ export function installSequenceTimeline({ state, scrub, locate }) {
   }
   function renderReport() {
     $("cleanup-count").textContent =
-      `Potential manual trims: ${report?.estimated ?? report?.untrimmed ?? 0}`;
+      `Potential manual trims: ${report?.estimated ?? report?.untrimmed ?? 0} external${report?.internal ? ` · ${report.internal} internal connections to inspect` : ""}${report?.trimDependent ? ` · ${report.trimDependent} trim-dependent` : ""}`;
     $("cleanup-assumptions").textContent =
       report?.assumptions || "No sequence available.";
     $("cleanup-breakdown").textContent = report

@@ -1574,7 +1574,7 @@ function renderTimeline() {
   $("timeline").value = state.cursor;
   const stats = state.plan?.stats;
   $("sequence-metrics").textContent = stats
-    ? `${stats.colors} color blocks · ${stats.manualChanges} manual changes · ${fmt(stats.jumps)} jumps${stats.stops ? ` · ${stats.stops} stops` : ""}${!isManualOrder(state.project) && stats.sourceColorBlocks !== undefined ? ` · layer order: ${stats.sourceColorBlocks} blocks` : ""} · Potential manual trims: ${fmt(state.cleanupReport.estimated)}`
+    ? `${stats.colors} color blocks · ${stats.manualChanges} manual changes · ${fmt(stats.jumps)} jumps${stats.stops ? ` · ${stats.stops} stops` : ""}${!isManualOrder(state.project) && stats.sourceColorBlocks !== undefined ? ` · layer order: ${stats.sourceColorBlocks} blocks` : ""} · Potential manual trims: ${fmt(state.cleanupReport.estimated)} external${state.cleanupReport.internal ? ` · ${fmt(state.cleanupReport.internal)} internal connections to inspect` : ""}`
     : "";
   const names = new Map(state.project.objects.map((o) => [o.id, o.name])),
     runs = [];

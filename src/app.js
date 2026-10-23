@@ -421,6 +421,7 @@ function multiHoopView(data) {
       x: e.x + h.x,
       y: e.y + h.y,
       hoopingId: h.id,
+      hoopingNumber: s.number,
       ...(i === 0 ? { hoopStart: { x: h.x, y: h.y } } : {}),
     })),
     stats: {
@@ -1551,7 +1552,7 @@ function renderTimeline() {
   $("timeline").value = state.cursor;
   const stats = state.plan?.stats;
   $("sequence-metrics").textContent = stats
-    ? `${stats.colors} color blocks · ${stats.manualChanges} manual changes · ${fmt(stats.jumps)} jumps${stats.stops ? ` · ${stats.stops} stops` : ""}${!isManualOrder(state.project) && stats.sourceColorBlocks !== undefined ? ` · layer order: ${stats.sourceColorBlocks} blocks` : ""} · Potential manual trims: ${fmt(state.cleanupReport.candidates.length)}`
+    ? `${stats.colors} color blocks · ${stats.manualChanges} manual changes · ${fmt(stats.jumps)} jumps${stats.stops ? ` · ${stats.stops} stops` : ""}${!isManualOrder(state.project) && stats.sourceColorBlocks !== undefined ? ` · layer order: ${stats.sourceColorBlocks} blocks` : ""} · Potential manual trims: ${fmt(state.cleanupReport.estimated)}`
     : "";
   const names = new Map(state.project.objects.map((o) => [o.id, o.name])),
     runs = [];
@@ -1629,7 +1630,7 @@ function renderPlayback() {
   $("stitch-counter").textContent = `${fmt(state.cursor)} / ${fmt(ev.length)}`;
   const e = ev[state.cursor - 1];
   $("command-readout").textContent = e
-    ? `${e.cmd.toUpperCase()} · X ${num(e.x)}  Y ${num(e.y)}${e.phase?.startsWith("underlay") ? " · UNDERLAY" : e.phase === "anchor" ? " · NEEDLE ANCHOR" : e.phase === "travel" ? " · FILL TRAVEL" : ""}`
+    ? `${e.hoopingNumber ? `Hooping ${e.hoopingNumber} · ` : ""}${e.cmd.toUpperCase()} · X ${num(e.x)}  Y ${num(e.y)}${e.phase?.startsWith("underlay") ? " · UNDERLAY" : e.phase === "anchor" ? " · NEEDLE ANCHOR" : e.phase === "travel" ? " · FILL TRAVEL" : ""}`
     : "Sequence start";
   $("play").textContent = playing ? "Ⅱ" : "▶";
   $("play").setAttribute(

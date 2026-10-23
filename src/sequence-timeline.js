@@ -1,4 +1,19 @@
 import { CLEANUP_COLORS, cleanupDescription } from "./manual-cleanup.js";
+export function hoopingRanges(events) {
+  const ranges = [];
+  events.forEach((e, i) => {
+    if (!e.hoopingId) return;
+    if (!ranges.length || ranges.at(-1).id !== e.hoopingId)
+      ranges.push({
+        id: e.hoopingId,
+        number: e.hoopingNumber || ranges.length + 1,
+        start: i,
+        end: i + 1,
+      });
+    ranges.at(-1).end = i + 1;
+  });
+  return ranges;
+}
 export function timelineWindow(total, start = 0, span = total) {
   span = Math.min(total, Math.max(Math.min(16, total), Math.round(span)));
   start = Math.max(0, Math.min(Math.max(0, total - span), Math.round(start)));
@@ -17,13 +32,14 @@ export function timelineMarkers(events, report) {
         length:
           e.cmd === "jump" ? Math.hypot(e.x - position.x, e.y - position.y) : 0,
       });
-    if (cleanup.has(index))
+    if (e.hoopStart) markers.push({ kind: "hoop", index, event: e });
+    if (cleanup.has(index) && !cleanup.get(index).internal)
       markers.push({ kind: "manual", index, candidate: cleanup.get(index) });
     if (["stitch", "jump"].includes(e.cmd)) position = e;
   });
   return markers;
 }
-const lane = { manual: 8, color: 21, stop: 21, trim: 32, jump: 43 };
+const lane = { manual: 8, color: 21, stop: 21, trim: 32, jump: 43, hoop: 54 };
 export function clusterMarkers(markers, view, width, showManual = true) {
   const bins = new Map();
   for (const m of markers) {
@@ -56,12 +72,27 @@ export function installSequenceTimeline({ state, scrub, locate }) {
     selection = null,
     member = 0,
     page = 0;
+  const hoops = document.createElement("div");
+  hoops.id = "hooping-timeline";
+  hoops.className = "hooping-timeline";
+  hoops.setAttribute("aria-label", "Hooping event ranges");
+  canvas.closest(".sequence-track-wrap").before(hoops);
   const describe = (m) =>
-    m.kind === "manual"
-      ? cleanupDescription(m.candidate, state.project.objects)
-      : `${{ trim: report?.decoded && report?.format === "jef" ? "Inferred trim marker (JEF decoder)" : "Automatic trim command", jump: "Jump movement", color: "Thread / color change", stop: "Operator stop" }[m.kind]} · command ${m.index + 1} / ${events.length}${m.kind === "jump" ? ` · ${m.length.toFixed(1)} mm` : ""}${m.event?.operationName ? " · " + m.event.operationName : ""}${m.kind === "trim" ? ". Command/decoder marker shown, not proof of a physical cut." : ""}`;
+    m.kind === "hoop"
+      ? `Hooping ${m.event.hoopingNumber || 1} starts · command ${m.index + 1}`
+      : m.kind === "manual"
+        ? cleanupDescription(m.candidate, state.project.objects)
+        : `${{ trim: report?.decoded && report?.format === "jef" ? "Inferred trim marker (JEF decoder)" : "Automatic trim command", jump: "Jump movement", color: "Thread / color change", stop: "Operator stop" }[m.kind]} · command ${m.index + 1} / ${events.length}${m.kind === "jump" ? ` · ${m.length.toFixed(1)} mm` : ""}${m.event?.operationName ? " · " + m.event.operationName : ""}${m.kind === "trim" ? ". Command/decoder marker shown, not proof of a physical cut." : ""}`;
   function cursor(n) {
     const index = Math.max(0, n - 1);
+    for (const b of hoops.children)
+      b.setAttribute(
+        "aria-pressed",
+        String(
+          index >= Number(b.dataset.rangeStart) &&
+            index < Number(b.dataset.rangeEnd),
+        ),
+      );
     const x =
       5 +
       ((index - view.start) / (view.span || 1)) *
@@ -99,6 +130,22 @@ export function installSequenceTimeline({ state, scrub, locate }) {
     ctx.scale(ratio, ratio);
     ctx.fillStyle = "#192b24";
     ctx.fillRect(0, 0, width, 56);
+    for (const r of hoopingRanges(events)) {
+      if (r.end < view.start || r.start >= view.end) continue;
+      const x =
+          5 +
+          ((Math.max(r.start, view.start) - view.start) / (view.span || 1)) *
+            (width - 10),
+        end =
+          5 +
+          ((Math.min(r.end, view.end) - view.start) / (view.span || 1)) *
+            (width - 10);
+      ctx.fillStyle = r.number % 2 ? "#edf3e50b" : "#e7b7840c";
+      ctx.fillRect(x, 0, end - x, 56);
+      ctx.fillStyle = "#a5b8a4";
+      ctx.fillRect(x, 0, 1, 56);
+      ctx.fillRect(end - 1, 0, 1, 56);
+    }
     // One ordinary-stitch bin per screen pixel; significant events get separate lanes.
     const bins = new Uint32Array(Math.ceil(width));
     for (let i = view.start; i < view.end; i++)
@@ -176,11 +223,11 @@ export function installSequenceTimeline({ state, scrub, locate }) {
   }
   function renderReport() {
     $("cleanup-count").textContent =
-      `Potential manual trims: ${report?.candidates.length || 0}`;
+      `Potential manual trims: ${report?.estimated ?? report?.untrimmed ?? 0}`;
     $("cleanup-assumptions").textContent =
       report?.assumptions || "No sequence available.";
     $("cleanup-breakdown").textContent = report
-      ? `${report.untrimmed} without an effective trim · ${report.trimDependent} trim-dependent. Filled red = no effective trim; hollow/dashed red = inspect machine trim behavior.`
+      ? `${report.estimated ?? report.untrimmed} external untrimmed connections · ${report.internal || 0} internal pattern connections (inspect; may remain visible) · ${report.trimDependent} trim-command dependent (excluded from estimate). Blue jumps remain unchanged. Red = estimated cleanup; hollow red = inspect trim behavior. All categories remain inspectable below.`
       : "";
     const list = $("cleanup-locations");
     list.replaceChildren();
@@ -192,7 +239,7 @@ export function installSequenceTimeline({ state, scrub, locate }) {
         const b = document.createElement("button");
         b.type = "button";
         b.dataset.cleanup = c.id;
-        b.textContent = `${c.id + 1}. ${c.length.toFixed(1)} mm · command ${c.endIndex + 1}${c.trimDependent ? " · trim-dependent" : ""}`;
+        b.textContent = `${c.id + 1}. ${c.length.toFixed(1)} mm · command ${c.endIndex + 1}${c.internal ? " · internal pattern" : ""}${c.trimDependent ? " · trim-dependent" : ""}`;
         b.setAttribute(
           "aria-label",
           cleanupDescription(c, state.project.objects),
@@ -348,6 +395,18 @@ export function installSequenceTimeline({ state, scrub, locate }) {
         view = timelineWindow(events.length);
         selection = null;
         page = 0;
+        const ranges = hoopingRanges(events);
+        hoops.hidden = !ranges.length;
+        hoops.replaceChildren();
+        for (const r of ranges) {
+          const b = document.createElement("button");
+          b.textContent = `Hooping ${r.number}`;
+          b.dataset.rangeStart = r.start;
+          b.dataset.rangeEnd = r.end;
+          b.title = `Hooping ${r.number} · commands ${r.start + 1}–${r.end}`;
+          b.onclick = () => scrub(r.start + 1);
+          hoops.append(b);
+        }
         $("sequence-detail").hidden = true;
       }
       renderReport();

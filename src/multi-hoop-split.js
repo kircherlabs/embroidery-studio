@@ -417,6 +417,7 @@ export function generateMultiHoop(master) {
         x: e.x + s.hoop.x,
         y: e.y + s.hoop.y,
         hoopingId: s.hoop.id,
+        hoopingNumber: s.number,
         ...(i === 0 ? { hoopStart: { x: s.hoop.x, y: s.hoop.y } } : {}),
       }),
     );

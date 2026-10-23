@@ -310,6 +310,20 @@ try {
     () => window.studio.getMultiHoop().bundle?.sections.length === 3,
   );
   assert.equal((await multi()).mode, true);
+  await page.locator("#preview-tab").click();
+  await reveal(page.locator("#hooping-timeline button").nth(1));
+  await page.locator("#hooping-timeline button").nth(1).click();
+  assert.match(
+    await page.locator("#command-readout").textContent(),
+    /Hooping 2/,
+  );
+  assert.equal(
+    await page
+      .locator("#hooping-timeline button")
+      .nth(1)
+      .getAttribute("aria-pressed"),
+    "true",
+  );
   await page.locator("[data-inspect-join]").first().click();
   assert.equal(
     (await page.evaluate(() => window.studio.getPlan())).events.length,

@@ -8,7 +8,12 @@ Protected backup branches must remain unchanged.
    Tests cover two/three fields, 0/37/90-degree rows and three seam positions.
    Verified: 22 focused Node tests, real six-format encode/decode and complete
    Chrome Multi-Hoop workflow, including join/full-result controls. Workstream 1 complete.
-2. Sequence: cleanup classification and explicit hooping timeline/playback pending.
+2. Sequence: internal short pattern repositioning, external untrimmed connections
+   and trim-dependent connections are separately reported. All remain inspectable;
+   internal connections are not claimed hidden. Imported/decoded commands stay
+   conservative. Hooping ranges/navigation and active playback labels implemented.
+   Verified 12 unit tests and the complete cleanup browser/export regression;
+   Multi-Hoop labels/navigation browser check passed. Workstream 2 complete.
 3. Closed Shape: reversible edge/node/contour operations pending.
 
 ## Interior split audit

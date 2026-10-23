@@ -717,6 +717,59 @@ function validateSource(o) {
   }
   if (o.curve) {
     const c = o.curve;
+    if (c.contours !== undefined) {
+      if (
+        !Array.isArray(c.nodes) ||
+        !Array.isArray(c.contours) ||
+        c.contours.length > 128 ||
+        c.nodes.length +
+          c.contours.reduce((n, p) => n + (p.nodes?.length || 0), 0) >
+          2000
+      )
+        throw Error("Invalid compound Bézier path.");
+      for (const part of c.contours) {
+        if (part.contours !== undefined)
+          throw Error("Nested Bézier contours are invalid.");
+        validateSource({ type: "fill", curve: { ...part, frame: c.frame } });
+      }
+    }
+    if (c.wholeMemory) {
+      if (
+        !Array.isArray(c.wholeMemory.flat) ||
+        c.wholeMemory.nodes?.some((n) => n.cornerMemory?.wholeMemory)
+      )
+        throw Error("Invalid curve restoration data.");
+      validateSource({
+        type: "fill",
+        curve: { nodes: c.wholeMemory.nodes, closed: true, frame: c.frame },
+      });
+      if (
+        c.wholeMemory.flat.some(
+          (p) => !number(p.x, -10000, 10000) || !number(p.y, -10000, 10000),
+        )
+      )
+        throw Error("Invalid curve restoration coordinates.");
+    }
+    if (
+      c.exactRing &&
+      (!Array.isArray(c.exactRing) ||
+        c.exactRing.some(
+          (p) => !number(p.x, -10000, 10000) || !number(p.y, -10000, 10000),
+        ))
+    )
+      throw Error("Invalid preserved contour.");
+    for (const n of c.nodes || [])
+      for (const memory of [
+        n.cornerMemory,
+        n.edgeMemory?.curved,
+        n.edgeMemory?.straight,
+      ].filter(Boolean))
+        if (
+          [memory.in, memory.out]
+            .filter(Boolean)
+            .some((p) => !number(p.x, -2000, 2000) || !number(p.y, -2000, 2000))
+        )
+          throw Error("Invalid saved Bézier handles.");
     if (
       typeof c.closed !== "boolean" ||
       !Array.isArray(c.nodes) ||

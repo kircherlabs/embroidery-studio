@@ -117,6 +117,7 @@ import { installReordering } from "./reorder-ui.js";
 import { installHelp } from "./help.js";
 import { installWorkspace } from "./workspace-layout.js";
 import { closedOutlinePreview } from "./outline-preview.js";
+import { closedCurveEditable } from "./closed-curve-editing.js";
 import { arrangeArtwork, installArrangeMenu } from "./arrange.js";
 installDesignToolbar();
 const icon = (name) =>
@@ -421,6 +422,7 @@ function multiHoopView(data) {
       x: e.x + h.x,
       y: e.y + h.y,
       hoopingId: h.id,
+      hoopingNumber: s.number,
       ...(i === 0 ? { hoopStart: { x: h.x, y: h.y } } : {}),
     })),
     stats: {
@@ -479,6 +481,8 @@ function select(id, options = {}) {
   state.methodRequest = null;
   state.satinMethodRequest = null;
   stage.node = null;
+  stage.contour = 0;
+  stage.segment = null;
   state.manualIndex = 0;
   renderPanels();
   stage.render();
@@ -537,7 +541,7 @@ function setTool(tool) {
     ?.scrollIntoView({ block: "nearest", inline: "nearest" });
   const hints = {
     select: "Drag objects to position them in the hoop",
-    node: "Drag anchors or pull a curve · double-click adds a node",
+    node: "Drag anchors/handles · closed outline: double-click anchor, edge or interior to toggle geometry",
     pencil:
       "Drag to trace · Finish path or Closed fill · editable Bézier artwork",
     knife:
@@ -628,6 +632,14 @@ function updateVectorOptions() {
       (e) => (e.hidden = !e.dataset.vectorOption.split(" ").includes(tool)),
     );
   const objects = vectorTargets();
+  $("closed-curve-actions").hidden =
+    tool !== "node" || objects.length !== 1 || !closedCurveEditable(objects[0]);
+  const closedEnabled = tool === "node" && state.mode === "design";
+  for (const control of document.querySelectorAll(
+    '[data-section="closed-curve"] button, #closed-contour',
+  ))
+    control.disabled = !closedEnabled;
+  if ($("closed-context-note")) $("closed-context-note").hidden = closedEnabled;
   $("sculpt-radius").closest("label").hidden =
     tool !== "node" || !objects.some((o) => !stage.activeCurve(o));
   const railTarget =
@@ -661,7 +673,9 @@ function updateVectorOptions() {
           : tool === "pencil"
             ? "Smoothing controls trace tolerance in millimeters. Start a new stroke to finish the previous one."
             : tool === "node"
-              ? "Pull a segment to sculpt; drag handles for precision. Imported contours use a local influence with automatic node compaction. Vector edits convert Smart Shapes/text to paths; Undo restores them."
+              ? closedCurveEditable(selected())
+                ? "Double-click an anchor: Corner / Smooth; an edge: Straight / Curved; empty interior: Smooth / Restore Contour. Break Handles and Insert anchor are explicit node actions. Drag handles or sculpt segments; Undo restores edits."
+                : "Pull a segment to sculpt; drag handles for precision. Imported contours use a local influence with automatic node compaction. Vector edits convert Smart Shapes/text to paths; Undo restores them."
               : "Pieces retain sewing actions; construction stops repeat per piece. Parametric shapes/text become paths; Undo restores them. Erasing keeps small fragments for review.";
   state.pencilSmoothing = $("pencil-smoothing").checkValidity()
     ? Number($("pencil-smoothing").value)
@@ -1250,6 +1264,21 @@ function renderProperties() {
       draw: () => stage.render(),
       selectTool: () => setTool("select"),
       node: () => stage.node,
+      closedAction: (action) => stage.closedAction(action),
+      insertAnchor: () => {
+        if (stage.segment) {
+          stage.contour = stage.segment.ring;
+          stage.insertNode(stage.segment.point);
+        } else toast("Click an edge first.");
+      },
+      contour: () => stage.contour || 0,
+      setContour: (i) => {
+        stage.contour = i;
+        stage.node = null;
+        stage.segment = null;
+        renderProperties();
+        stage.render();
+      },
       editCurve: () => setTool("node"),
       splitRails: splitManualRails,
       retrace: async (group) => {
@@ -1551,7 +1580,7 @@ function renderTimeline() {
   $("timeline").value = state.cursor;
   const stats = state.plan?.stats;
   $("sequence-metrics").textContent = stats
-    ? `${stats.colors} color blocks · ${stats.manualChanges} manual changes · ${fmt(stats.jumps)} jumps${stats.stops ? ` · ${stats.stops} stops` : ""}${!isManualOrder(state.project) && stats.sourceColorBlocks !== undefined ? ` · layer order: ${stats.sourceColorBlocks} blocks` : ""} · Potential manual trims: ${fmt(state.cleanupReport.candidates.length)}`
+    ? `${stats.colors} color blocks · ${stats.manualChanges} manual changes · ${fmt(stats.jumps)} jumps${stats.stops ? ` · ${stats.stops} stops` : ""}${!isManualOrder(state.project) && stats.sourceColorBlocks !== undefined ? ` · layer order: ${stats.sourceColorBlocks} blocks` : ""} · Potential manual trims: ${fmt(state.cleanupReport.estimated)} external${state.cleanupReport.internal ? ` · ${fmt(state.cleanupReport.internal)} internal connections to inspect` : ""}`
     : "";
   const names = new Map(state.project.objects.map((o) => [o.id, o.name])),
     runs = [];
@@ -1629,7 +1658,7 @@ function renderPlayback() {
   $("stitch-counter").textContent = `${fmt(state.cursor)} / ${fmt(ev.length)}`;
   const e = ev[state.cursor - 1];
   $("command-readout").textContent = e
-    ? `${e.cmd.toUpperCase()} · X ${num(e.x)}  Y ${num(e.y)}${e.phase?.startsWith("underlay") ? " · UNDERLAY" : e.phase === "anchor" ? " · NEEDLE ANCHOR" : e.phase === "travel" ? " · FILL TRAVEL" : ""}`
+    ? `${e.hoopingNumber ? `Hooping ${e.hoopingNumber} · ` : ""}${e.cmd.toUpperCase()} · X ${num(e.x)}  Y ${num(e.y)}${e.phase?.startsWith("underlay") ? " · UNDERLAY" : e.phase === "anchor" ? " · NEEDLE ANCHOR" : e.phase === "travel" ? " · FILL TRAVEL" : ""}`
     : "Sequence start";
   $("play").textContent = playing ? "Ⅱ" : "▶";
   $("play").setAttribute(
@@ -2904,6 +2933,16 @@ for (const [id, action] of [
 ])
   $(id).onclick = () => repairPath(action);
 $("rails-from-selection").onclick = createRailsFromSelection;
+$("closed-curve-action").onchange = (e) => {
+  const action = e.target.value;
+  e.target.value = "";
+  if (action === "insert") {
+    if (stage.segment) {
+      stage.contour = stage.segment.ring;
+      stage.insertNode(stage.segment.point);
+    } else toast("Click an edge first.");
+  } else if (action) stage.closedAction(action);
+};
 $("rails-closed").onchange = () => {
   updateVectorOptions();
   stage.render();

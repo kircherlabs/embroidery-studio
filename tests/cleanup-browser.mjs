@@ -2,6 +2,9 @@ import assert from "node:assert/strict";
 import { createRequire } from "node:module";
 import { mkdir, readFile } from "node:fs/promises";
 import { object } from "../src/model.js";
+import { makeFillSettings } from "../src/fills/context.js";
+import { stampFillFeatures } from "../src/fills/schema.js";
+import { makeOperation } from "../src/operations.js";
 import { decodePes, declaredRect } from "./helpers/pes-decoder.mjs";
 import { reveal } from "./helpers/ui.mjs";
 const { chromium } = createRequire(import.meta.url)(
@@ -430,6 +433,53 @@ try {
   );
   await touch.screenshot({ path: "test-results/cleanup-touch.png" });
   await touch.close();
+  const bloom = object(
+    "Bloom",
+    [
+      Array.from({ length: 80 }, (_, i) => {
+        const a = (i * Math.PI) / 40,
+          r = 25 + 7 * Math.cos(5 * a);
+        return { x: r * Math.cos(a), y: r * Math.sin(a) };
+      }),
+    ],
+    { spacing: 0.5, underlay: false, compensation: 0 },
+  );
+  bloom.operations = [
+    {
+      ...makeOperation("fill", bloom),
+      id: "spiral",
+      name: "Spiral",
+      fillSettings: makeFillSettings("spiral", bloom),
+    },
+  ];
+  await open(
+    stampFillFeatures({
+      version: 1,
+      name: "Bloom cleanup categories",
+      machine: "se700",
+      objects: [bloom],
+    }),
+  );
+  const bloomReport = await cleanup();
+  // Earlier format checks can leave JEF as this machine's preference. Its
+  // omitted trims remain external estimates rather than trim-dependent cuts.
+  const external = bloomReport.format === "jef" ? 6 : 2,
+    conditional = bloomReport.format === "jef" ? 0 : 4;
+  assert.equal(bloomReport.estimated, external);
+  assert.equal(bloomReport.internal, 132);
+  assert.equal(bloomReport.trimDependent, conditional);
+  assert.match(
+    await page.locator("#cleanup-count").textContent(),
+    new RegExp(
+      `${external} external.*132 internal connections to inspect${conditional ? ".*4 trim-dependent" : ""}`,
+    ),
+  );
+  assert.match(
+    await page.locator("#sequence-metrics").textContent(),
+    new RegExp(
+      `139 jumps.*${external} external.*132 internal connections to inspect`,
+    ),
+  );
   assert.deepEqual(errors, []);
   console.log(
     "Cleanup preview: sewn-anchor grouping, trim-dependent/JEF states, real red pixels, independent toggles, marker hover/navigation, clusters/zoom/pan/keyboard/mobile, imported provenance/reload, unchanged project/commands and byte-identical decoded PES pass.",

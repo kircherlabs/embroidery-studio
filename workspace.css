@@ -1873,3 +1873,22 @@
   cursor: pointer;
   padding-block: 0.4rem;
 }
+.hooping-timeline {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  padding: 4px 0;
+}
+.hooping-timeline[hidden] {
+  display: none;
+}
+.hooping-timeline button {
+  flex: 0 0 auto;
+  padding: 4px 10px;
+  font-size: 12px;
+}
+.hooping-timeline button[aria-pressed="true"] {
+  background: var(--accent, #e7b784);
+  color: #192b24;
+  border-color: #fff1d5;
+}

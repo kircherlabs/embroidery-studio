@@ -11,6 +11,7 @@ import {
   mapPoint,
   curveRings,
   detachSource,
+  curveContours,
 } from "./smart-geometry.js";
 import { uid, bounds } from "./model.js";
 import { operationsOf, requiresClosed } from "./operations.js";
@@ -55,7 +56,7 @@ const segmentDistance = (p, a, b) => {
 };
 export function worldCurve(o, ring = 0) {
   if (o.curve) {
-    const c = structuredClone(o.curve),
+    const c = structuredClone(curveContours(o.curve)[ring]),
       m = c.frame || identity();
     c.nodes = c.nodes.map((n) => ({
       ...mapPoint(n, m),
@@ -64,6 +65,9 @@ export function worldCurve(o, ring = 0) {
       ...(n.mode ? { mode: n.mode } : {}),
     }));
     c.frame = identity();
+    delete c.exactRing;
+    delete c.contours;
+    delete c.wholeMemory;
     return c;
   }
   return {
@@ -74,7 +78,11 @@ export function worldCurve(o, ring = 0) {
 }
 export function nearestSegment(o, p) {
   let best = null;
-  for (let ring = 0; ring < (o.curve ? 1 : o.rings.length); ring++) {
+  for (
+    let ring = 0;
+    ring < (o.curve ? curveContours(o.curve).length : o.rings.length);
+    ring++
+  ) {
     const c = worldCurve(o, ring);
     for (let i = 0; i < c.nodes.length - (c.closed ? 0 : 1); i++) {
       const ps = controls(c, i);
@@ -179,7 +187,9 @@ export function sculptCurve(c, index, t, delta) {
 }
 export function sculptArtwork(o, hit, delta, radius = 2) {
   if (o.curve) {
-    sculptCurve(o.curve, hit.index, hit.t, delta);
+    const c = hit.ring ? o.curve.contours?.[hit.ring - 1] : o.curve;
+    delete c.exactRing;
+    sculptCurve(c, hit.index, hit.t, delta);
     o.rings = curveRings(o.curve);
     return;
   }
@@ -657,8 +667,22 @@ export function eraseArtwork(o, points, width, area = true, allowOpen = false) {
   );
 }
 function reverseCurve(c) {
+  delete c.exactRing;
+  if (c.wholeMemory) {
+    reverseCurve({ nodes: c.wholeMemory.nodes });
+    c.wholeMemory.flat.reverse();
+  }
   c.nodes.reverse();
   for (const n of c.nodes) {
+    delete n.edgeMemory;
+    if (n.cornerMemory) {
+      const a = n.cornerMemory.in,
+        b = n.cornerMemory.out;
+      delete n.cornerMemory.in;
+      delete n.cornerMemory.out;
+      if (a) n.cornerMemory.out = a;
+      if (b) n.cornerMemory.in = b;
+    }
     const a = n.in,
       b = n.out;
     if (b) n.in = b;
@@ -672,6 +696,7 @@ export function reverseArtwork(o) {
   editable(o);
   if (o.curve) {
     reverseCurve(o.curve);
+    for (const c of o.curve.contours || []) reverseCurve(c);
     o.rings = curveRings(o.curve);
   } else {
     detachSource(o);

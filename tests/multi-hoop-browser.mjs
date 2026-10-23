@@ -310,6 +310,30 @@ try {
     () => window.studio.getMultiHoop().bundle?.sections.length === 3,
   );
   assert.equal((await multi()).mode, true);
+  await page.locator("#preview-tab").click();
+  await reveal(page.locator("#hooping-timeline button").nth(1));
+  await page.locator("#hooping-timeline button").nth(1).click();
+  assert.match(
+    await page.locator("#command-readout").textContent(),
+    /Hooping 2/,
+  );
+  assert.equal(
+    await page
+      .locator("#hooping-timeline button")
+      .nth(1)
+      .getAttribute("aria-pressed"),
+    "true",
+  );
+  await page.locator("[data-inspect-join]").first().click();
+  assert.equal(
+    (await page.evaluate(() => window.studio.getPlan())).events.length,
+    Number(await page.locator("#timeline").inputValue()),
+  );
+  await page.locator("#multi-complete").click();
+  assert.equal(
+    (await page.evaluate(() => window.studio.getPlan())).events.length,
+    Number(await page.locator("#timeline").inputValue()),
+  );
   assert.deepEqual(errors, []);
   console.log(
     "Multi-Hoop browser: actual fields/drag/cancel/history, source independence, selected/assembled sequence, order/reload, three-hoop/six-format ZIP, independent PES needles, measured print scale, mobile controls and blocked unsafe satin passed.",

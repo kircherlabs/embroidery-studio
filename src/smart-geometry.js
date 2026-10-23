@@ -186,6 +186,12 @@ export function roundArtwork(o, radius, vertices = null) {
 }
 // Cubic control points remain editable; adaptive flattening stays within .025 mm.
 export function curveRings(c) {
+  if (c.contours?.length)
+    return curveContours(c).flatMap((part) =>
+      curveRings({ ...part, contours: undefined }),
+    );
+  if (c.exactRing)
+    return [c.exactRing.map((p) => mapPoint(p, c.frame || identity()))];
   const out = [];
   const frame = c.frame || identity(),
     tolerance =
@@ -231,6 +237,15 @@ export function curveRings(c) {
     add(a, b, a.out || a, b.in || b);
   }
   return [out.map((p) => mapPoint(p, c.frame || identity()))];
+}
+export function curveContours(c) {
+  return [
+    c,
+    ...(c.contours || []).map((part) => ({
+      ...part,
+      frame: c.frame || identity(),
+    })),
+  ];
 }
 export function inversePoint(p, m) {
   const det = m[0] * m[3] - m[1] * m[2];

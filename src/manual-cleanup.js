@@ -1,3 +1,5 @@
+import { safeConnector } from "./geometry.js";
+import { operationsOf, effectiveOperation } from "./operations.js";
 // Read-only diagnostics. Never infer travel or trimming from stitch length alone.
 export const CLEANUP_COLORS = {
   jump: "#82aacf",
@@ -19,7 +21,34 @@ export function estimateCleanup(events, options = {}) {
     if (!run || !needle) return;
     const length =
       kind === "travel" ? run.movementLength : distance(run.from, to);
-    if (length < 0.01) return; // Coincident anchors have no connecting span.
+    if (length < 0.05) return; // Below half the existing machine coordinate quantum.
+    const source = objects.get(to.objectId),
+      ops = source ? operationsOf(source) : [],
+      action =
+        ops.find((a) => a.id === to.operationId) ||
+        (ops.length === 1 ? ops[0] : null),
+      cfg = action && effectiveOperation(source, action);
+    // Keep these real thread connections inspectable, but distinguish the
+    // generator's short within-region pattern repositioning from cleanup across
+    // separate regions. This is NOT a claim that a connector is physically hidden.
+    const internal =
+      kind === "jump" &&
+      !options.decoded &&
+      !source?.machineSourceFormat &&
+      source &&
+      cfg &&
+      ["fill", "column", "border"].includes(cfg.type) &&
+      run.from.objectId === to.objectId &&
+      run.from.operationId === to.operationId &&
+      length <= Math.min(cfg.length || 2.5, 2.2) &&
+      safeConnector(
+        run.from,
+        to,
+        source.rings,
+        0,
+        [],
+        source.fillRule || "evenodd",
+      );
     const importedFormat = objects.get(to.objectId)?.machineSourceFormat;
     const sourceFormat = [
       "pes",
@@ -80,16 +109,27 @@ export function estimateCleanup(events, options = {}) {
       operationName: to.operationName,
       trimIndex: trim,
       trimDependent,
+      internal: !!internal,
       encoding,
       format,
       sourceFormat,
       stopped,
       reason:
-        reason + (stopped ? " A stop alone does not cut the thread." : ""),
+        (internal
+          ? "Short internal pattern connection within this source region; not included in the external cleanup estimate. It may remain visible: inspect actual thread before cutting. "
+          : "") +
+        reason +
+        (stopped ? " A stop alone does not cut the thread." : ""),
     });
   };
   for (let i = 0; i < events.length; i++) {
     const e = events[i];
+    if (e.hoopStart) {
+      position = point(e.hoopStart);
+      needle = jumps = exposed = null;
+      trim = null;
+      stopped = false;
+    }
     if (["color", "end"].includes(e.cmd)) {
       if (exposed) add(exposed, position, i, "travel");
       needle = jumps = exposed = null;
@@ -161,6 +201,8 @@ export function estimateCleanup(events, options = {}) {
     decoded: !!options.decoded,
     untrimmed: candidates.filter((c) => !c.trimDependent).length,
     trimDependent: candidates.filter((c) => c.trimDependent).length,
+    internal: candidates.filter((c) => c.internal && !c.trimDependent).length,
+    estimated: candidates.filter((c) => !c.internal && !c.trimDependent).length,
     assumptions: `${options.decoded ? "Decoded commands" : "Generated plan"} · ${(options.format || "unknown format").toUpperCase()}. Red locations are estimates, not guaranteed cuts. Trim requests/encoded commands do not prove physical execution.${options.format === "jef" ? " This JEF writer omits explicit trims; the decoder can infer trim markers from jumps." : options.format === "dst" ? " DST trims use jump sequences; interpretation depends on the machine." : ""}${options.machine === "se700" ? " SE700: the manual documents cutting at color completion when auto-cut is enabled; Studio cannot read that setting or verify same-color jump cuts." : " Machine trim settings are not available to Studio."} Color changes start a new thread; stops alone do not cut it. Known internal fill travel and ordinary sewing are excluded. Imported stitches cannot reveal hidden travel or later coverage. Initial/final thread tails are not counted.`,
   };
 }
@@ -170,7 +212,7 @@ export function cleanupDescription(c, objects = []) {
   const related = [names.get(c.fromObjectId), names.get(c.toObjectId)].filter(
     Boolean,
   );
-  return `Estimated manual cleanup · command ${c.endIndex + 1} · ${c.length.toFixed(1)} mm · ${c.color || "thread"}${related.length ? " · " + [...new Set(related)].join(" → ") : ""}${c.operationName ? " · " + c.operationName : ""}. ${c.reason} ${c.jumpCommands ? `${c.jumpCommands} jump command${c.jumpCommands === 1 ? "" : "s"}, ${c.movementLength.toFixed(1)} mm movement.` : "Travel stitching."} Trim: ${c.trimIndex === null ? "none" : `command ${c.trimIndex + 1}, ${c.encoding} in ${c.format.toUpperCase()}`}.${c.sourceFormat ? ` Imported ${c.sourceFormat.toUpperCase()} source; decoder trim interpretations may be approximate.` : ""}`;
+  return `${c.internal ? "Internal pattern connection" : "Estimated manual cleanup"} · command ${c.endIndex + 1} · ${c.length.toFixed(1)} mm · ${c.color || "thread"}${related.length ? " · " + [...new Set(related)].join(" → ") : ""}${c.operationName ? " · " + c.operationName : ""}. ${c.reason} ${c.jumpCommands ? `${c.jumpCommands} jump command${c.jumpCommands === 1 ? "" : "s"}, ${c.movementLength.toFixed(1)} mm movement.` : "Travel stitching."} Trim: ${c.trimIndex === null ? "none" : `command ${c.trimIndex + 1}, ${c.encoding} in ${c.format.toUpperCase()}`}.${c.sourceFormat ? ` Imported ${c.sourceFormat.toUpperCase()} source; decoder trim interpretations may be approximate.` : ""}`;
 }
 
 export function drawCleanupOverlay(
@@ -184,6 +226,7 @@ export function drawCleanupOverlay(
     seen = new Set();
   let active = null;
   for (const c of report.candidates) {
+    if (c.internal && c.id !== selected) continue;
     if (c.endIndex >= end || !included(c)) continue;
     if (c.id === selected) {
       active = c;

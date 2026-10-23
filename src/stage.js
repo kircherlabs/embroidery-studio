@@ -8,6 +8,7 @@ import {
 } from "./transform-box.js";
 import {
   nearestSegment,
+  worldCurve,
   sculptArtwork,
   alignHandle,
   pencilCurve,
@@ -17,6 +18,7 @@ import { letteringCurve, updateLetteringCurve } from "./text-path.js";
 import {
   detachSource,
   curveRings,
+  curveContours,
   mapPoint,
   inversePoint,
   splitCurve,
@@ -27,6 +29,10 @@ import {
 import { objectBounds, pointsOf, bounds } from "./model.js";
 import { inside, distance } from "./engine.js";
 import { movementSegments } from "./preview.js";
+import {
+  closedCurveEditable,
+  editClosedCurve,
+} from "./closed-curve-editing.js";
 import { drawCleanupOverlay } from "./manual-cleanup.js";
 import { drawHoopingOverlay } from "./multi-hoop-overlay.js";
 import { closedOutlinePreview, drawClosedOutline } from "./outline-preview.js";
@@ -66,7 +72,10 @@ export class Stage {
   activeCurve(o) {
     return o?.satinRails
       ? o.satinRails[this.state.railSide || "a"]
-      : letteringCurve(o || {}) || o?.curve;
+      : letteringCurve(o || {}) ||
+          (o?.curve
+            ? curveContours(o.curve)[this.contour || 0] || o.curve
+            : null);
   }
   updateCurve(o, c) {
     if (o.satinRails) {
@@ -85,8 +94,13 @@ export class Stage {
         this.drag.pathError = e.message;
       }
     } else {
-      o.curve = c;
-      o.rings = curveRings(c);
+      delete c.exactRing;
+      if (o.curve?.contours && this.contour > 0) {
+        const part = { ...c };
+        delete part.frame;
+        o.curve.contours[this.contour - 1] = part;
+      } else o.curve = c;
+      o.rings = curveRings(o.curve);
     }
   }
   constructor(canvas, state, actions) {
@@ -98,6 +112,8 @@ export class Stage {
     this.pan = { x: 0, y: 0 };
     this.draft = [];
     this.node = null;
+    this.contour = 0;
+    this.segment = null;
     this.pointers = new Map();
     this.referenceImages = new Map();
     this.dpr = devicePixelRatio || 1;
@@ -106,6 +122,10 @@ export class Stage {
     canvas.addEventListener("pointermove", (e) => this.move(e));
     canvas.addEventListener("pointerup", (e) => this.up(e));
     canvas.addEventListener("pointercancel", () => this.cancelDrag());
+    canvas.addEventListener("mousedown", (e) => {
+      if (this.state.tool === "node" && e.detail === 1)
+        this.nodeDoubleContextId = this.nodePointerSelection;
+    });
     canvas.addEventListener(
       "wheel",
       (e) => {
@@ -134,12 +154,15 @@ export class Stage {
       { passive: false },
     );
     canvas.addEventListener("dblclick", (e) => {
+      if (this.state.space || this.gesture || e.button !== 0) return;
       if (this.satinGuideTarget()) return;
       if (this.draft.length) {
         this.draft.pop();
         this.actions.finish();
-      } else if (this.state.tool === "node") this.insertNode(this.toWorld(e));
-      else if (this.state.tool === "select") {
+      } else if (this.state.tool === "node") {
+        if (!this.closedDoubleClick(this.toWorld(e)))
+          this.insertNode(this.toWorld(e));
+      } else if (this.state.tool === "select") {
         const hit = this.hit(this.toWorld(e));
         if (hit) {
           const id = this.canvasTarget(hit);
@@ -690,7 +713,18 @@ export class Stage {
                 });
               }
         points.forEach((p, i) => {
-          editingHandle(ctx, p, scale, { radius: 3, active: this.node === i });
+          editingHandle(ctx, p, scale, {
+            radius: 3,
+            active: this.node === i,
+            shape:
+              editableCurve?.nodes[i].mode === "smooth" ||
+              editableCurve?.nodes[i].mode === "symmetric"
+                ? "circle"
+                : "square",
+            color: editableCurve?.nodes[i].broken
+              ? EDITING_STYLE.guide
+              : EDITING_STYLE.ink,
+          });
         });
       } else {
         strokeEditingPath(
@@ -1024,6 +1058,7 @@ export class Stage {
     this.canvas.focus();
     const s = this.state,
       p = this.toWorld(e);
+    this.nodePointerSelection = s.selection;
     this.canvas.setPointerCapture(e.pointerId);
     if (e.pointerType === "touch") {
       if (!this.pointers.size) {
@@ -1194,6 +1229,23 @@ export class Stage {
           "Remove effects to edit the original nodes, or Bake effects to edit the result. Both are in Artwork effects.",
         );
         return;
+      }
+      if (closedCurveEditable(selected)) {
+        this.segment = nearestSegment(selected, p);
+        if (this.segment?.distance > 8 / this.scale) this.segment = null;
+        if (selected.curve) {
+          const parts = curveContours(selected.curve);
+          for (let ri = 0; ri < parts.length; ri++)
+            if (
+              parts[ri].nodes.some(
+                (n) =>
+                  distance(p, mapPoint(n, parts[ri].frame)) < 8 / this.scale,
+              )
+            ) {
+              this.contour = ri;
+              break;
+            }
+        }
       }
       if (this.activeCurve(selected)) {
         const c = this.activeCurve(selected);
@@ -1523,6 +1575,24 @@ export class Stage {
             n[key].x += dx;
             n[key].y += dy;
           }
+        for (const memory of [
+          n.cornerMemory,
+          ...Object.values(n.edgeMemory || {}),
+        ].filter(Boolean)) {
+          const keys = memory === n.cornerMemory ? ["in", "out"] : ["out"];
+          for (const k of keys)
+            if (memory[k]) {
+              memory[k].x += dx;
+              memory[k].y += dy;
+            }
+        }
+        const previous =
+          c.nodes[(d.index + c.nodes.length - 1) % c.nodes.length];
+        for (const memory of Object.values(previous.edgeMemory || {}))
+          if (memory.in) {
+            memory.in.x += dx;
+            memory.in.y += dy;
+          }
       } else {
         n[d.key] = q;
         alignHandle(n, d.key);
@@ -1656,6 +1726,99 @@ export class Stage {
     this.pointers.clear();
     this.actions.refresh();
     this.render();
+  }
+  closedAction(action, target = null) {
+    const s = this.state,
+      o = s.project.objects.find((o) => o.id === s.selection);
+    if (
+      s.tool !== "node" ||
+      s.mode !== "design" ||
+      selectionIds(s).length !== 1 ||
+      !closedCurveEditable(o) ||
+      isLocked(s.project, o)
+    )
+      return false;
+    try {
+      let ring = target?.ring ?? this.contour ?? 0,
+        index = target?.index ?? this.node;
+      if (
+        !o.curve &&
+        !target &&
+        index !== null &&
+        action !== "toggle-segment"
+      ) {
+        ring = 0;
+        while (o.rings[ring] && index >= o.rings[ring].length)
+          index -= o.rings[ring++].length;
+      }
+      if (action === "toggle-segment") {
+        const hit = target || this.segment;
+        if (!hit)
+          throw Error(
+            "Click an edge first, then choose Straight / Curved Segment.",
+          );
+        ring = hit.ring;
+        index = hit.index;
+      }
+      const next = editClosedCurve(o, action, ring, index);
+      this.contour = ring;
+      this.node = index;
+      this.actions.mutate(() => {
+        for (const key of Object.keys(o)) delete o[key];
+        Object.assign(o, next);
+      });
+      return true;
+    } catch (e) {
+      this.actions.notice?.(e.message);
+      return true;
+    }
+  }
+  closedDoubleClick(p) {
+    const s = this.state,
+      o = s.project.objects.find((o) => o.id === s.selection);
+    if (s.space || !closedCurveEditable(o) || selectionIds(s).length !== 1)
+      return false;
+    if (
+      this.nodeDoubleContextId !== undefined &&
+      this.nodeDoubleContextId !== o.id
+    )
+      return true;
+    if (isLocked(s.project, o) || !isVisible(s.project, o)) return true;
+    const parts = o.curve
+      ? curveContours(o.curve)
+      : o.rings.map((_, i) => worldCurve(o, i));
+    // Anchors win, even when their tangent handle is coincident with them.
+    for (let ring = 0; ring < parts.length; ring++)
+      for (let index = 0; index < parts[ring].nodes.length; index++) {
+        if (
+          distance(p, mapPoint(parts[ring].nodes[index], parts[ring].frame)) <
+          8 / this.scale
+        ) {
+          this.closedAction("toggle-node", { ring, index });
+          return true;
+        }
+      }
+    for (const c of parts)
+      for (const n of c.nodes)
+        for (const key of ["in", "out"])
+          if (n[key] && distance(p, mapPoint(n[key], c.frame)) < 8 / this.scale)
+            return true;
+    const hit = nearestSegment(o, p);
+    if (hit?.distance < 8 / this.scale) {
+      this.segment = hit;
+      this.closedAction("toggle-segment", hit);
+      return true;
+    }
+    if (
+      this.hit(p)?.id === o.id &&
+      inside(p, o.rings, o.fillRule || "evenodd")
+    ) {
+      const ring = parts.findIndex((c) =>
+        inside(p, curveRings({ ...c, contours: undefined }), "evenodd"),
+      );
+      this.closedAction("toggle-whole", { ring: Math.max(0, ring), index: 0 });
+    }
+    return true;
   }
   insertNode(p) {
     const o = this.state.project.objects.find(

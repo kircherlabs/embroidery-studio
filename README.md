@@ -6,6 +6,14 @@ No account, paid service, design upload or backend required.
 
 **[Open the studio](https://kircherlabs.github.io/embroidery-studio/)**
 
+**v0.18.1 corrections:** inspect actual Multi-Hoop joins or the complete stitched
+result, navigate explicit Hooping 1/2/3 timeline ranges, and distinguish external
+cleanup estimates from internal pattern connections and trim-dependent bridges.
+Closed Shape's Edit Points context now offers reversible straight/curved edges,
+Corner/Smooth vertices, explicit Break Handles and contour smoothing/restoration.
+See [curve editing](docs/CLOSED_SHAPE_EDITING.md) and
+[verification and split-method audit](docs/CORRECTIONS_PROGRESS.md).
+
 **Multi-Hoop:** Machine & hoop → Multi-Hoop keeps one editable master while
 placing numbered, movable sewing fields. Inspect selected/assembled stitches,
 adjust source seams, and export independently validated files with thread order,

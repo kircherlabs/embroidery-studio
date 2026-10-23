@@ -3,6 +3,7 @@ import { validateEquipment } from "./equipment.js";
 import { validateReferences } from "./references.js";
 import { sourceTransform } from "./smart-geometry.js";
 import { validateFillFeatures } from "./fills/schema.js";
+import { validateMultiHoop } from "./multi-hoop-schema.js";
 export const VERSION = 1;
 export const PALETTE = [
   "#e6ab43",
@@ -203,6 +204,7 @@ export function validateProject(p) {
   )
     throw Error("Unsupported or invalid studio project.");
   validateFillFeatures(p);
+  validateMultiHoop(p);
   validateEquipment(p);
   if (typeof p.name !== "string" || p.name.length > 200)
     throw Error("Invalid project name.");

@@ -233,6 +233,7 @@
             <span class="machine-title">Machine &amp; hoop</span
             ><strong id="machine-summary"></strong><span id="hoop-size"></span
             ><span id="fit-status"></span>
+            <span id="multi-hoop-badge"></span>
           </summary>
           <div class="machine-settings" aria-label="Equipment selection">
             <label class="equipment-search"
@@ -251,6 +252,7 @@
             ></label>
             <span id="machine-search-status" role="status"></span>
             <div class="equipment-actions">
+              <button id="multi-hoop-entry" type="button">Multi-Hoop…</button>
               <button id="equipment-center" type="button" hidden>
                 Center design in hoop
               </button>
@@ -286,6 +288,11 @@
               <div id="equipment-sources"></div>
             </details>
           </div>
+          <section
+            id="multi-hoop-controls"
+            aria-label="Multi-Hoop production"
+            hidden
+          ></section>
         </details>
         <div class="workspace-description">
           <span id="stage-hint">Select and move artwork</span>
@@ -714,7 +721,7 @@
     <footer class="status-bar">
       <span id="status">Ready</span
       ><span
-        >40 wt thread presets <i>·</i> v0.17.0 <i>·</i>
+        >40 wt thread presets <i>·</i> v0.18.0 <i>·</i>
         <a
           href="https://github.com/kircherlabs/embroidery-studio"
           target="_blank"

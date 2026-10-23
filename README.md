@@ -6,6 +6,13 @@ No account, paid service, design upload or backend required.
 
 **[Open the studio](https://kircherlabs.github.io/embroidery-studio/)**
 
+**Multi-Hoop:** Machine & hoop → Multi-Hoop keeps one editable master while
+placing numbered, movable sewing fields. Inspect selected/assembled stitches,
+adjust source seams, and export independently validated files with thread order,
+optional registration and measured 1:1 templates. Reliable Tatami/Emboss and
+running-path cuts regenerate from source; unsupported satin or construction cuts
+are explicitly blocked. See [standard rehooping and limitations](docs/MULTI_HOOP.md).
+
 This is an early, functional release. It covers the complete artwork → stitches →
 simulation → machine file workflow. It is not yet a replacement for every feature
 in a mature commercial digitizing package. Test sew-outs on scrap fabric; the

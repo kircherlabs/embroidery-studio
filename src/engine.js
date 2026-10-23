@@ -112,12 +112,14 @@ export function fillRows(
   maxSatin = null,
   counterClearance = maxSatin ? 0.08 : 0,
   textureOptions = null,
+  coverageClip = null,
 ) {
   if (!rings.length) return [];
   const a = (angle * Math.PI) / 180,
     rs = rings.map((r) => r.map((p) => rotate(p, -a))),
     b = bounds(rs.flat()),
-    rows = [];
+    rows = [],
+    clip = coverageClip?.map((r) => r.map((p) => rotate(p, -a)));
   const first = textureOptions?.fixed
     ? Math.ceil((b.minY - spacing / 2) / spacing) * spacing + spacing / 2
     : b.minY + spacing / 2;
@@ -153,7 +155,7 @@ export function fillRows(
       } else if (was && !now && c.x - start > 0.05) {
         // Compensation must not turn a microscopic span into a full-width speck.
         const extension = Math.min(compensation, (c.x - start) * 0.15),
-          x1 =
+          rawX1 =
             start +
             (counterClearance && cuts[startIndex].hole
               ? Math.min(counterClearance, (c.x - start) / 4)
@@ -161,7 +163,7 @@ export function fillRows(
                   extension,
                   startIndex ? (start - cuts[startIndex - 1].x) / 3 : Infinity,
                 )),
-          x2 =
+          rawX2 =
             c.x +
             (counterClearance && c.hole
               ? -Math.min(counterClearance, (c.x - start) / 4)
@@ -171,6 +173,27 @@ export function fillRows(
                     ? (cuts[cutIndex + 1].x - c.x) / 3
                     : Infinity,
                 )),
+          limits = clip
+            ? clip
+                .flatMap((r) =>
+                  r.flatMap((p, i) => {
+                    const q = r[(i + 1) % r.length];
+                    return (p.y <= y && q.y > y) || (q.y <= y && p.y > y)
+                      ? [p.x + ((q.x - p.x) * (y - p.y)) / (q.y - p.y)]
+                      : [];
+                  }),
+                )
+                .sort((p, q) => p - q)
+            : null,
+          middle = (start + c.x) / 2,
+          at = limits?.findIndex(
+            (x, i) =>
+              i % 2 === 0 &&
+              x <= middle + 1e-7 &&
+              limits[i + 1] >= middle - 1e-7,
+          ),
+          x1 = at >= 0 ? Math.max(rawX1, limits[at]) : rawX1,
+          x2 = at >= 0 ? Math.min(rawX2, limits[at + 1]) : rawX2,
           pts = [{ x: x1, y }],
           phase = textureOptions?.phase
             ? textureOptions.phase(row) * length

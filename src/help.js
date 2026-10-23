@@ -1,4 +1,18 @@
 const descriptions = {
+  "multi-hoop-entry":
+    "Standard rehooping uses separate numbered files while keeping one editable master. Place real machine fields, inspect source seams and export measured alignment templates. This is not proprietary multi-position encoding.",
+  "multi-auto":
+    "Suggest horizontal/vertical fields with the requested minimum overlap and safety clearance. Replaces the current placement; Undo restores it. Move fields for irregular layouts.",
+  "multi-overlap":
+    "Minimum overlap used by Auto place and Add. Existing fields keep their positions until adjusted. Alignment overlap never duplicates sewing.",
+  "multi-registration":
+    "Opt in to temporary running crosses shared by neighboring fields, followed by an operator pause. Two clear alignment points are required. Disable marks for formats that cannot preserve that pause.",
+  "multi-seam-x":
+    "Move the selected field’s split ownership center horizontally within overlapping coverage. The physical field stays in place. Inspect regenerated joins before exporting.",
+  "multi-seam-y":
+    "Move the selected field’s split ownership center vertically. This supports vertical and irregular joins; it does not rotate or enlarge the machine field.",
+  "multi-export":
+    "Encode and independently decode every section, then download numbered files, thread order, a shared-coordinate guide and measured 1:1 templates. No physical alignment guarantee is implied.",
   "machine-brand":
     "Choose a manufacturer, or Generic / Custom for your own dimensions. Selecting equipment changes the design field; artwork is never resized automatically.",
   "machine-hoop":

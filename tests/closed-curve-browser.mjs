@@ -77,7 +77,10 @@ try {
     await page.locator(`[data-select="${o.id}"] .object-title`).click();
     await chooseTool(page, "node");
   };
+  await page.locator(`[data-select="${o.id}"] .object-title`).click();
+  assert(await page.locator("#node-whole").isDisabled());
   await pick();
+  assert(await page.locator("#node-whole").isEnabled());
   const world = async (p) =>
     page.evaluate((p) => {
       const v = window.studio.getView(),

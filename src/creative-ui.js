@@ -165,6 +165,18 @@ export function creativeInspector(api, leaf, objects, targets) {
     box
       .querySelector('[data-section="closed-curve"] .creative-grid')
       .append(symmetric);
+    const enabled = state.tool === "node" && state.mode === "design";
+    for (const control of box.querySelectorAll(
+      '[data-section="closed-curve"] button, #closed-contour',
+    ))
+      control.disabled = !enabled;
+    const notice = document.createElement("p");
+    notice.id = "closed-context-note";
+    notice.className = "property-note";
+    notice.textContent =
+      "Choose Edit Points in Design to enable these actions.";
+    notice.hidden = enabled;
+    box.querySelector('[data-section="closed-curve"]').append(notice);
     $("closed-contour").value = api.contour();
     $("closed-contour").onchange = (e) =>
       api.setContour(Number(e.target.value));

@@ -634,6 +634,12 @@ function updateVectorOptions() {
   const objects = vectorTargets();
   $("closed-curve-actions").hidden =
     tool !== "node" || objects.length !== 1 || !closedCurveEditable(objects[0]);
+  const closedEnabled = tool === "node" && state.mode === "design";
+  for (const control of document.querySelectorAll(
+    '[data-section="closed-curve"] button, #closed-contour',
+  ))
+    control.disabled = !closedEnabled;
+  if ($("closed-context-note")) $("closed-context-note").hidden = closedEnabled;
   $("sculpt-radius").closest("label").hidden =
     tool !== "node" || !objects.some((o) => !stage.activeCurve(o));
   const railTarget =

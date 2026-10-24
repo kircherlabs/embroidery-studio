@@ -1,7 +1,11 @@
 # Selected Bézier handle pair — v0.18.3
 
 Starting main: `4efd8d95475812072c0d0d941f480adf0a3313bc` (v0.18.2).
-Branch: `fix/selected-bezier-handles`. Publishing checks pending.
+Branch: `fix/selected-bezier-handles`, verified head
+`87b4f7706ec1cb69fc4e1bc5146c17a66ec8e26d`.
+[PR #32](https://github.com/kircherlabs/embroidery-studio/pull/32) merged as
+`897490b9697f319932c72c17008ed3f93c13f417` after complete CI passed.
+Main release checks, Pages deployment and live verification passed. Published.
 
 ## Implemented
 
@@ -24,8 +28,16 @@ Branch: `fix/selected-bezier-handles`. Publishing checks pending.
 - Chrome: node UI (real canvas pixels and hidden-hit rejection), closed curves,
   Focus Mode, path editing, sculpting, manual rails, geometry contrast,
   text-on-path, tool-context, creative and manual-artwork suites passed.
-- Final Edge production build: node UI and closed-curve suites passed. Full
-  GitHub CI and deployment verification pending.
+- Final production build: Edge node UI and closed-curve suites passed; Chrome
+  node UI passed. Full PR CI [40060665060](https://github.com/kircherlabs/embroidery-studio/actions/runs/40060665060)
+  passed all 400 Node tests, 10 Python tests, 49 browser scripts and static build.
+  Main CI/Pages [40061633890](https://github.com/kircherlabs/embroidery-studio/actions/runs/40061633890)
+  passed the complete workflow and deployment.
+- Live v0.18.3: all four changed runtime assets (`index.html`, `src/app.js`,
+  `src/stage.js`, `src/node-controls.js`) matched normalized SHA-256 hashes of
+  merge `897490b9697f319932c72c17008ed3f93c13f417` at 2026-10-24 04:29 UTC.
+  Live Chrome node-ui and closed-curve suites passed, including actual handle
+  pixels/hit scope, touch, history, persistence and independently decoded PES.
 - Visually inspected the selected-edge screenshot: only that edge's two tangent
   handles appear; other anchors and artwork stay legible. Mouse/touch, handle
   dragging, Undo/Redo, save/reopen and independently decoded PES are exercised.
@@ -33,12 +45,16 @@ Branch: `fix/selected-bezier-handles`. Publishing checks pending.
   with the bundled runtime passed. Browser fixtures now select the relevant
   anchor before trying to drag its newly scoped handle.
 
-## Exact next steps
+## Release status / next steps
 
-Run final production checks; commit and open a PR. Require the complete existing
-GitHub CI workflow, merge, wait for Pages, verify deployed runtime hashes and live
-selected-handle browser behavior. Record release evidence here. Protected backup
-branches remain unchanged. No unresolved product regressions are known.
+Complete and live; no required implementation work remains. Local preview servers
+are stopped. Verification artifacts are local ignored files under `test-results/`:
+`live-selected-handles-verification.json`, `selected-node-handles.png` and
+`selected-edge-handles.png`. Protected backup refs remain unchanged:
+`BACKUP-V0.18.0` at `8aed6698c00a3b34485f0a778511f78e0302c32f` and
+`backup-before-creative-update` at `99c0a78cd7ec7c026d32c44195ebea882f06c925`.
+No unresolved product regressions are known. This final documentation update uses
+`[skip ci]`; deployed runtime assets remain exactly those verified above.
 
 ---
 

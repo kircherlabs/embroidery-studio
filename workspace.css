@@ -994,6 +994,108 @@
   font-size: 10px;
   line-height: 1.4;
 }
+/* The canvas dock is light; do not inherit dark-panel buttons or faded text. */
+.vector-controls button {
+  color: #294332;
+  background: #f2f3e9;
+  border-color: #98a88e;
+  line-height: 1.35;
+}
+.vector-controls button:hover:not(:disabled) {
+  color: #182d20;
+  background: #d3dfc7;
+  border-color: #546e4e;
+}
+.vector-controls button:active:not(:disabled) {
+  background: #becfad;
+}
+.vector-controls button[aria-pressed="true"] {
+  color: #fff9e9;
+  background: #34503a;
+  border: 2px solid #294332;
+  box-shadow: inset 0 0 0 1px #c6d5ba;
+}
+.vector-controls button[aria-pressed="true"]:hover:not(:disabled),
+.vector-controls button[aria-pressed="true"]:active:not(:disabled) {
+  color: #fff9e9;
+  background: #416146;
+}
+.vector-controls button:disabled {
+  opacity: 1;
+  color: #586653;
+  background: #e1e4d8;
+  border-color: #b2bbaa;
+  border-style: dashed;
+  cursor: not-allowed;
+}
+.vector-controls button:focus-visible,
+.vector-controls summary:focus-visible {
+  outline-color: #466c4b;
+  outline-offset: 2px;
+}
+#closed-curve-actions {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 4px;
+}
+#closed-curve-actions button {
+  width: 40px;
+  height: 40px;
+  padding: 7px;
+  display: grid;
+  place-items: center;
+  transition: none;
+}
+#closed-curve-actions svg {
+  pointer-events: none;
+}
+#path-repair {
+  min-width: 0;
+  max-width: 100%;
+}
+.vector-controls:has(#path-repair[open]) {
+  max-height: none;
+  overflow: visible;
+}
+.vector-controls #path-repair > .path-repair-groups {
+  align-items: stretch;
+  gap: 12px;
+}
+.path-repair-groups fieldset {
+  border: 0;
+  padding: 4px 0;
+  margin: 0;
+  min-width: 0;
+  max-width: 100%;
+}
+.path-repair-groups legend {
+  color: #34503a;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 0 0 4px;
+}
+.path-repair-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+}
+.path-repair-actions .check {
+  max-width: 240px;
+  line-height: 1.4;
+}
+.path-repair-actions input[type="checkbox"] {
+  flex-shrink: 0;
+}
+.path-repair-actions button {
+  white-space: normal;
+}
+@media (pointer: coarse) {
+  #closed-curve-actions button {
+    width: 44px;
+    height: 44px;
+  }
+}
 .shape-family {
   width: 40px;
   flex-shrink: 0;

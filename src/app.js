@@ -118,8 +118,16 @@ import { installHelp } from "./help.js";
 import { installWorkspace } from "./workspace-layout.js";
 import { closedOutlinePreview } from "./outline-preview.js";
 import { closedCurveEditable } from "./closed-curve-editing.js";
+import {
+  installNodeTools,
+  EDGE_HELP,
+  CONTOUR_HELP,
+  INSERT_HELP,
+} from "./node-tools.js";
+import { pointEditable } from "./point-editing.js";
 import { arrangeArtwork, installArrangeMenu } from "./arrange.js";
 installDesignToolbar();
+installNodeTools();
 const icon = (name) =>
   `<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${{ eye: '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>', hidden: '<path d="m3 3 18 18M9.5 5.3A12 12 0 0 1 12 5c6.5 0 10 7 10 7a18 18 0 0 1-3.1 3.7M6 6.4A20 20 0 0 0 2 12s3.5 7 10 7a12 12 0 0 0 5.4-1.3M10 10a3 3 0 0 0 4 4"/>', lock: '<rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>', unlock: '<rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 7.5-2"/>', grip: '<path d="M9 5h.01M15 5h.01M9 12h.01M15 12h.01M9 19h.01M15 19h.01" stroke-width="3"/>' }[name]}</svg>`;
 const $ = (id) => document.getElementById(id),
@@ -216,8 +224,10 @@ const stage = new Stage($("stage"), state, {
   vectorStroke,
   notice: toast,
   sculptChanged,
+  nodeChanged: updateNodeActions,
   scrub,
-  contextMenu: ({ x, y }) => arrangeMenu?.open(x, y),
+  contextMenu: ({ x, y }) =>
+    arrangeMenu?.open(x, y, undefined, { nodeContext: true }),
   hoopPick: (p) => multiHoopUI?.pick(p),
 });
 const sequenceTimeline = installSequenceTimeline({
@@ -615,6 +625,34 @@ function vectorTargets() {
     (o) => !["manual", "reference"].includes(o.type),
   );
 }
+function updateNodeActions() {
+  const o = stage.nodeTarget(),
+    c = stage.activeCurve(o),
+    index = stage.node;
+  const hasNode =
+    !!o &&
+    index !== null &&
+    (c
+      ? !!c.nodes[index]
+      : closedCurveEditable(o) && index >= 0 && index < o.rings.flat().length);
+  for (const action of ["corner", "smooth", "break"]) {
+    const n = c?.nodes[index];
+    $("node-" + action).disabled =
+      !hasNode || (action === "break" && !(n?.in && n?.out));
+  }
+  for (const id of ["closed-contour", "node-symmetric"])
+    if ($(id)) $(id).disabled = !o;
+  $("node-points").disabled = !pointEditable(o);
+  $("node-points").setAttribute(
+    "aria-pressed",
+    String(!!stage.pointMode && !!o),
+  );
+  if (state.tool === "node")
+    $("vector-edit-guidance").textContent =
+      stage.pointMode && o
+        ? "Click an edge to add a point; click a highlighted anchor to remove it. Select the tool again to finish."
+        : "Double-click nodes or edges to toggle their shape. Hover over a tool for details.";
+}
 function updateVectorOptions() {
   const tool = state.tool,
     active =
@@ -632,14 +670,7 @@ function updateVectorOptions() {
       (e) => (e.hidden = !e.dataset.vectorOption.split(" ").includes(tool)),
     );
   const objects = vectorTargets();
-  $("closed-curve-actions").hidden =
-    tool !== "node" || objects.length !== 1 || !closedCurveEditable(objects[0]);
-  const closedEnabled = tool === "node" && state.mode === "design";
-  for (const control of document.querySelectorAll(
-    '[data-section="closed-curve"] button, #closed-contour',
-  ))
-    control.disabled = !closedEnabled;
-  if ($("closed-context-note")) $("closed-context-note").hidden = closedEnabled;
+  updateNodeActions();
   $("sculpt-radius").closest("label").hidden =
     tool !== "node" || !objects.some((o) => !stage.activeCurve(o));
   const railTarget =
@@ -674,7 +705,7 @@ function updateVectorOptions() {
             ? "Smoothing controls trace tolerance in millimeters. Start a new stroke to finish the previous one."
             : tool === "node"
               ? closedCurveEditable(selected())
-                ? "Double-click an anchor: Corner / Smooth; an edge: Straight / Curved; empty interior: Smooth / Restore Contour. Break Handles and Insert anchor are explicit node actions. Drag handles or sculpt segments; Undo restores edits."
+                ? "Double-click nodes or edges to toggle their shape. Hover over a tool for details."
                 : "Pull a segment to sculpt; drag handles for precision. Imported contours use a local influence with automatic node compaction. Vector edits convert Smart Shapes/text to paths; Undo restores them."
               : "Pieces retain sewing actions; construction stops repeat per piece. Parametric shapes/text become paths; Undo restores them. Erasing keeps small fragments for review.";
   state.pencilSmoothing = $("pencil-smoothing").checkValidity()
@@ -2244,6 +2275,7 @@ async function importFile(file) {
 }
 function removeSelected() {
   const o = selected();
+  if (stage.pointMode && stage.removeActivePoint()) return;
   if (
     state.tool === "node" &&
     stage.node !== null &&
@@ -2933,15 +2965,13 @@ for (const [id, action] of [
 ])
   $(id).onclick = () => repairPath(action);
 $("rails-from-selection").onclick = createRailsFromSelection;
-$("closed-curve-action").onchange = (e) => {
-  const action = e.target.value;
-  e.target.value = "";
-  if (action === "insert") {
-    if (stage.segment) {
-      stage.contour = stage.segment.ring;
-      stage.insertNode(stage.segment.point);
-    } else toast("Click an edge first.");
-  } else if (action) stage.closedAction(action);
+for (const action of ["corner", "smooth", "break"])
+  $("node-" + action).onclick = () => stage.nodeAction(action);
+$("node-points").onclick = () => {
+  if (!pointEditable(stage.nodeTarget())) return;
+  stage.pointMode = !stage.pointMode;
+  stage.pointHover = null;
+  stage.render();
 };
 $("rails-closed").onchange = () => {
   updateVectorOptions();
@@ -3056,6 +3086,32 @@ workspaceLayout = installWorkspace({
 arrangeMenu = installArrangeMenu({
   state,
   command: editCommand,
+  nodeActions: () => {
+    const o = stage.nodeTarget();
+    if (!o || !closedCurveEditable(o)) return [];
+    return [
+      {
+        label: "Straight / Curved Segment",
+        help: EDGE_HELP,
+        disabled: !stage.segment,
+        run: () => stage.closedAction("toggle-segment"),
+      },
+      {
+        label: "Smooth / Restore Contour",
+        help: CONTOUR_HELP,
+        run: () => stage.closedAction("toggle-whole"),
+      },
+      {
+        label: "Insert anchor here",
+        help: INSERT_HELP,
+        disabled: !stage.segment,
+        run: () => {
+          stage.contour = stage.segment.ring;
+          stage.insertNode(stage.segment.point);
+        },
+      },
+    ];
+  },
   fitDesign: () => stage.fitDesign(),
   fitHoop: () => stage.fit(),
 });
@@ -3110,6 +3166,20 @@ document.addEventListener("keydown", (e) => {
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
     e.preventDefault();
     if (!stage.undoDraft(e.shiftKey)) e.shiftKey ? redo() : undo();
+    return;
+  }
+  if (
+    !e.ctrlKey &&
+    !e.metaKey &&
+    !e.altKey &&
+    !e.shiftKey &&
+    ["1", "2", "3", "4"].includes(e.key) &&
+    stage.nodeTarget()
+  ) {
+    e.preventDefault();
+    $(
+      "node-" + ["corner", "smooth", "break", "points"][Number(e.key) - 1],
+    ).click();
     return;
   }
   if (e.key === "Backspace" && stage.undoDraft()) {

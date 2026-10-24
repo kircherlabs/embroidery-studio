@@ -13,6 +13,7 @@ import {
   alignHandle,
   pencilCurve,
   sculptCurve,
+  setNodeMode,
 } from "./path-editing.js";
 import { letteringCurve, updateLetteringCurve } from "./text-path.js";
 import {
@@ -34,6 +35,7 @@ import {
   editClosedCurve,
 } from "./closed-curve-editing.js";
 import { drawCleanupOverlay } from "./manual-cleanup.js";
+import { pointEditable, pointHit, editArtworkPoint } from "./point-editing.js";
 import { drawHoopingOverlay } from "./multi-hoop-overlay.js";
 import { closedOutlinePreview, drawClosedOutline } from "./outline-preview.js";
 import {
@@ -55,6 +57,99 @@ import {
   within,
 } from "./hierarchy.js";
 export class Stage {
+  // One eligibility rule for painted controls, their hit targets and actions.
+  // Selection outlines are independent; groups/multiselection never expose nodes.
+  nodeTarget() {
+    const s = this.state,
+      ids = selectionIds(s);
+    if (
+      s.mode !== "design" ||
+      s.tool !== "node" ||
+      ids.length !== 1 ||
+      ids[0] !== s.selection
+    )
+      return null;
+    const o = s.project.objects.find((o) => o.id === s.selection);
+    return o &&
+      o.type !== "reference" &&
+      !o.effects &&
+      !o.linkedGeometry &&
+      isVisible(s.project, o) &&
+      !isLocked(s.project, o) &&
+      (!s.isolation || within(s.project, o, s.isolation))
+      ? o
+      : null;
+  }
+  nodeAction(action) {
+    const o = this.nodeTarget();
+    if (!o) return false;
+    this.pointMode = false;
+    this.pointHover = null;
+    if (closedCurveEditable(o)) {
+      const changed = this.closedAction(action);
+      this.render();
+      return changed;
+    }
+    const c = this.activeCurve(o),
+      n = c?.nodes[this.node];
+    if (!n) return false;
+    this.actions.mutate(() => {
+      if (action === "break") {
+        n.mode = "corner";
+        n.broken = true;
+      } else if (action === "corner") {
+        n.mode = "corner";
+        delete n.broken;
+      } else {
+        setNodeMode(c, this.node, action);
+        delete n.broken;
+      }
+      this.updateCurve(o, c);
+    });
+    this.render();
+    return true;
+  }
+  pointPick(p, touch = false) {
+    const o = this.nodeTarget();
+    if (!pointEditable(o)) return null;
+    const radius = (touch ? 13 : 8) / this.scale;
+    const anchor = pointHit(o, p, radius);
+    if (anchor) return anchor;
+    const edge = nearestSegment(o, p);
+    return edge?.distance < radius ? { ...edge, kind: "edge" } : null;
+  }
+  pointAction(hit) {
+    const o = this.nodeTarget();
+    if (!o || !hit) return false;
+    try {
+      const next = editArtworkPoint(o, hit);
+      this.actions.mutate(() => {
+        for (const key of Object.keys(o)) delete o[key];
+        Object.assign(o, next);
+      });
+      this.node = hit.kind === "anchor" ? null : hit.index + 1;
+      this.contour = hit.ring;
+      this.segment = this.pointHover = null;
+      return true;
+    } catch (e) {
+      this.actions.notice?.(e.message);
+      return false;
+    }
+  }
+  removeActivePoint() {
+    const o = this.nodeTarget();
+    if (!pointEditable(o) || this.node === null) return false;
+    let ring = this.contour || 0,
+      index = this.node;
+    if (!o.curve) {
+      ring = 0;
+      while (o.rings[ring] && index >= o.rings[ring].length)
+        index -= o.rings[ring++].length;
+    }
+    this.pointAction({ kind: "anchor", ring, index });
+    this.render();
+    return true;
+  }
   satinGuideTarget() {
     const selection = selectedLeaves(this.state, { editable: true });
     if (selection.length !== 1 || !isVisible(this.state.project, selection[0]))
@@ -120,6 +215,12 @@ export class Stage {
     new ResizeObserver(() => this.resize()).observe(canvas);
     canvas.addEventListener("pointerdown", (e) => this.down(e));
     canvas.addEventListener("pointermove", (e) => this.move(e));
+    canvas.addEventListener("pointerleave", () => {
+      if (this.pointHover && !this.drag) {
+        this.pointHover = null;
+        this.render();
+      }
+    });
     canvas.addEventListener("pointerup", (e) => this.up(e));
     canvas.addEventListener("pointercancel", () => this.cancelDrag());
     canvas.addEventListener("mousedown", (e) => {
@@ -160,6 +261,16 @@ export class Stage {
         this.draft.pop();
         this.actions.finish();
       } else if (this.state.tool === "node") {
+        if (this.pointMode) return;
+        if ((e.ctrlKey || e.metaKey || e.shiftKey) && this.nodeTarget()) {
+          if (
+            this.nodeDoubleContextId !== undefined &&
+            this.nodeDoubleContextId !== this.nodeTarget().id
+          )
+            return;
+          this.insertNode(this.toWorld(e));
+          return;
+        }
         if (!this.closedDoubleClick(this.toWorld(e)))
           this.insertNode(this.toWorld(e));
       } else if (this.state.tool === "select") {
@@ -173,6 +284,7 @@ export class Stage {
     });
     canvas.addEventListener("contextmenu", (e) => {
       e.preventDefault();
+      if (this.drag?.type === "point-edit") this.drag = null;
       const world = this.toWorld(e);
       const hit =
         this.hit(
@@ -181,6 +293,14 @@ export class Stage {
         ) || this.hit(world);
       if (hit && !selectedLeaves(this.state).some((o) => o.id === hit.id))
         this.actions.select(this.canvasTarget(hit, e.altKey));
+      const target = this.nodeTarget();
+      if (target) {
+        const edge = nearestSegment(target, world);
+        if (edge?.distance < 8 / this.scale) {
+          this.segment = edge;
+          this.contour = edge.ring || 0;
+        }
+      }
       this.actions.contextMenu?.({ x: e.clientX, y: e.clientY });
     });
     canvas.addEventListener("keydown", (e) => {
@@ -360,6 +480,14 @@ export class Stage {
   }
   render() {
     if (!this.w || !this.h) return;
+    const nodeId = this.nodeTarget()?.id || null;
+    if (this.nodeObjectId !== nodeId) {
+      this.nodeObjectId = nodeId;
+      this.node = this.segment = null;
+      this.contour = 0;
+      this.pointMode = false;
+      this.pointHover = null;
+    }
     const ctx = this.ctx,
       s = this.state,
       scale = this.scale,
@@ -680,13 +808,7 @@ export class Stage {
         scale,
         { width: 1, dash: [4, 3] },
       );
-      if (
-        s.tool === "node" &&
-        selected &&
-        selected.type !== "reference" &&
-        selectionIds(s).length === 1 &&
-        s.selection === selected.id
-      ) {
+      if (this.nodeTarget() === selected && selected) {
         const editableCurve = this.activeCurve(selected);
         const points = editableCurve
           ? editableCurve.nodes.map((p) => mapPoint(p, editableCurve.frame))
@@ -778,17 +900,17 @@ export class Stage {
           dash: side === "a" ? [] : [4, 2],
         });
         const start = mapPoint(c.nodes[0], c.frame);
-        editingHandle(ctx, start, scale, {
-          color,
-          shape: side === "a" ? "circle" : "diamond",
-          radius: 4,
-        });
+        if (this.nodeTarget() === selected)
+          editingHandle(ctx, start, scale, {
+            color,
+            shape: side === "a" ? "circle" : "diamond",
+            radius: 4,
+          });
       }
     }
     if (
       selected?.textSource?.path &&
-      s.mode === "design" &&
-      s.tool === "node" &&
+      this.nodeTarget() === selected &&
       isVisible(s.project, selected)
     ) {
       const c = letteringCurve(selected);
@@ -945,6 +1067,35 @@ export class Stage {
       );
     }
     drawHoopingOverlay(ctx, s, scale, this.drag?.type === "multi-hoop");
+    if (this.pointMode && this.nodeTarget() && this.pointHover) {
+      const h = this.pointHover;
+      editingHandle(ctx, h.point, scale, {
+        shape: h.kind === "anchor" ? "square" : "circle",
+        radius: 6,
+        color:
+          h.eligible === false ? EDITING_STYLE.warning : EDITING_STYLE.snap,
+        active: true,
+      });
+      if (h.kind === "edge") {
+        const o = this.nodeTarget(),
+          c = o.curve ? curveContours(o.curve)[h.ring] : worldCurve(o, h.ring);
+        const a = c.nodes[h.index],
+          b = c.nodes[(h.index + 1) % c.nodes.length];
+        strokeEditingPath(
+          ctx,
+          (cx) => {
+            const p = mapPoint(a, c.frame),
+              u = mapPoint(a.out || a, c.frame),
+              v = mapPoint(b.in || b, c.frame),
+              q = mapPoint(b, c.frame);
+            cx.moveTo(p.x, p.y);
+            cx.bezierCurveTo(u.x, u.y, v.x, v.y, q.x, q.y);
+          },
+          scale,
+          { color: EDITING_STYLE.snap, width: 2.2 },
+        );
+      }
+    }
     document.getElementById("zoom-value").textContent =
       Math.round(this.zoom * 100) + "%";
     document.getElementById("navigation-hint").textContent =
@@ -967,15 +1118,27 @@ export class Stage {
         ? handleCursor(this.drag.handle, this.drag.b)
         : this.drag?.type === "rotate"
           ? "grabbing"
-          : s.tool === "pan" || s.space || this.drag?.type === "pan"
-            ? this.drag
-              ? "grabbing"
-              : "grab"
-            : this.satinGuideTarget()
-              ? "crosshair"
-              : ["select", "node"].includes(s.tool)
-                ? "default"
-                : "crosshair";
+          : this.pointMode &&
+              this.nodeTarget() &&
+              !s.space &&
+              this.drag?.type !== "pan"
+            ? this.pointHover?.eligible === false
+              ? "not-allowed"
+              : "crosshair"
+            : s.tool === "pan" || s.space || this.drag?.type === "pan"
+              ? this.drag
+                ? "grabbing"
+                : "grab"
+              : this.satinGuideTarget()
+                ? "crosshair"
+                : ["select", "node"].includes(s.tool)
+                  ? "default"
+                  : "crosshair";
+    this.canvas.dataset.nodeEditingObject = this.nodeTarget()?.id || "";
+    this.canvas.dataset.pointEditing = String(
+      !!this.pointMode && !!this.nodeTarget(),
+    );
+    this.actions.nodeChanged?.();
   }
   roundRect(ctx, x, y, w, h, r) {
     ctx.beginPath();
@@ -1210,14 +1373,20 @@ export class Stage {
       return;
     }
     const selected = s.project.objects.find((o) => o.id === s.selection);
-    if (
-      s.tool === "node" &&
-      selected &&
-      selected.type !== "reference" &&
-      !isLocked(s.project, selected) &&
-      isVisible(s.project, selected) &&
-      selectionIds(s).length === 1
-    ) {
+    if (this.pointMode && this.nodeTarget()) {
+      const hit = this.pointPick(p, e.pointerType === "touch");
+      if (hit) this.drag = { type: "point-edit", hit, start: p, moved: false };
+      else {
+        const other = this.hit(p);
+        if (!other || other.id !== selected?.id)
+          this.actions.select(
+            other ? this.canvasTarget(other, e.altKey) : null,
+          );
+      }
+      this.render();
+      return;
+    }
+    if (selected && this.nodeTarget() === selected) {
       if (selected.linkedGeometry) {
         this.actions.notice?.(
           "Edit the linked original, or Unlink this copy in Artwork to edit its nodes independently.",
@@ -1249,7 +1418,7 @@ export class Stage {
       }
       if (this.activeCurve(selected)) {
         const c = this.activeCurve(selected);
-        let best = 8 / this.scale,
+        let best = (e.pointerType === "touch" ? 13 : 8) / this.scale,
           hit = null;
         for (let i = 0; i < c.nodes.length; i++)
           for (const key of ["anchor", "in", "out"]) {
@@ -1293,8 +1462,8 @@ export class Stage {
       }
     }
     if (
-      s.tool === "node" &&
       selected &&
+      this.nodeTarget() === selected &&
       !["reference", "manual"].includes(selected.type) &&
       !isLocked(s.project, selected) &&
       isVisible(s.project, selected) &&
@@ -1422,6 +1591,31 @@ export class Stage {
       return;
     }
     const p = this.toWorld(e);
+    if (this.drag?.type === "point-edit") {
+      this.drag.moved ||= distance(p, this.drag.start) * this.scale > 8;
+      return;
+    }
+    if (!this.drag && this.pointMode && this.nodeTarget()) {
+      const hit = this.pointPick(p, e.pointerType === "touch");
+      if (hit?.kind === "anchor") {
+        const o = this.nodeTarget(),
+          key = `${o.id}:${hit.ring}:${hit.index}`;
+        if (this.pointHoverKey !== key || this.pointHoverRings !== o.rings) {
+          this.pointHoverKey = key;
+          this.pointHoverRings = o.rings;
+          try {
+            editArtworkPoint(o, hit);
+            this.pointHoverEligible = true;
+          } catch {
+            this.pointHoverEligible = false;
+          }
+        }
+        hit.eligible = this.pointHoverEligible;
+      }
+      this.pointHover = hit;
+      this.render();
+      return;
+    }
     if (this.marquee) {
       this.marquee.end = p;
       this.render();
@@ -1654,6 +1848,11 @@ export class Stage {
     if (this.drag) {
       const d = this.drag;
       this.drag = null;
+      if (d.type === "point-edit") {
+        if (!d.moved) this.pointAction(d.hit);
+        this.render();
+        return;
+      }
       if (d.type === "pencil") {
         const stroke = this.draft;
         if (stroke.length < 2) {
@@ -1729,7 +1928,7 @@ export class Stage {
   }
   closedAction(action, target = null) {
     const s = this.state,
-      o = s.project.objects.find((o) => o.id === s.selection);
+      o = this.nodeTarget();
     if (
       s.tool !== "node" ||
       s.mode !== "design" ||
@@ -1775,7 +1974,7 @@ export class Stage {
   }
   closedDoubleClick(p) {
     const s = this.state,
-      o = s.project.objects.find((o) => o.id === s.selection);
+      o = this.nodeTarget();
     if (s.space || !closedCurveEditable(o) || selectionIds(s).length !== 1)
       return false;
     if (
@@ -1821,9 +2020,13 @@ export class Stage {
     return true;
   }
   insertNode(p) {
-    const o = this.state.project.objects.find(
-      (o) => o.id === this.state.selection,
-    );
+    const o = this.nodeTarget();
+    if (pointEditable(o)) {
+      const edge = nearestSegment(o, p);
+      if (edge?.distance < 8 / this.scale)
+        this.pointAction({ ...edge, kind: "edge" });
+      return;
+    }
     if (
       !o ||
       ["manual", "reference"].includes(o.type) ||

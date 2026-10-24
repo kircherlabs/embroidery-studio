@@ -383,47 +383,75 @@
                 step="0.1"
                 value="2"
             /></label>
-            <label data-vector-option="node" id="closed-curve-actions"
-              >Closed Shape<select
-                id="closed-curve-action"
-                aria-label="Closed Shape node action"
-              >
-                <option value="">Node / edge action…</option>
-                <option value="corner">Change to Corner</option>
-                <option value="smooth">Change to Smooth</option>
-                <option value="break">Break Handles</option>
-                <option value="toggle-segment">
-                  Straight / Curved Segment
-                </option>
-                <option value="toggle-whole">
-                  Smooth / Restore Selected Contour
-                </option>
-                <option value="insert">Insert anchor on selected edge</option>
-              </select></label
+            <div
+              data-vector-option="node"
+              id="closed-curve-actions"
+              role="group"
+              aria-label="Node editing"
             >
+              <button
+                id="node-corner"
+                type="button"
+                aria-label="Change to Corner"
+                disabled
+              ></button>
+              <button
+                id="node-smooth"
+                type="button"
+                aria-label="Change to Smooth"
+                disabled
+              ></button>
+              <button
+                id="node-break"
+                type="button"
+                aria-label="Break Handles"
+                disabled
+              ></button>
+              <button
+                id="node-points"
+                type="button"
+                aria-label="Add & Remove Points"
+                aria-pressed="false"
+                disabled
+              ></button>
+            </div>
             <label class="check" data-vector-option="node knife eraser"
               ><input id="allow-open-run" type="checkbox" />Convert incompatible
               actions on open pieces to Running</label
             >
             <details data-vector-option="node knife" id="path-repair">
-              <summary>Path repair</summary>
-              <div>
-                <button id="split-node">Split at selected node</button
-                ><button id="close-vector">Close path</button
-                ><button id="reverse-vector">Reverse path</button>
-                <label
-                  >Join gap · mm<input
-                    id="join-gap"
-                    type="number"
-                    min="0.01"
-                    max="50"
-                    step="0.1"
-                    value="1"
-                /></label>
-                <label class="check"
-                  ><input id="join-use-first" type="checkbox" />Use first path's
-                  sewing actions</label
-                ><button id="join-vectors">Join two paths</button>
+              <summary
+                data-help="Repair source paths without changing their sewing settings. In Edit Points, double-click a closed edge for Straight / Curved, or empty filled interior for Smooth / Restore Contour. Shift-double-click an edge inserts an anchor. Right-click or touch-hold the canvas for these same actions."
+              >
+                Path repair
+              </summary>
+              <div class="path-repair-groups">
+                <fieldset>
+                  <legend>Split / Close / Reverse</legend>
+                  <div class="path-repair-actions">
+                    <button id="split-node">Split at selected node</button
+                    ><button id="close-vector">Close path</button
+                    ><button id="reverse-vector">Reverse path</button>
+                  </div>
+                </fieldset>
+                <fieldset>
+                  <legend>Join Paths</legend>
+                  <div class="path-repair-actions">
+                    <label
+                      >Join gap · mm<input
+                        id="join-gap"
+                        type="number"
+                        min="0.01"
+                        max="50"
+                        step="0.1"
+                        value="1"
+                    /></label>
+                    <label class="check"
+                      ><input id="join-use-first" type="checkbox" />Use first
+                      path's sewing actions</label
+                    ><button id="join-vectors">Join two paths</button>
+                  </div>
+                </fieldset>
               </div>
             </details>
             <span id="vector-edit-guidance" role="status"></span>
@@ -739,7 +767,7 @@
     <footer class="status-bar">
       <span id="status">Ready</span
       ><span
-        >40 wt thread presets <i>·</i> v0.18.1 <i>·</i>
+        >40 wt thread presets <i>·</i> v0.18.2 <i>·</i>
         <a
           href="https://github.com/kircherlabs/embroidery-studio"
           target="_blank"

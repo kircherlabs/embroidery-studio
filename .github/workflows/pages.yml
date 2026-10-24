@@ -31,6 +31,7 @@ jobs:
           STUDIO_PID=$!
           trap 'kill "$STUDIO_PID"' EXIT
           node tests/closed-curve-browser.mjs
+          node tests/node-ui-browser.mjs
           node tests/multi-hoop-browser.mjs
           node tests/cleanup-browser.mjs
           node tests/export-package-browser.mjs

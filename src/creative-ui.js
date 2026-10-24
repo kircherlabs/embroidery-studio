@@ -144,47 +144,25 @@ export function creativeInspector(api, leaf, objects, targets) {
   if (closedCurveEditable(leaf)) {
     box.insertAdjacentHTML(
       "beforeend",
-      `<details data-section="closed-curve"><summary>Closed Shape node controls</summary><p class="property-note">Edit Points: double-click an anchor for Corner / Smooth, an edge for Straight / Curved, or empty shape interior to smooth/restore its contour. Break Handles is a separate action. Anchors stay in place; invalid curves are rejected. Insert anchors remains available below.</p><label>Contour<select id="closed-contour">${leaf.rings.map((_, i) => `<option value="${i}">Contour ${i + 1}</option>`).join("")}</select></label><div class="creative-grid"><button id="node-corner">Change to Corner</button><button id="node-smooth">Change to Smooth</button><button id="node-break">Break Handles</button><button id="node-segment">Straight / Curved Segment</button><button id="node-whole">${(api.contour() ? leaf.curve?.contours?.[api.contour() - 1] : leaf.curve)?.wholeMemory ? "Restore" : "Smooth"} Selected Contour</button><button id="node-insert">Insert anchor on selected edge</button></div></details>`,
+      `<details data-section="closed-curve"><summary>Contour details</summary><label>Contour<select id="closed-contour">${leaf.rings.map((_, i) => `<option value="${i}">Contour ${i + 1}</option>`).join("")}</select></label><button id="node-symmetric" data-help="Align both tangent handles with equal lengths. Corner, Smooth and Break Handles are in the node-editing toolbar; Smooth preserves independent lengths.">Symmetric handles · equal lengths</button></details>`,
     );
-  }
-  if (
-    !closedCurveEditable(leaf) &&
-    (leaf?.curve || leaf?.satinRails || leaf?.textSource?.path)
-  )
+  } else if (leaf?.curve || leaf?.satinRails || leaf?.textSource?.path) {
     box.insertAdjacentHTML(
       "beforeend",
-      '<details><summary>Bézier node controls</summary><p class="property-note">Select an anchor with the Node tool. Drag tangent handles to reshape curves; double-click a curve to split it. Delete removes an anchor.</p><button id="node-smooth">Smooth active anchor</button><button id="node-corner">Make active anchor a corner</button><button id="node-symmetric">Symmetric active anchor</button></details>',
+      '<details><summary>Curve details</summary><button id="node-symmetric" data-help="Align the active node’s tangent handles with equal lengths. The node-editing toolbar provides Corner, Smooth and Break Handles.">Symmetric active anchor</button></details>',
     );
+  }
   const panel = document.getElementById("properties");
   panel.prepend(box);
   const $ = (id) => document.getElementById(id);
   if ($("closed-contour")) {
-    const symmetric = document.createElement("button");
-    symmetric.id = "node-symmetric";
-    symmetric.textContent = "Symmetric handles · equal lengths";
-    box
-      .querySelector('[data-section="closed-curve"] .creative-grid')
-      .append(symmetric);
-    const enabled = state.tool === "node" && state.mode === "design";
-    for (const control of box.querySelectorAll(
-      '[data-section="closed-curve"] button, #closed-contour',
-    ))
-      control.disabled = !enabled;
-    const notice = document.createElement("p");
-    notice.id = "closed-context-note";
-    notice.className = "property-note";
-    notice.textContent =
-      "Choose Edit Points in Design to enable these actions.";
-    notice.hidden = enabled;
-    box.querySelector('[data-section="closed-curve"]').append(notice);
     $("closed-contour").value = api.contour();
     $("closed-contour").onchange = (e) =>
       api.setContour(Number(e.target.value));
-    $("node-break").onclick = () => api.closedAction("break");
-    $("node-segment").onclick = () => api.closedAction("toggle-segment");
-    $("node-whole").onclick = () => api.closedAction("toggle-whole");
-    $("node-insert").onclick = () => api.insertAnchor();
   }
+  for (const id of ["closed-contour", "node-symmetric"])
+    if ($(id))
+      $(id).disabled = state.tool !== "node" || state.mode !== "design";
   if ($("patch-refit"))
     $("patch-refit").onclick = () => {
       const input = $("patch-refit-margin");
@@ -295,7 +273,7 @@ export function creativeInspector(api, leaf, objects, targets) {
         roundChecked(leaf, radius, { ring, indices: [at] });
       });
     };
-  for (const action of ["smooth", "corner", "symmetric"])
+  for (const action of ["symmetric"])
     if ($("node-" + action))
       $("node-" + action).onclick = () => {
         if (closedCurveEditable(leaf)) {

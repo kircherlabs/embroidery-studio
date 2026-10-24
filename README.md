@@ -6,6 +6,14 @@ No account, paid service, design upload or backend required.
 
 **[Open the studio](https://kircherlabs.github.io/embroidery-studio/)**
 
+**v0.18.2 node editing:** only the actively edited object shows Bézier controls.
+The compact Corner, Smooth, Break Handles and Add & Remove Points buttons replace
+the action dropdown. Add/remove anchors directly with hover previews, exact cubic
+subdivision and guarded removal; ordinary double-clicks and Undo/Redo are retained.
+Path Repair now groups its actions with readable disabled controls and responsive
+spacing. See [editing instructions](docs/CLOSED_SHAPE_EDITING.md) and
+[verification progress](docs/NODE_UI_PROGRESS.md).
+
 **v0.18.1 corrections:** inspect actual Multi-Hoop joins or the complete stitched
 result, navigate explicit Hooping 1/2/3 timeline ranges, and distinguish external
 cleanup estimates from internal pattern connections and trim-dependent bridges.

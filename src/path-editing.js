@@ -86,6 +86,27 @@ export function nearestSegment(o, p) {
     const c = worldCurve(o, ring);
     for (let i = 0; i < c.nodes.length - (c.closed ? 0 : 1); i++) {
       const ps = controls(c, i);
+      // Straight traced contours need one projection per edge, including hover.
+      // Collapsed cubic endpoint controls parameterize the line by 3t² - 2t³.
+      if (distance(ps[0], ps[1]) < 1e-12 && distance(ps[2], ps[3]) < 1e-12) {
+        const a = ps[0],
+          b = ps[3],
+          dx = b.x - a.x,
+          dy = b.y - a.y;
+        const u = Math.max(
+          0,
+          Math.min(
+            1,
+            ((p.x - a.x) * dx + (p.y - a.y) * dy) / (dx * dx + dy * dy || 1),
+          ),
+        );
+        const q = mix(a, b, u),
+          d = distance(p, q),
+          t = 0.5 - Math.sin(Math.asin(1 - 2 * u) / 3);
+        if (!best || d < best.distance)
+          best = { ring, index: i, t, point: q, distance: d };
+        continue;
+      }
       let sample = 0,
         d = Infinity;
       for (let k = 0; k <= 24; k++) {
@@ -97,7 +118,7 @@ export function nearestSegment(o, p) {
       }
       let lo = Math.max(0, sample - 1 / 24),
         hi = Math.min(1, sample + 1 / 24);
-      for (let k = 0; k < 20; k++) {
+      for (let k = 0; k < 32; k++) {
         const a = lo + (hi - lo) / 3,
           b = hi - (hi - lo) / 3;
         if (distance(p, cubic(ps, a)) < distance(p, cubic(ps, b))) hi = b;

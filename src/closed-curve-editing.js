@@ -32,7 +32,7 @@ function topology(rings, rule) {
   const p = fillPolygons(rings, rule);
   return p && [p.length, p.reduce((n, p) => n + p.length - 1, 0)];
 }
-function validate(before, after, rule) {
+export function validateClosedEdit(before, after, rule) {
   if (after.reduce((n, r) => n + r.length * r.length, 0) > 8000000)
     throw Error(
       "Curve validation exceeds the interactive budget. Edit a smaller contour first.",
@@ -173,7 +173,7 @@ export function editClosedCurve(original, action, ring = 0, index = 0) {
   delete o.shape;
   delete o.rounding;
   const rings = curveRings(c);
-  validate(original.rings, rings, original.fillRule || "evenodd");
+  validateClosedEdit(original.rings, rings, original.fillRule || "evenodd");
   o.rings = rings;
   return o;
 }

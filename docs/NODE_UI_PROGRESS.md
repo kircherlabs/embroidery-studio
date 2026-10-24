@@ -14,7 +14,7 @@ Branch: `fix/selected-bezier-handles`. Publishing checks pending.
   Whole-contour smoothing does not implicitly select an anchor. Switching rails
   resets the selected edge as well as the node. No persistent geometry changes
   are made by showing/hiding controls.
-- Updated `src/stage.js`, `src/app.js`, five browser suites, new scope unit tests,
+- Updated `src/stage.js`, `src/app.js`, seven browser suites, new scope unit tests,
   editing instructions, README and version labels. Existing source/handle data,
   sewing actions, exports and Focus Mode interactions remain unchanged.
 
@@ -23,7 +23,7 @@ Branch: `fix/selected-bezier-handles`. Publishing checks pending.
 - 400 Node tests and 10 Python codec/format-safety tests passed.
 - Chrome: node UI (real canvas pixels and hidden-hit rejection), closed curves,
   Focus Mode, path editing, sculpting, manual rails, geometry contrast,
-  text-on-path and tool-context suites passed.
+  text-on-path, tool-context, creative and manual-artwork suites passed.
 - Final Edge production build: node UI and closed-curve suites passed. Full
   GitHub CI and deployment verification pending.
 - Visually inspected the selected-edge screenshot: only that edge's two tangent

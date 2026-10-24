@@ -230,6 +230,8 @@ try {
   assert.equal(curve.curve.nodes.length, 2);
   assert(curve.rings[0].length > 5);
   await chooseTool(page, "node");
+  const penAnchor = await world(-30, -25);
+  await page.mouse.click(penAnchor.x, penAnchor.y);
   await drag([-22, -32], [-22, -28]);
   await ready();
   curve = (await project()).objects.at(-1);

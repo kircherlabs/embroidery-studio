@@ -16,7 +16,11 @@ Select an ordinary closed vector outline and choose **Edit Points**.
 The existing node-editing toolbar provides **Change to Corner (1)**,
 **Change to Smooth (2)**, **Break Handles (3)** and **Add & Remove Points (4)**.
 Names/shortcuts appear on hover; Hints adds detailed explanations. Only the
-directly selected active object exposes editable nodes and handles. Multiselection,
+directly selected active object exposes editable nodes. Selecting an anchor shows
+only its incoming/outgoing handle pair; selecting an edge shows only the start
+anchor’s outgoing handle and end anchor’s incoming handle. Other tangents stay
+hidden and cannot accept pointer hits. With no node or edge selected, only anchors
+are shown. Selecting another node/edge switches the pair immediately. Multiselection,
 group selection, hidden/locked objects and leaving Edit Points hide their controls
 without changing stored geometry. Properties retains a contour selector for holes
 or disconnected outlines and the optional equal-length Symmetric action.

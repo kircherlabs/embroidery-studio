@@ -1,3 +1,4 @@
+import { selectedHandles } from "./node-controls.js";
 import { getMachine } from "./equipment.js";
 import {
   selectionBox,
@@ -295,10 +296,16 @@ export class Stage {
         this.actions.select(this.canvasTarget(hit, e.altKey));
       const target = this.nodeTarget();
       if (target) {
-        const edge = nearestSegment(target, world);
-        if (edge?.distance < 8 / this.scale) {
-          this.segment = edge;
-          this.contour = edge.ring || 0;
+        const c = this.activeCurve(target);
+        const anchor = c?.nodes[this.node];
+        const onSelectedAnchor =
+          anchor && distance(world, mapPoint(anchor, c.frame)) < 8 / this.scale;
+        const edge = nearestSegment(c ? { curve: c } : target, world);
+        if (!onSelectedAnchor && edge?.distance < 8 / this.scale) {
+          this.node = null;
+          this.segment = { ...edge, ring: c ? this.contour || 0 : edge.ring };
+          if (!c) this.contour = edge.ring || 0;
+          this.render();
         }
       }
       this.actions.contextMenu?.({ x: e.clientX, y: e.clientY });
@@ -814,26 +821,29 @@ export class Stage {
           ? editableCurve.nodes.map((p) => mapPoint(p, editableCurve.frame))
           : pointsOf(selected);
         if (editableCurve)
-          for (const n of editableCurve.nodes)
-            for (const key of ["in", "out"])
-              if (n[key]) {
-                const a = mapPoint(n, editableCurve.frame),
-                  b = mapPoint(n[key], editableCurve.frame);
-                strokeEditingPath(
-                  ctx,
-                  (c) => {
-                    c.moveTo(a.x, a.y);
-                    c.lineTo(b.x, b.y);
-                  },
-                  scale,
-                  { color: EDITING_STYLE.guide, width: 1.1, dash: [3, 2] },
-                );
-                editingHandle(ctx, b, scale, {
-                  shape: "circle",
-                  radius: 3,
-                  color: EDITING_STYLE.guide,
-                });
-              }
+          for (const { i, key } of selectedHandles(
+            editableCurve,
+            this.node,
+            this.segment,
+          )) {
+            const n = editableCurve.nodes[i];
+            const a = mapPoint(n, editableCurve.frame),
+              b = mapPoint(n[key], editableCurve.frame);
+            strokeEditingPath(
+              ctx,
+              (c) => {
+                c.moveTo(a.x, a.y);
+                c.lineTo(b.x, b.y);
+              },
+              scale,
+              { color: EDITING_STYLE.guide, width: 1.1, dash: [3, 2] },
+            );
+            editingHandle(ctx, b, scale, {
+              shape: "circle",
+              radius: 3,
+              color: EDITING_STYLE.guide,
+            });
+          }
         points.forEach((p, i) => {
           editingHandle(ctx, p, scale, {
             radius: 3,
@@ -1399,39 +1409,49 @@ export class Stage {
         );
         return;
       }
-      if (closedCurveEditable(selected)) {
-        this.segment = nearestSegment(selected, p);
-        if (this.segment?.distance > 8 / this.scale) this.segment = null;
-        if (selected.curve) {
-          const parts = curveContours(selected.curve);
-          for (let ri = 0; ri < parts.length; ri++)
-            if (
-              parts[ri].nodes.some(
-                (n) =>
-                  distance(p, mapPoint(n, parts[ri].frame)) < 8 / this.scale,
-              )
-            ) {
-              this.contour = ri;
-              break;
-            }
-        }
-      }
-      if (this.activeCurve(selected)) {
-        const c = this.activeCurve(selected);
-        let best = (e.pointerType === "touch" ? 13 : 8) / this.scale,
-          hit = null;
-        for (let i = 0; i < c.nodes.length; i++)
-          for (const key of ["anchor", "in", "out"]) {
-            const point = key === "anchor" ? c.nodes[i] : c.nodes[i][key];
-            if (!point) continue;
-            const d = distance(p, mapPoint(point, c.frame));
-            if (d < best) {
-              best = d;
-              hit = { i, key };
+      // Preserve the current edge scope while testing its visible handles.
+      const active = this.activeCurve(selected);
+      if (active) {
+        const radius = (e.pointerType === "touch" ? 13 : 8) / this.scale;
+        const parts =
+          selected.curve && !selected.satinRails && !letteringCurve(selected)
+            ? curveContours(selected.curve)
+            : [active];
+        let hit = null,
+          c = active;
+        // Anchors take priority over tangents, including coincident handles.
+        let anchorDistance = radius;
+        for (let ring = 0; ring < parts.length; ring++)
+          for (let i = 0; i < parts[ring].nodes.length; i++) {
+            const d = distance(
+              p,
+              mapPoint(parts[ring].nodes[i], parts[ring].frame),
+            );
+            if (d < anchorDistance) {
+              anchorDistance = d;
+              c = parts[ring];
+              if (parts.length > 1) this.contour = ring;
+              hit = { i, key: "anchor" };
             }
           }
+        if (!hit) {
+          let best = radius;
+          for (const h of selectedHandles(active, this.node, this.segment)) {
+            const d = distance(
+              p,
+              mapPoint(active.nodes[h.i][h.key], active.frame),
+            );
+            if (d < best) {
+              best = d;
+              hit = h;
+            }
+          }
+        }
         if (hit) {
-          this.node = hit.i;
+          if (hit.key === "anchor") {
+            this.node = hit.i;
+            this.segment = null;
+          }
           this.drag = {
             type: "curve",
             o: selected,
@@ -1449,6 +1469,7 @@ export class Stage {
       let index = pts.findIndex((q) => distance(p, q) < 7 / this.scale);
       if (index >= 0) {
         this.node = index;
+        this.segment = null;
         this.drag = {
           type: "node",
           o: selected,
@@ -1470,13 +1491,18 @@ export class Stage {
       selectionIds(s).length === 1
     ) {
       const hit = nearestSegment(
-        this.activeCurve(selected)
-          ? { curve: this.activeCurve(selected) }
-          : selected,
+        selected.curve && !selected.satinRails && !letteringCurve(selected)
+          ? selected
+          : this.activeCurve(selected)
+            ? { curve: this.activeCurve(selected) }
+            : selected,
         p,
       );
       if (hit && hit.distance < 8 / this.scale) {
         this.node = null;
+        this.segment = hit;
+        if (selected.curve && !selected.satinRails && !letteringCurve(selected))
+          this.contour = hit.ring || 0;
         this.drag = {
           type: "sculpt",
           o: selected,
@@ -1961,7 +1987,11 @@ export class Stage {
       }
       const next = editClosedCurve(o, action, ring, index);
       this.contour = ring;
-      this.node = index;
+      this.node = ["toggle-segment", "toggle-whole"].includes(action)
+        ? null
+        : index;
+      this.segment =
+        action === "toggle-segment" ? { ...this.segment, ring, index } : null;
       this.actions.mutate(() => {
         for (const key of Object.keys(o)) delete o[key];
         Object.assign(o, next);
@@ -1997,11 +2027,10 @@ export class Stage {
           return true;
         }
       }
-    for (const c of parts)
-      for (const n of c.nodes)
-        for (const key of ["in", "out"])
-          if (n[key] && distance(p, mapPoint(n[key], c.frame)) < 8 / this.scale)
-            return true;
+    const c = this.activeCurve(o);
+    for (const { i, key } of selectedHandles(c, this.node, this.segment))
+      if (distance(p, mapPoint(c.nodes[i][key], c.frame)) < 8 / this.scale)
+        return true;
     const hit = nearestSegment(o, p);
     if (hit?.distance < 8 / this.scale) {
       this.segment = hit;

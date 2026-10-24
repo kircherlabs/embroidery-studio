@@ -146,7 +146,7 @@ try {
   await pick(a);
   await chooseTool(page, "node");
   await controls(a.id);
-  assert((await purple(ah)) > 5);
+  assert.equal(await purple(ah), 0);
   assert.equal(await purple(bh), 0);
   assert.equal(await page.locator("#closed-curve-action").count(), 0);
   assert.equal(await page.locator("#closed-curve-actions > button").count(), 4);
@@ -157,10 +157,56 @@ try {
   assert(await page.locator("#node-smooth").isDisabled());
   await click(a.curve.nodes[0]);
   assert(await page.locator("#node-smooth").isEnabled());
+  assert((await purple(ah)) > 5);
+  assert((await purple(a.curve.nodes[0].in)) > 5);
+  assert.equal(await purple(a.curve.nodes[1].in), 0);
+  assert.equal(await purple(a.curve.nodes[1].out), 0);
+  await page.screenshot({ path: "test-results/selected-node-handles.png" });
+  const segmentMid = cubic(
+    [a.curve.nodes[0], ah, a.curve.nodes[1].in, a.curve.nodes[1]],
+    0.5,
+  );
+  await click(segmentMid);
+  assert(await page.locator("#node-smooth").isDisabled());
+  assert((await purple(ah)) > 5);
+  assert((await purple(a.curve.nodes[1].in)) > 5);
+  assert.equal(await purple(a.curve.nodes[0].in), 0);
+  assert.equal(await purple(a.curve.nodes[1].out), 0);
+  await page.screenshot({ path: "test-results/selected-edge-handles.png" });
+  // A segment handle remains in segment scope during dragging and undo.
+  const from = await world(ah),
+    to = await world({ x: ah.x - 1, y: ah.y - 1 });
+  await page.mouse.move(from.x, from.y);
+  await page.mouse.down();
+  await page.mouse.move(to.x, to.y, { steps: 4 });
+  await page.mouse.up();
+  await ready();
+  assert(
+    Math.abs((await project()).objects[0].curve.nodes[0].out.x - (ah.x - 1)) <
+      0.05,
+  );
+  assert((await purple(a.curve.nodes[1].in)) > 5);
+  assert.equal(await purple(a.curve.nodes[0].in), 0);
+  assert(await page.locator("#node-smooth").isDisabled());
+  await page.locator("#undo").click();
+  await ready();
+  assert.equal(JSON.stringify((await project()).objects), untouched);
+  // A hidden handle on the same active object must not accept a drag.
+  await click(a.curve.nodes[0]);
+  const hidden = await world(a.curve.nodes[1].in);
+  await page.mouse.move(hidden.x, hidden.y);
+  await page.mouse.down();
+  await page.mouse.move(hidden.x + 20, hidden.y - 20);
+  await page.mouse.up();
+  await ready();
+  assert.equal(JSON.stringify((await project()).objects), untouched);
   await pick(b);
   await controls(b.id);
   assert.equal(await purple(ah), 0);
+  assert.equal(await purple(bh), 0);
+  await click(b.curve.nodes[0], true);
   assert((await purple(bh)) > 5);
+  assert.equal(await purple(b.curve.nodes[1].in), 0);
   // Clicking an inactive handle cannot drag or change its old source.
   await click(ah);
   assert.equal(JSON.stringify((await project()).objects), untouched);
@@ -335,6 +381,8 @@ try {
   await page.keyboard.up("Alt");
   await ready();
   await controls(a.id);
+  assert.equal(await purple(ah), 0);
+  await click(a.curve.nodes[0]);
   assert((await purple(ah)) > 5);
   assert.equal(await purple(bh), 0);
   await page.locator("#exit-isolation").click();

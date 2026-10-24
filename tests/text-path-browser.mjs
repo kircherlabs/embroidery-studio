@@ -169,6 +169,11 @@ try {
   // Node edits the embedded baseline, not the glyph outlines or original guide.
   await page.locator("#text-path-edit").click();
   const sourceBefore = structuredClone((await project()).objects[0]);
+  const baselineCurve = (await project()).objects[1].textSource.path.curve;
+  const firstAnchor = await world(
+    mapPoint(baselineCurve.nodes[0], baselineCurve.frame),
+  );
+  await page.mouse.click(firstAnchor.x, firstAnchor.y);
   await drag({ x: -15, y: -20 }, { x: -15, y: -18 });
   o = (await project()).objects[1];
   assert.equal(o.id, id);

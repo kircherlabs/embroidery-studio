@@ -1,3 +1,47 @@
+# Selected Bézier handle pair — v0.18.3
+
+Starting main: `4efd8d95475812072c0d0d941f480adf0a3313bc` (v0.18.2).
+Branch: `fix/selected-bezier-handles`. Publishing checks pending.
+
+## Implemented
+
+- A selected anchor exposes only its incoming/outgoing handles. A selected edge
+  exposes only its start outgoing and end incoming handles, including closing
+  edges. Other anchors remain selectable; no tangent controls appear before a
+  node or edge is chosen. Switching scope immediately replaces the pair.
+- `src/node-controls.js` supplies the shared scope for rendering, pointer hits and
+  handle double-click suppression. Segment-handle drags retain edge selection.
+  Whole-contour smoothing does not implicitly select an anchor. Switching rails
+  resets the selected edge as well as the node. No persistent geometry changes
+  are made by showing/hiding controls.
+- Updated `src/stage.js`, `src/app.js`, five browser suites, new scope unit tests,
+  editing instructions, README and version labels. Existing source/handle data,
+  sewing actions, exports and Focus Mode interactions remain unchanged.
+
+## Validation
+
+- 400 Node tests and 10 Python codec/format-safety tests passed.
+- Chrome: node UI (real canvas pixels and hidden-hit rejection), closed curves,
+  Focus Mode, path editing, sculpting, manual rails, geometry contrast,
+  text-on-path and tool-context suites passed.
+- Final Edge production build: node UI and closed-curve suites passed. Full
+  GitHub CI and deployment verification pending.
+- Visually inspected the selected-edge screenshot: only that edge's two tangent
+  handles appear; other anchors and artwork stay legible. Mouse/touch, handle
+  dragging, Undo/Redo, save/reopen and independently decoded PES are exercised.
+- Initial export unit run lacked the configured Python executable; rerunning
+  with the bundled runtime passed. Browser fixtures now select the relevant
+  anchor before trying to drag its newly scoped handle.
+
+## Exact next steps
+
+Run final production checks; commit and open a PR. Require the complete existing
+GitHub CI workflow, merge, wait for Pages, verify deployed runtime hashes and live
+selected-handle browser behavior. Record release evidence here. Protected backup
+branches remain unchanged. No unresolved product regressions are known.
+
+---
+
 # Active node controls and point editing — verified v0.18.2 release
 
 Starting main: `4031d017ca995269a7c4844109293a114c934b51` (live v0.18.1).

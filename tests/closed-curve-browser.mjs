@@ -189,6 +189,11 @@ try {
   current = await leaf();
   assert.deepEqual(current.rings, beforeWhole.rings);
   assert.deepEqual(current.curve.nodes, beforeWhole.curve.nodes);
+  const anchor = await world(
+    mapPoint(current.curve.nodes[0], current.curve.frame),
+  );
+  await page.mouse.click(anchor.x, anchor.y);
+  await ready();
   const beforeHandle = JSON.stringify(current);
   await dbl(mapPoint(current.curve.nodes[0].out, current.curve.frame));
   assert.equal(JSON.stringify(await leaf()), beforeHandle);

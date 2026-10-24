@@ -199,6 +199,8 @@ try {
   o = (await project()).objects[2];
   const railA = structuredClone(o.satinRails.a);
   await page.locator("#active-rail").selectOption("b");
+  const anchor = await world({ x: -20, y: 3 });
+  await page.mouse.click(anchor.x, anchor.y);
   await drag({ x: -10, y: -7 }, { x: -8, y: -8 });
   o = (await project()).objects[2];
   assert.deepEqual(o.satinRails.a, railA);

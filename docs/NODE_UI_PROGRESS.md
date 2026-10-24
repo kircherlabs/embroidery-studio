@@ -1,9 +1,11 @@
-# Active node controls and point editing — v0.18.2 release candidate
+# Active node controls and point editing — verified v0.18.2 release
 
 Starting main: `4031d017ca995269a7c4844109293a114c934b51` (live v0.18.1).
-Working branch: `fix/active-node-controls`. Implementation and focused browser
-validation are complete. Full exact-head CI, merge, Pages and live verification
-remain pending. Do not describe this update as live until those gates pass.
+Implementation branch: `fix/active-node-controls`; source commit
+`d00bbf83a6d2aa262ff2104b2414ea7850044667`.
+[PR #31](https://github.com/kircherlabs/embroidery-studio/pull/31) merged as
+`0976945a691217f7deab80f978c8477cf4844a71` after exact-head CI passed.
+Main CI, Pages and live verification all passed. This release is published.
 
 ## Implemented source
 
@@ -78,17 +80,28 @@ remain pending. Do not describe this update as live until those gates pass.
   `backup-before-creative-update` remains
   `99c0a78cd7ec7c026d32c44195ebea882f06c925`. Neither was modified.
 
-## Remaining release gates
+## Final release evidence
 
-1. Commit/push and create/attach PR; production Edge validation is complete.
-2. Require exact-head GitHub CI: 395 Node, ten Python and all 49 browser scripts.
-   Resolve any real regressions without weakening geometry/visibility assertions.
-3. Merge through the established workflow only on successful CI. Wait for main
-   CI/Pages, compare deployed runtime assets to the tested merge, and rerun the
-   node UI and Closed Shape workflows on the public site.
-4. Record final commit/PR/run IDs and live evidence here. Keep source frozen after
-   verification. User authorization to publish persists; no further approval is
-   required. Do not alter backup branches. No physical sew-out is claimed.
+- [PR #31](https://github.com/kircherlabs/embroidery-studio/pull/31) merged the
+  source commit above without additional runtime changes.
+- [Exact-head PR CI](https://github.com/kircherlabs/embroidery-studio/actions/runs/40057261915)
+  passed 395 Node tests, ten Python codec/safety checks, all 49 browser scripts and
+  production build. No geometry or visibility assertions were weakened.
+- [Main CI/Pages](https://github.com/kircherlabs/embroidery-studio/actions/runs/40058232293)
+  repeated all tests successfully and deployed the tested merge.
+- Public-site checks on 2026-10-24 UTC matched all 11 changed runtime assets by
+  normalized SHA-256 to `0976945a691217f7deab80f978c8477cf4844a71` and verified
+  the v0.18.2 footer. Evidence: ignored
+  `test-results/live-node-ui-verification.json`.
+- Both node UI and Closed Shape browser suites then passed against the published
+  studio in isolated Chrome sessions: actual handle pixels and hit scope,
+  selection/group/Focus transitions, readable enabled/disabled/active controls,
+  Hints, direct point editing/history, Ctrl-double-click, touch/responsive layouts,
+  exact curve restoration, save/reopen, regenerated stitches and independently
+  decoded PES needles. The user's existing browser tab was not modified.
 
-An offline formatter is available at:
-`C:/Users/david/AppData/Local/pnpm/store/v11/links/@/prettier/3.6.2/75ee6ab1d0d576e29c0e1d8407ab8ec6e66b110f4ae2901b00e2b7bef305f677/node_modules/prettier/bin/prettier.cjs`.
+No implementation or deployment steps remain. Source geometry and machine-file
+algorithms were not changed merely to control handle visibility. Point editing's
+ordinary-vector scope, 0.25 mm sampled removal guard and existing source budgets
+are documented above and in [editing instructions](CLOSED_SHAPE_EDITING.md).
+Protected backup branches remain unchanged. Task-owned preview servers are stopped.

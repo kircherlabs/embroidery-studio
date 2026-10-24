@@ -2979,7 +2979,7 @@ $("rails-closed").onchange = () => {
 };
 $("active-rail").onchange = (e) => {
   state.railSide = e.target.value;
-  stage.node = null;
+  stage.node = stage.segment = null;
   renderPanels();
   stage.render();
 };

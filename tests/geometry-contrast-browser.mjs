@@ -328,6 +328,9 @@ try {
   await chooseTool(page, "node");
   let o = (await project()).objects.find((o) => o.id === "line"),
     node = o.curve.nodes[1];
+  const nodePos = await world(node);
+  await page.mouse.click(nodePos.x, nodePos.y);
+  await ready();
   await visibility([[node, node.out]], "Bezier tangent guide", { min: 0.5 });
   await drag(
     node,

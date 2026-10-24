@@ -396,6 +396,10 @@ try {
     flipped,
   );
   await chooseTool(page, "node");
+  const curveAnchor = await world(
+    mapPoint(flipped.curve.nodes[0], flipped.curve.frame),
+  );
+  await page.mouse.click(curveAnchor.x, curveAnchor.y);
   const handle = mapPoint(flipped.curve.nodes[0].out, flipped.curve.frame);
   await drag(handle, { x: handle.x + 2, y: handle.y - 1 }, true);
   assert.notDeepEqual(

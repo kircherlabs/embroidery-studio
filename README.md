@@ -6,7 +6,8 @@ No account, paid service, design upload or backend required.
 
 **[Open the studio](https://kircherlabs.github.io/embroidery-studio/)**
 
-**v0.18.2 node editing:** only the actively edited object shows Bézier controls.
+**v0.18.3 node editing:** only the selected anchor or edge shows its Bézier handle pair.
+Other anchors remain selectable; hidden tangents do not intercept input.
 The compact Corner, Smooth, Break Handles and Add & Remove Points buttons replace
 the action dropdown. Add/remove anchors directly with hover previews, exact cubic
 subdivision and guarded removal; ordinary double-clicks and Undo/Redo are retained.

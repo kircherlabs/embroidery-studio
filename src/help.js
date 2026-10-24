@@ -132,7 +132,7 @@ const descriptions = {
   "node-smooth":
     "Align the selected Bézier anchor's tangent handles to form a smooth transition. Move handles on canvas for finer control.",
   "node-corner":
-    "Remove the selected Bézier anchor's tangent handles to create a corner. Undo restores its prior handles.",
+    "Make the selected vertex a corner with independent handle directions. Existing handles and curved edges remain intact. Double-click a closed-shape vertex to toggle Corner / Smooth; Undo restores the edit.",
   "pen-closed":
     "Close this Pen or Pencil path and generate a filled artwork region when finishing. Leave off for an open running-stitch curve.",
   "raster-colors":
@@ -363,6 +363,7 @@ const selector =
   "button,input:not([type=hidden]):not([type=file]),select,summary,canvas[tabindex],[data-help]";
 function description(el) {
   if (el.dataset.toolDescription) return el.dataset.toolDescription;
+  if (el.dataset.toolName && el.dataset.help) return el.dataset.help;
   if (descriptions[el.id]) return descriptions[el.id];
   if (el.dataset.help) return el.dataset.help;
   if (el.matches("[data-close-panel]"))

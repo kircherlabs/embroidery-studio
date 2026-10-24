@@ -13,16 +13,40 @@ Select an ordinary closed vector outline and choose **Edit Points**.
   Holes and other contours remain separate. Invalid crossings, collapsed contours
   or changed hole topology reject the operation without modifying the artwork.
 
-The existing tool-context bar provides **Closed Shape → Node / edge action** for
-keyboard/touch use. The Properties pane also has **Closed Shape node controls**,
-including a contour selector for holes or disconnected outlines.
+The existing node-editing toolbar provides **Change to Corner (1)**,
+**Change to Smooth (2)**, **Break Handles (3)** and **Add & Remove Points (4)**.
+Names/shortcuts appear on hover; Hints adds detailed explanations. Only the
+directly selected active object exposes editable nodes and handles. Multiselection,
+group selection, hidden/locked objects and leaving Edit Points hide their controls
+without changing stored geometry. Properties retains a contour selector for holes
+or disconnected outlines and the optional equal-length Symmetric action.
 
 **Change to Corner** releases tangent constraints without deleting handles.
 **Break Handles** explicitly unlinks two existing curved controls, retaining their
 positions. It is never an automatic double-click action. **Change to Smooth**
 reconnects tangent directions while retaining independent lengths. The existing
 equal-length **Symmetric handles** action remains available in Properties.
-**Insert anchor on selected edge** retains the previous node-insertion capability.
+For an existing edge, **Ctrl/Command-double-click** inserts an anchor without
+changing its cubic geometry. Shift-double-click remains an alternative. The
+canvas context menu (right-click, touch hold, or Shift+F10 after selecting an edge)
+also provides edge toggling, contour smoothing/restoration and insertion.
+
+**Add & Remove Points** is a toggle, not a new drawing mode or dropdown. Click/tap
+an edge to add a point, or a highlighted anchor to remove it. Select the button
+again to return to ordinary node editing. Curved insertion uses exact de Casteljau
+subdivision. Removing a split point recovers its parent curve when possible;
+other curved removals use a tangent-based fit with a sampled two-way 0.25 mm
+physical-deviation guard. This tolerance is a removal safety limit, not a stitch
+spacing setting or a guarantee for arbitrary unsampled geometry. Unsafe edits,
+collapsed contours and changes to holes are rejected without modifying artwork.
+Closed contours retain at least three anchors; open paths retain two. The point
+tool applies to ordinary vector artwork; rails, live lettering and manual needle
+data retain their dedicated editing workflows. Smart Shapes become paths when
+their source points are explicitly edited. Undo restores the original source.
+
+Point edits commit on pointer release, so touch navigation, cancellation and
+accidental drags do not insert/delete anchors. Selecting another object or leaving
+node editing exits the point tool. Geometry hover marks are editing aids only.
 
 Smooth anchors are circular; corners are square. Explicitly broken controls use
 the existing guide color. All retain the application's high-contrast editing style.

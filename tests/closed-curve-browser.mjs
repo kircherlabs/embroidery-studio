@@ -78,9 +78,10 @@ try {
     await chooseTool(page, "node");
   };
   await page.locator(`[data-select="${o.id}"] .object-title`).click();
-  assert(await page.locator("#node-whole").isDisabled());
+  assert(await page.locator("#node-smooth").isDisabled());
   await pick();
-  assert(await page.locator("#node-whole").isEnabled());
+  assert(await page.locator("#closed-curve-actions").isVisible());
+  assert.equal(await page.locator("#closed-curve-action").count(), 0);
   const world = async (p) =>
     page.evaluate((p) => {
       const v = window.studio.getView(),
@@ -96,6 +97,12 @@ try {
     await ready();
   };
   const leaf = async () => (await project()).objects[0];
+  const contour = async () => {
+    await page.locator("#stage").focus();
+    await page.keyboard.press("Shift+F10");
+    await page.locator('[data-arrange="node:1"]').click();
+    await ready();
+  };
   await dbl({ x: 0, y: -20 });
   let current = await leaf();
   assert(current.curve.nodes[0].out && current.curve.nodes[1].in);
@@ -172,7 +179,7 @@ try {
     [current.curve.nodes[0].in, current.curve.nodes[0].out],
     controls,
   );
-  await page.locator("#closed-curve-action").selectOption("smooth");
+  await page.locator("#node-smooth").click();
   await ready();
   assert.equal((await leaf()).curve.nodes[0].mode, "smooth");
   const beforeWhole = await leaf();
@@ -189,7 +196,7 @@ try {
   await dbl({ x: 42, y: 42 });
   assert.equal(JSON.stringify(await leaf()), beforeBackground);
   await pick();
-  await page.locator("#closed-curve-action").selectOption("toggle-whole");
+  await contour();
   await ready();
   const download = page.waitForEvent("download");
   await page.locator("#save-project").click();
@@ -198,22 +205,22 @@ try {
   );
   await load(saved);
   await pick();
-  await page.locator("#closed-curve-action").selectOption("toggle-whole");
+  await contour();
   await ready();
   assert.deepEqual((await leaf()).rings, beforeWhole.rings);
   // Touch uses the same contextual actions; double-click is never mandatory.
   const pt = await world({ x: -20, y: -20 });
   await page.touchscreen.tap(pt.x, pt.y);
-  await page.locator("#closed-curve-action").selectOption("smooth");
+  await page.locator("#node-smooth").click();
   await ready();
   assert.equal((await leaf()).curve.nodes[0].mode, "smooth");
-  await page.locator("#closed-curve-action").selectOption("break");
+  await page.locator("#node-break").click();
   await ready();
   assert((await leaf()).curve.nodes[0].broken);
   await page.screenshot({ path: "test-results/closed-curve-desktop.png" });
   await page.setViewportSize({ width: 390, height: 844 });
   await chooseTool(page, "node");
-  await page.locator("#closed-curve-action").selectOption("toggle-whole");
+  await contour();
   await ready();
   assert((await leaf()).curve.wholeMemory);
   await page.screenshot({ path: "test-results/closed-curve-mobile.png" });
@@ -242,10 +249,10 @@ try {
   await pick();
   await reveal(page.locator("#closed-contour"));
   await page.locator("#closed-contour").selectOption("1");
-  await page.locator("#closed-curve-action").selectOption("toggle-whole");
+  await contour();
   await ready();
   assert((await leaf()).curve.contours[0].wholeMemory);
-  await page.locator("#closed-curve-action").selectOption("toggle-whole");
+  await contour();
   await ready();
   assert.deepEqual((await leaf()).rings, holed.rings);
   const originalProject = await project(),

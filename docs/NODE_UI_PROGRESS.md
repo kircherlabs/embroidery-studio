@@ -1,0 +1,94 @@
+# Active node controls and point editing — v0.18.2 release candidate
+
+Starting main: `4031d017ca995269a7c4844109293a114c934b51` (live v0.18.1).
+Working branch: `fix/active-node-controls`. Implementation and focused browser
+validation are complete. Full exact-head CI, merge, Pages and live verification
+remain pending. Do not describe this update as live until those gates pass.
+
+## Implemented source
+
+- Shared `Stage.nodeTarget()` eligibility drives rendered controls, pointer hits,
+  insertion, explicit actions and the runtime active-object indicator. Only one
+  directly selected, visible, unlocked object inside the focused scope is active.
+  Group/multiselection and tool/selection changes hide controls and reset local
+  editing state; stored geometry and handles are retained.
+- Removed Node / edge action dropdown and duplicate Properties actions. The
+  existing dock has four 24-pixel SVG icons: Corner, Smooth, Break Handles and
+  Add & Remove Points, with names, detailed Hints and shortcuts 1/2/3/4.
+  Ordinary double-clicks still toggle node/edge/contour shapes. Ctrl/Command-
+  double-click (also Shift-double-click) inserts a precise anchor. The existing
+  canvas context menu supplies touch/keyboard alternatives; contour selection
+  and equal-length Symmetric controls remain in Properties.
+- Path Repair separates Split/Close/Reverse from Join Paths, spaces the join
+  settings and action, wraps on narrow layouts and uses readable light-dock
+  button styling. Disabled controls have legible text and dashed borders instead
+  of 35% opacity. The persistent Closed Shape hint is concise.
+- Point tool toggles on/off without project-state changes. Active source edges
+  and anchors receive contrasting hover marks; mouse/touch clicks add/remove
+  anchors on release. Drag/cancel/pinch do not commit. Curved insertion uses exact
+  subdivision; removal recovers split cubics or uses a guarded local fit. Closed
+  topology/holes and minimum anchor counts are checked. Unrelated geometry,
+  sewing actions and physical-thread metadata remain intact.
+- Direct point editing applies to ordinary closed/open vectors. Dedicated
+  manual-rail, live-lettering and manual-needle workflows remain available.
+  The existing 2,000-anchor curve budget still applies. General curved removal
+  uses a sampled two-way 0.25 mm physical-distance limit and rejects larger changes.
+
+## Files
+
+- UI: `index.html`, `workspace.css`, `src/node-tools.js`, `src/app.js`,
+  `src/creative-ui.js`, `src/help.js`, `src/arrange.js`.
+- Editing: `src/stage.js`, `src/point-editing.js`, `src/path-editing.js`,
+  `src/closed-curve-editing.js` (shared topology validator export).
+- Tests: `tests/point-editing.test.mjs`, `tests/node-ui-browser.mjs`,
+  `tests/closed-curve-browser.mjs`, `.github/workflows/pages.yml`.
+- Instructions: `docs/CLOSED_SHAPE_EDITING.md`, this handoff.
+
+## Verified locally
+
+- Full 395-test Node run passed, including all nine new point/active-target tests.
+- Ten Python codec/format-safety tests, production build and JS syntax checks
+  passed. Logs: ignored `test-results/node-ui-units.log` and
+  `test-results/node-ui-browser-regressions.log`.
+- Chrome suites passed: node UI, Closed Shape curves, four-level nested Focus,
+  path editing, sculpt, manual rails, geometry contrast, toolbar and tool context.
+  Existing export checks independently decoded actual PES needles; selection and
+  handle visibility never changed artwork or needle commands.
+- The final production build passed node UI in Edge; Closed Shape/independent
+  PES decoding also passed in Edge. Expanded mobile Path Repair uses one scroll
+  area so its action rows remain reachable without nested scrolling.
+- The new browser test measures actual purple guide pixels on the canvas across
+  active-object changes, multiselection, exit, groups and focused child editing.
+  It checks all four icons, Hints Off/On, enabled/disabled/active contrast >=4.5:1,
+  point add/remove/history, Ctrl-double-click and touch at 320/390/768 widths.
+  Desktop/mobile/hover screenshots are in ignored `test-results/`.
+- Source tests cover exact subdivision at several parameters, exact split recovery,
+  general fit/rejection, physical edge-hit accuracy, holes, minimum nodes, open
+  paths, transforms, serialization, actual stitch generation, unrelated objects
+  and thread data, focus/group eligibility and real Stage release/cancel/pinch.
+- Visual inspection caught a transient pale active button during the inherited
+  background transition. Node buttons now switch states immediately and keep
+  dark active/hover backgrounds. Contrast assertions pass for these states.
+- One added group test initially mapped a pointer before opening the node dock.
+  Recomputing current canvas coordinates fixed the fixture; the unchanged
+  child-only handle-pixel assertions then passed. No product workaround was needed.
+- Approval review's earlier usage-limit failure was resolved after the user
+  restored availability. The approved server and browser launches succeeded.
+- Protected `BACKUP-V0.18.0` remains `8aed6698c00a3b34485f0a778511f78e0302c32f`;
+  `backup-before-creative-update` remains
+  `99c0a78cd7ec7c026d32c44195ebea882f06c925`. Neither was modified.
+
+## Remaining release gates
+
+1. Commit/push and create/attach PR; production Edge validation is complete.
+2. Require exact-head GitHub CI: 395 Node, ten Python and all 49 browser scripts.
+   Resolve any real regressions without weakening geometry/visibility assertions.
+3. Merge through the established workflow only on successful CI. Wait for main
+   CI/Pages, compare deployed runtime assets to the tested merge, and rerun the
+   node UI and Closed Shape workflows on the public site.
+4. Record final commit/PR/run IDs and live evidence here. Keep source frozen after
+   verification. User authorization to publish persists; no further approval is
+   required. Do not alter backup branches. No physical sew-out is claimed.
+
+An offline formatter is available at:
+`C:/Users/david/AppData/Local/pnpm/store/v11/links/@/prettier/3.6.2/75ee6ab1d0d576e29c0e1d8407ab8ec6e66b110f4ae2901b00e2b7bef305f677/node_modules/prettier/bin/prettier.cjs`.

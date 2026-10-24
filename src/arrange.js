@@ -87,7 +87,13 @@ export function snapTranslation(b, dx, dy, targets, tolerance) {
   return { dx: snap("x", dx), dy: snap("y", dy), guides };
 }
 
-export function installArrangeMenu({ state, command, fitDesign, fitHoop }) {
+export function installArrangeMenu({
+  state,
+  command,
+  fitDesign,
+  fitHoop,
+  nodeActions = () => [],
+}) {
   const menu = document.createElement("div");
   menu.id = "arrange-menu";
   menu.className = "arrange-menu";
@@ -105,11 +111,19 @@ export function installArrangeMenu({ state, command, fitDesign, fitHoop }) {
       .setAttribute("aria-expanded", "false");
     if (restore) returnTo?.focus();
   };
-  function open(x, y, trigger) {
+  let contextActions = [];
+  function open(x, y, trigger, { nodeContext = false } = {}) {
     const count = alignmentUnits(state.project, state.selectionIds).length,
       any = count > 0;
     returnTo = trigger || document.getElementById("stage");
+    contextActions = nodeContext ? nodeActions() : [];
     menu.innerHTML =
+      (contextActions.length
+        ? '<div class="menu-caption">Active contour</div>' +
+          contextActions
+            .map((a, i) => add(`node:${i}`, a.label, a.help, a.disabled))
+            .join("")
+        : "") +
       '<div class="menu-caption">Position in hoop</div>' +
       add(
         "center",
@@ -249,7 +263,9 @@ export function installArrangeMenu({ state, command, fitDesign, fitHoop }) {
     const action = e.target.closest("[data-arrange]")?.dataset.arrange;
     if (!action) return;
     hide(true);
-    if (action === "fit-design") fitDesign();
+    if (action.startsWith("node:"))
+      contextActions[Number(action.slice(5))]?.run();
+    else if (action === "fit-design") fitDesign();
     else if (action === "fit-hoop") fitHoop();
     else command(action);
   };

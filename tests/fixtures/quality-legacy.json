@@ -1,0 +1,112 @@
+{
+  "tatamiCounter": {
+    "hash": "5a7f6159285b9ecb48d15bbf23014908b224b4fdc358efb7ac965e745cd09c0c",
+    "stitches": 773,
+    "jumps": 1,
+    "trims": 1,
+    "events": 776
+  },
+  "adjacentFills": {
+    "hash": "abbe01b8e018190391966866fe04071b735b8ce0c628e797e1bb45ccdca9e595",
+    "stitches": 1167,
+    "jumps": 2,
+    "trims": 2,
+    "events": 1173
+  },
+  "narrowNeck": {
+    "hash": "cd4c79ebd0ec4257d0ad5b15512f7a9d33d9a83afbb2450dc73c80e3bff78e85",
+    "stitches": 957,
+    "jumps": 1,
+    "trims": 1,
+    "events": 960
+  },
+  "satinCurve": {
+    "hash": "9b6c6a48c3840eba86eb872f865b59b756e23e663cc1ccbb5a86e5d7b5b76933",
+    "stitches": 183,
+    "jumps": 2,
+    "trims": 1,
+    "events": 187
+  },
+  "satinCorner": {
+    "hash": "1ac8ad222a01c30903ebab53356d2333534c8d69828e35ea109e635e4832df2c",
+    "stitches": 234,
+    "jumps": 2,
+    "trims": 2,
+    "events": 239
+  },
+  "satinBorder": {
+    "hash": "8cdbe8f869fc0a7ed32ab00d75dda6447dddecdd6fbeae37dccce41f89c966c4",
+    "stitches": 422,
+    "jumps": 2,
+    "trims": 1,
+    "events": 426
+  },
+  "automaticColumn": {
+    "hash": "c0c3b9e76e430c27fbf662d47b8a28d205eef544d606cd17ce1ec2eb002d11a1",
+    "stitches": 456,
+    "jumps": 5,
+    "trims": 5,
+    "events": 467
+  },
+  "manualNarrow": {
+    "hash": "b646a15690733c7fbdc6d078cf568b4dde8682b7396fe4b93ae59b4118bff67e",
+    "stitches": 104,
+    "jumps": 1,
+    "trims": 1,
+    "events": 107,
+    "paths": [
+      [
+        "underlay",
+        9,
+        false
+      ],
+      [
+        "satin-rails",
+        91,
+        true
+      ]
+    ],
+    "warnings": []
+  },
+  "manualWide": {
+    "hash": "d657a0c474c7b9381f9788be6ee4bca98696cd484872e3372de370fe17763b29",
+    "stitches": 229,
+    "jumps": 1,
+    "trims": 1,
+    "events": 232,
+    "paths": [
+      [
+        "underlay",
+        14,
+        false
+      ],
+      [
+        "satin-rails",
+        211,
+        true
+      ]
+    ],
+    "warnings": []
+  },
+  "decorativeTatami": {
+    "hash": "12c2257fd815201626f91bc18fbbb0100ee33465091987bfbf2524d1a272ab7d",
+    "stitches": 773,
+    "jumps": 1,
+    "trims": 1,
+    "events": 776
+  },
+  "embossedCounter": {
+    "hash": "33f8acea0fc1bd07d47e1c2582bbc2a622b2dfa27887351339f531062df54111",
+    "stitches": 879,
+    "jumps": 1,
+    "trims": 1,
+    "events": 882
+  },
+  "intentionalRun": {
+    "hash": "b235e6da9178bac7d1e4203e93e6b533c6a5ed81a180d954f98ec73173a8be06",
+    "stitches": 50,
+    "jumps": 1,
+    "trims": 1,
+    "events": 53
+  }
+}

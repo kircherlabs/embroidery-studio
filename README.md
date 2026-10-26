@@ -6,6 +6,13 @@ No account, paid service, design upload or backend required.
 
 **[Open the studio](https://kircherlabs.github.io/embroidery-studio/)**
 
+**v0.19.0 stitch quality:** targeted corrections avoid completed-fill/column
+returns and preserve narrow curved satin underlay. Stitch quality safeguards are
+on for new blank designs; older projects retain their exact stitch output until
+explicitly enabled in Digitizing & sequence. Focused warnings can inspect the
+actual stitch. See [quality findings and reference plans](docs/STITCH_QUALITY.md)
+and [milestone verification](docs/STITCH_QUALITY_PROGRESS.md).
+
 **v0.18.3 node editing:** only the selected anchor or edge shows its Bézier handle pair.
 Other anchors remain selectable; hidden tangents do not intercept input.
 The compact Corner, Smooth, Break Handles and Add & Remove Points buttons replace

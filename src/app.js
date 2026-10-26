@@ -1145,6 +1145,7 @@ function renderPanels() {
   )
     state.isolation = null;
   const planning = planningOptions(state.project);
+  $("quality-safeguards").checked = planning.qualitySafeguards;
   $("optimize-colors").checked = planning.optimizeColors;
   $("skip-outlines").checked = planning.skipSvgOutlines;
   $("small-detail").value = planning.smallDetail;
@@ -1502,7 +1503,7 @@ function renderStats() {
     const detail =
       machinePlan || b.unclassified
         ? `Decoded file: ${fmt(stats.jumps)} jump commands (${fmt(stats.jumpMoves)} moves), ${fmt(stats.trims)} encoded trim commands. Object origins are unavailable in machine files.`
-        : `Jump commands: ${b.initial} initial · ${b.betweenObjects} between objects · ${b.betweenRegions} between regions · ${b.withinRegions} within regions. ${fmt(stats.travelStitches)} running travel stitches stay inside fills. ${fmt(stats.jumps - stats.jumpMoves)} jumps have no positional movement.`;
+        : `Jump commands: ${b.initial} initial · ${b.betweenObjects} between objects · ${b.betweenRegions} between regions · ${b.withinRegions} within regions. ${fmt(stats.travelStitches)} routing stitches; containment alone does not guarantee concealment. ${fmt(stats.jumps - stats.jumpMoves)} jumps have no positional movement.`;
     $("stats").insertAdjacentHTML(
       "beforeend",
       `<p class="property-note travel-summary">${detail}</p>`,
@@ -1540,7 +1541,7 @@ function renderStats() {
   const count = (severity) =>
     issues.filter((i) => i.severity === severity).length;
   $("warnings").innerHTML =
-    `<details class="design-issues" ${wasOpen || count("error") ? "open" : ""}><summary>Design issues <span>${issues.length ? [count("error") ? count("error") + " errors" : "", count("warning") ? count("warning") + " warnings" : "", count("info") ? count("info") + " notices" : ""].filter(Boolean).join(" · ") : "No issues"}</span></summary>${issues.map((i, index) => `<article class="design-issue ${i.severity}"><strong>${esc(i.severity)}${i.objectName ? " · " + esc(i.objectName) : ""}${i.operationName ? " / " + esc(i.operationName) : ""}</strong><p>${esc(i.message)}</p><p class="issue-action">${esc(i.action || "")}</p>${i.objectId ? `<button data-issue="${index}">Locate artwork &amp; step</button>` : ""}</article>`).join("")}</details>`;
+    `<details class="design-issues" ${wasOpen || count("error") ? "open" : ""}><summary>Design issues <span>${issues.length ? [count("error") ? count("error") + " errors" : "", count("warning") ? count("warning") + " warnings" : "", count("info") ? count("info") + " notices" : ""].filter(Boolean).join(" · ") : "No issues"}</span></summary>${issues.map((i, index) => `<article class="design-issue ${i.severity}"><strong>${esc(i.severity)}${i.objectName ? " · " + esc(i.objectName) : ""}${i.operationName ? " / " + esc(i.operationName) : ""}</strong><p>${esc(i.message)}</p><p class="issue-action">${esc(i.action || "")}</p>${i.objectId ? `<button data-issue="${index}">${Number.isInteger(i.eventIndex) ? "Inspect stitch" : "Locate artwork &amp; step"}</button>` : ""}</article>`).join("")}</details>`;
   $("warnings")
     .querySelectorAll("[data-issue]")
     .forEach(
@@ -1552,9 +1553,27 @@ function renderStats() {
           state.activeOperationId =
             issue.operationId === "base" ? null : issue.operationId;
           state.collapsedActionKey = null;
-          setMode("design");
-          renderPanels();
-          stage.render();
+          const event = state.plan?.events[issue.eventIndex];
+          if (
+            Number.isInteger(issue.eventIndex) &&
+            event?.objectId === issue.objectId
+          ) {
+            const target = nodeById(state.project, issue.objectId);
+            if (
+              state.isolation &&
+              target &&
+              !within(state.project, target, state.isolation)
+            )
+              state.isolation = null;
+            setMode("preview");
+            renderPanels();
+            scrub(issue.eventIndex + 1);
+            stage.fitSelection();
+          } else {
+            setMode("design");
+            renderPanels();
+            stage.render();
+          }
         }),
     );
   if (state.plan?.diagnostics?.duplicates?.length) {
@@ -1689,7 +1708,7 @@ function renderPlayback() {
   $("stitch-counter").textContent = `${fmt(state.cursor)} / ${fmt(ev.length)}`;
   const e = ev[state.cursor - 1];
   $("command-readout").textContent = e
-    ? `${e.hoopingNumber ? `Hooping ${e.hoopingNumber} · ` : ""}${e.cmd.toUpperCase()} · X ${num(e.x)}  Y ${num(e.y)}${e.phase?.startsWith("underlay") ? " · UNDERLAY" : e.phase === "anchor" ? " · NEEDLE ANCHOR" : e.phase === "travel" ? " · FILL TRAVEL" : ""}`
+    ? `${e.hoopingNumber ? `Hooping ${e.hoopingNumber} · ` : ""}${e.cmd.toUpperCase()} · X ${num(e.x)}  Y ${num(e.y)}${e.phase?.startsWith("underlay") ? " · UNDERLAY" : e.phase === "anchor" ? " · NEEDLE ANCHOR" : e.phase === "travel" ? " · ROUTING TRAVEL" : ""}`
     : "Sequence start";
   $("play").textContent = playing ? "Ⅱ" : "▶";
   $("play").setAttribute(
@@ -2512,6 +2531,7 @@ $("new-project").onclick = async () => {
         name: "Untitled design",
         machine: "se700",
         objects: [],
+        planning: { qualitySafeguards: true },
       };
       equipmentUI.applyDefault(state.project);
       state.selection = null;
@@ -3045,6 +3065,7 @@ for (const [id, key] of [
     stage.render();
   };
 for (const [id, key] of [
+  ["quality-safeguards", "qualitySafeguards"],
   ["optimize-colors", "optimizeColors"],
   ["skip-outlines", "skipSvgOutlines"],
 ])

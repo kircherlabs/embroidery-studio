@@ -1,7 +1,12 @@
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
 import { mkdir, readFile } from "node:fs/promises";
-import { qualityFixtures } from "./helpers/quality-fixtures.mjs";
+import {
+  qualityFixtures,
+  manualRing,
+  autoLetter,
+  project as fixtureProject,
+} from "./helpers/quality-fixtures.mjs";
 import { reveal } from "./helpers/ui.mjs";
 const { chromium } = createRequire(import.meta.url)(
   process.env.PLAYWRIGHT_MODULE || "playwright",
@@ -33,9 +38,10 @@ try {
     });
     await page.locator("#dialog-submit").click();
     await page.waitForFunction(
-      (name) =>
-        window.studio.getProject().name === name && window.studio.getPlan(),
-      p.name,
+      ({ name, id }) =>
+        window.studio.getProject().name === name &&
+        window.studio.getPlan()?.events.some((e) => e.objectId === id),
+      { name: p.name, id: p.objects[0].id },
     );
   };
   await open(source);
@@ -78,9 +84,47 @@ try {
     assert(box && box.x >= 0 && box.x + box.width <= width);
   }
   await page.setViewportSize({ width: 1500, height: 1050 });
+  for (const [name, art] of [
+    ["Manual satin quality", manualRing(2, 1.6)],
+    ["Automatic satin quality", autoLetter()],
+  ]) {
+    const fixture = fixtureProject([art]);
+    fixture.name = name;
+    await open(fixture);
+    const original = await plan(),
+      sourceObjects = JSON.stringify((await project()).objects);
+    await reveal(page.locator("#quality-safeguards"));
+    await page.locator("#quality-safeguards").check();
+    if (name.startsWith("Manual"))
+      await page.waitForFunction(
+        () => window.studio.getPlan()?.stats.jumps === 1,
+      );
+    else
+      await page.waitForFunction(
+        () => window.studio.getPlan()?.stats.travelStitches === 0,
+      );
+    const improved = await plan();
+    const needles = (p) =>
+      p.events
+        .filter(
+          (e) =>
+            ["satin-rails", "satin-stroke"].includes(e.phase) &&
+            e.cmd === "stitch",
+        )
+        .map((e) => [e.x, e.y]);
+    assert.deepEqual(needles(improved), needles(original));
+    assert.equal(JSON.stringify((await project()).objects), sourceObjects);
+    if (name.startsWith("Manual"))
+      assert(improved.stats.jumps < original.stats.jumps);
+    else assert(improved.stats.travelStitches < original.stats.travelStitches);
+  }
   await page.locator("#new-project").click();
   await page.locator("#dialog-submit").click();
-  await ready();
+  await page.waitForFunction(
+    () =>
+      window.studio.getProject().objects.length === 0 &&
+      window.studio.getPlan()?.stats.stitches === 0,
+  );
   assert((await project()).planning.qualitySafeguards);
   await page.reload();
   await ready();

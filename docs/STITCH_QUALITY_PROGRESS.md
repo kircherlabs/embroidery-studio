@@ -56,14 +56,37 @@ encoded requests, not evidence that hardware executed each cut. Input files are
 unchanged and are not bundled in the public repository. Local decoded events and
 metrics are under ignored test-results/. No machine faults are inferred.
 
-## B — Satin quality: next
+## B — Satin quality: implemented and tested
 
-Confirmed manual-satin underlay uses sparse equal-distance chords that can leave
-a narrow curved band. The grid validator then repairs endpoints or breaks paths:
-a 2 mm outer-radius/0.4 mm band creates 6 underlay paths and 6 jumps. Reproduce in
-a failing test, then reuse contour simplification and subdivision to preserve
-underlay curvature while leaving actual top satin and explicit corner settings
-unchanged. Audit automatic-column inter-stroke routing over completed branches.
+Confirmed two defects with failing tests before edits:
+
+1. `manualSatin.walk` uses sparse equal-distance underlay chords. On a 2 mm
+   outer-radius/0.4 mm band, they leave the curved band and the existing machine-
+   grid validator splits them into six singleton paths. Generated output has six
+   placements but zero actual underlay stitches. Quality mode retains the paced
+   contour only when the old chord path is unsafe, using existing simplification
+   within 10% of band width (capped at 0.05 mm, half the needle-grid step), then
+   limits segment length to 2.5 mm. Existing grid validation still applies.
+   This sample now has one path, 16 actual underlay stitches and one jump; all 61
+   top satin stitches are identical. Total stitches 69 -> 82; trims remain 1.
+2. `strokeSatin` calls whole-region `strokeTravel` after finishing each branch.
+   Region containment does not conceal a return across completed satin. Quality
+   mode keeps branch/sewing order and requests the existing jump/trim transition
+   at the next branch. T travel 26.54 -> 0 mm, jumps/trims 1/1 -> 2/2, identical
+   185 top stitches. H travel 45.02 -> 0 mm, jumps/trims 1/1 -> 3/3, identical
+   293 top stitches. Existing locking, max-span splitting and writer logic remain.
+
+No rail pairing, pacing, corner shortening, width/spacing, junction partitioning,
+centerline or border algorithm was replaced. Explicit corner settings remain
+unchanged. Extremely tight turns and fragmented automatic columns still require
+existing warnings/manual adjustment; they are not silently smoothed or discarded.
+
+Files: manual-satin.js, stroke-satin.js, quality test fixtures, satin-quality unit
+suite, extended quality browser suite. Tested center/edge/both underlays, five
+narrow/wide rings, T/H/L/I with corner control both on/off, existing centerline and
+border output, contour containment, exact top needles/sections and legacy hashes.
+38 focused satin/routing tests passed; Chrome quality, manual-rails and satin
+workflows passed with independent PES decoding and desktop/mobile editing.
 
 ## C — Diagnostics / final verification: pending
 

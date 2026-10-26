@@ -27,6 +27,24 @@ const art = (id, rings, props = {}) =>
   });
 export const fillCounter = () =>
   art("counter", [rect(-15, -10, 30, 20), rect(-5, -5, 10, 10)]);
+export function autoLetter(kind = "T") {
+  const shapes = {
+    T: [rect(-10, -8, 20, 4), rect(-2, -5, 4, 15)],
+    H: [rect(-10, -10, 4, 20), rect(6, -10, 4, 20), rect(-7, -2, 14, 4)],
+    L: [rect(-10, -10, 4, 20), rect(-10, 6, 20, 4)],
+    I: [rect(-10, -10, 20, 4), rect(-2, -7, 4, 14), rect(-10, 6, 20, 4)],
+  };
+  const o = art(`automatic-${kind}`, shapes[kind], { fillRule: "nonzero" });
+  o.operations = [
+    {
+      ...makeOperation("column", o),
+      id: "column",
+      columnMode: "stroke",
+      compensation: 0,
+    },
+  ];
+  return o;
+}
 export const manualRing = (outer = 3, inner = 2.6) => {
   const c = (radius) => ({
     closed: true,

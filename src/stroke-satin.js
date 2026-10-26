@@ -407,11 +407,12 @@ export function strokeSatin(o, from = { x: 0, y: 0 }) {
       .sort((a, b) => distance(position, a.p) - distance(position, b.p));
     const { stroke, reverse } = choices[0];
     todo.delete(stroke);
+    const boundary = paths.length;
     const sections = reverse ? [...stroke.sections].reverse() : stroke.sections,
       centers = sections.map((s) => s.center);
     // Existing graph travel principles: sew only within material, otherwise jump.
     // Route a hidden center walk between sections rather than a visible connector.
-    if (paths.length) {
+    if (paths.length && !o.qualitySafeguards) {
       const route = strokeTravel(graph, position, centers[0], o.rings);
       if (route) {
         append(route, "travel", true, stroke.id);
@@ -468,6 +469,13 @@ export function strokeSatin(o, from = { x: 0, y: 0 }) {
         safe(position, needle[0], o, (o.compensation || 0) + 0.02),
       stroke.id,
     );
+    // A route inside the whole region may traverse a branch already covered
+    // with satin. Keep branch order and let the existing engine jump/trim rules
+    // handle this transition instead of calling that center walk "hidden".
+    if (o.qualitySafeguards && boundary > 0 && paths[boundary]) {
+      paths[boundary].continuous = false;
+      paths[boundary].travel = "jump";
+    }
   }
   const quantized = quantizeColumnPaths(paths, o);
   return {

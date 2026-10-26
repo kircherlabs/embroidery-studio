@@ -5,6 +5,7 @@ import {
   signedArea,
   fillPolygons,
   safeConnector,
+  simplifyPath,
 } from "./geometry.js";
 import { paceRails, shortInnerTurns } from "./satin-rails.js";
 import { quantizeColumnPaths } from "./column-routing.js";
@@ -320,7 +321,26 @@ export function manualSatin(o) {
   const walk = (ps) => {
     const c = measure({ nodes: ps, closed: layout.closed, frame: identity() }),
       n = Math.max(1, Math.ceil(c.length / 2.5));
-    return Array.from({ length: n + 1 }, (_, i) => c.at(i / n).p);
+    const candidate = Array.from({ length: n + 1 }, (_, i) => c.at(i / n).p);
+    if (
+      !o.qualitySafeguards ||
+      candidate.slice(1).every((p, i) => safe(candidate[i], p))
+    )
+      return candidate;
+    // Sparse arc stations can cut across a counter. Keep the existing paced
+    // contour within 10% of the band width, capped at half a needle-grid unit,
+    // then limit lengths. Narrow bands need finer chords, not global density.
+    const source = layout.closed ? [...ps, ps[0]] : ps;
+    const tolerance = Math.min(0.05, ...original.map((q) => q.width * 0.1));
+    const contour = simplifyPath(source, tolerance),
+      out = [contour[0]];
+    for (let i = 1; i < contour.length; i++) {
+      const a = contour[i - 1],
+        b = contour[i],
+        count = Math.max(1, Math.ceil(distance(a, b) / 2.5));
+      for (let j = 1; j <= count; j++) out.push(mix(a, b, j / count));
+    }
+    return out;
   };
   if (o.underlay) {
     const kind = o.railUnderlay || "center";

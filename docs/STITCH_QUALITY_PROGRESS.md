@@ -1,7 +1,7 @@
 # Stitch quality audit — progress
 
 Base: main `6c3a53b0aff43eac2d9006673d61b3e4d7e92113` (v0.18.3).
-Branch: `fix/stitch-quality-audit`. No deployment until A/B/C pass.
+Implementation branch: `fix/stitch-quality-audit`; merged through PR #33.
 
 ## A — Travel and underlay routing: implemented and tested
 
@@ -88,7 +88,7 @@ border output, contour containment, exact top needles/sections and legacy hashes
 38 focused satin/routing tests passed; Chrome quality, manual-rails and satin
 workflows passed with independent PES decoding and desktop/mobile editing.
 
-## C — Diagnostics and verification: implemented; release checks pending
+## C — Diagnostics and verification: implemented and tested
 
 Implemented diagnostic-only `stitch-quality.js`: long generated returns, fragmented
 manual underlay, and conservative measured needle-clustering warnings. Locks,
@@ -132,16 +132,42 @@ editable projects, event JSON, SVG plots, metrics and instructions in ignored
 All reference pairs have matching source-geometry hashes. Physical comparisons
 remain to be performed; small diagnostic satin samples retain narrow-band warnings.
 
+## Release evidence
+
+- A: `2d62455` — opt-in fill routing and legacy event protection.
+- B: `2414db4` — curved manual underlay and automatic satin branch transitions.
+- C: `efad107` — diagnostics, final entry-row refinement, reference plans and
+  six-format verification.
+- [PR #33](https://github.com/kircherlabs/embroidery-studio/pull/33) merged as
+  `c19787fb146d64f35a1aeba42e53c22204602440`.
+- [PR workflow 40410391400](https://github.com/kircherlabs/embroidery-studio/actions/runs/40410391400)
+  passed: 418 Node tests, 10 Python tests, all 50 browser scripts and static build.
+- Final production quality workflow passed in both Chrome and Edge; the Edge
+  closed-curve regression also passed. Focus-scope inspection, actual marker
+  pixels, unchanged sources and responsive layouts were verified.
+- [Main/Pages workflow 40412254382](https://github.com/kircherlabs/embroidery-studio/actions/runs/40412254382)
+  passed all 418 Node tests, 10 Python tests, 50 browser scripts, static build
+  and Pages deployment on 2026-10-26.
+- Live **v0.19.0** verified at 22:39 UTC: 14 runtime assets matched merged
+  commit `c19787fb146d64f35a1aeba42e53c22204602440`, including the unchanged
+  codec, PEC origin correction and export-safety files. Local hash evidence:
+  `test-results/live-stitch-quality-verification.json`.
+- Chrome live-site quality and closed-curve workflows passed: actual routing,
+  all 2,340 imported fill positions retained, unchanged source, opt-in/history,
+  persistence, responsive controls, issue-to-needle navigation, reversible
+  segment/node/contour toggles, touch controls and independent PES decoding.
+- Protected backup refs still match their original commits. SHA256 checks of
+  all three supplied PES files match the initial audit; originals are unchanged.
+
 ## Exact next steps
 
-Final Edge production quality/closed-curve checks passed, including Focus-scope
-inspection and unchanged source. Commit milestone C,
-push and open PR, require the complete existing CI (now 50 browser scripts), merge,
-wait for Pages and verify live source hashes and quality behavior. Update this
-record with exact commits/run IDs. Do not deploy if any critical regression remains.
-Local source server: 5173; production server: 5174. No critical product regressions
-are currently known. Existing severe corner/rail ambiguities remain documented
-manual-adjustment cases rather than unverified automatic repairs.
+Software implementation, regression testing and publication are complete. No
+critical product regressions are known. Local preview servers are stopped.
+Physical comparison sew-outs remain to be performed using the generated
+before/after reference package. Existing severe corner/rail ambiguities remain
+documented manual-adjustment cases rather than unverified automatic repairs.
+Future changes must retain the frozen legacy streams and top-needle comparisons;
+do not infer source phases or automatically redigitize the supplied PES files.
 
 Protected refs: BACKUP-V0.18.3 = 6c3a53b0aff43eac2d9006673d61b3e4d7e92113;
 BACKUP-V0.18.0 = 8aed6698c00a3b34485f0a778511f78e0302c32f;

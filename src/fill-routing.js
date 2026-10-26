@@ -11,6 +11,9 @@ export function routeFill(
   { stride = 1, connectFrom = false, to = null } = {},
 ) {
   if (!rows.length) return [];
+  // Containment alone does not mean concealment. In the opt-in quality path,
+  // completed rows cannot be used as bridges back to an unsewn branch.
+  const quality = o.qualitySafeguards === true && phase === "top";
   const holes = o.polygon ? o.rings.slice(1) : [],
     safe = (a, b) => safeConnector(a, b, o.rings, 0, holes, o.fillRule),
     nodes = [],
@@ -165,6 +168,7 @@ export function routeFill(
         continue;
       }
       for (const e of edges[id]) {
+        if (quality && !todo.has(nodes[e.to].row)) continue;
         const d = dist[id] + e.d;
         if (d < dist[e.to]) {
           dist[e.to] = d;
@@ -209,6 +213,7 @@ export function routeFill(
         0,
       );
       if (
+        (!quality || path.length === 2) &&
         distance(position, p[0]) <= length + 1e-8 &&
         // The nominal anchors must also see each other through material. Pull
         // compensation at the tips must not shortcut across a narrow open slot.
@@ -223,7 +228,7 @@ export function routeFill(
         )
       )
         travel = [position, p[0]];
-      else travel = thinTravel(travel);
+      else if (!quality) travel = thinTravel(travel);
       // The short retraces to compensated tips follow the original fill spans.
       out.push({
         p: travel,

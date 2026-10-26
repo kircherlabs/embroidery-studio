@@ -206,6 +206,8 @@ const descriptions = {
     "Focus Mode temporarily isolates an object or group for editing. With Select, double-click artwork to focus it or its outer group; double-click inside a focused group to go one level deeper. Exit Focus Mode returns directly to the full workspace. Esc normally also exits fully; while editing satin direction guides, Esc first leaves that guide tool. Manual Show/Hide settings and exports are unchanged.",
   "optimize-colors":
     "In automatic mode, batch compatible colors and reduce travel while preserving overlaps, sequence pins and complete operation stacks. Manual mode always respects your chosen order.",
+  "quality-safeguards":
+    "Avoid routing back over completed fill rows and retain curved satin underlay. This can add jumps where a concealed connection is unavailable. Enabled for new blank designs; older projects keep their historical stitch output until you enable it. Undo restores the previous plan.",
   "order-mode":
     "Automatic uses safe color and travel optimization. Manual preserves the complete object order shown below; operation steps stay together. Changing sewing order can change which overlapping thread is sewn on top.",
   "skip-outlines":

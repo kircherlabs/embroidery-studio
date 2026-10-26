@@ -464,7 +464,7 @@ export function validateProject(p) {
   if (p.planning) {
     if (
       typeof p.planning !== "object" ||
-      ["optimizeColors", "skipSvgOutlines"].some(
+      ["optimizeColors", "skipSvgOutlines", "qualitySafeguards"].some(
         (k) =>
           p.planning[k] !== undefined && typeof p.planning[k] !== "boolean",
       ) ||

@@ -14,6 +14,8 @@ import {
   nearbyBoundaries,
 } from "./geometry.js";
 export const PLANNING_DEFAULTS = {
+  // Missing in existing projects: retain their exact historical stitch plan.
+  qualitySafeguards: false,
   optimizeColors: true,
   smallDetail: 0.3,
   skipSvgOutlines: true,

@@ -1145,6 +1145,7 @@ function renderPanels() {
   )
     state.isolation = null;
   const planning = planningOptions(state.project);
+  $("quality-safeguards").checked = planning.qualitySafeguards;
   $("optimize-colors").checked = planning.optimizeColors;
   $("skip-outlines").checked = planning.skipSvgOutlines;
   $("small-detail").value = planning.smallDetail;
@@ -2512,6 +2513,7 @@ $("new-project").onclick = async () => {
         name: "Untitled design",
         machine: "se700",
         objects: [],
+        planning: { qualitySafeguards: true },
       };
       equipmentUI.applyDefault(state.project);
       state.selection = null;
@@ -3045,6 +3047,7 @@ for (const [id, key] of [
     stage.render();
   };
 for (const [id, key] of [
+  ["quality-safeguards", "qualitySafeguards"],
   ["optimize-colors", "optimizeColors"],
   ["skip-outlines", "skipSvgOutlines"],
 ])

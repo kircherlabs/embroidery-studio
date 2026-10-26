@@ -22,6 +22,10 @@ try {
   await page.waitForFunction(() => window.studio?.getPlan());
   await page.locator("#new-project").click();
   await page.locator("#dialog-submit").click();
+  // This suite freezes historical jump-optimization counts. New-design quality
+  // routing deliberately trades some concealed-path guesses for explicit jumps.
+  await reveal(page.locator("#quality-safeguards"));
+  await page.locator("#quality-safeguards").uncheck();
   await page
     .locator("#file-input")
     .setInputFiles(

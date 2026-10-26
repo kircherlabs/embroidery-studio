@@ -591,7 +591,11 @@ export function generate(project) {
   };
   let previousObject = null;
   for (const [regionIndex, unit] of prepared.units.entries()) {
-    const o = { ...unit, regionId: `${unit.id}:${regionIndex}` };
+    const o = {
+      ...unit,
+      regionId: `${unit.id}:${regionIndex}`,
+      qualitySafeguards: prepared.options.qualitySafeguards === true,
+    };
     activeRegion = o.regionId;
     activeOperation = o.operationId || null;
     activeOperationName = o.operationName || null;

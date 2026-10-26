@@ -387,6 +387,11 @@ export function manualSatin(o) {
     anchors: layout.anchors,
     minWidth: Math.min(...original.map((q) => q.width)),
     maxWidth: Math.max(...original.map((q) => q.width)),
+    underlayBreaks: Math.max(
+      0,
+      quantized.filter((p) => p.phase === "underlay").length -
+        paths.filter((p) => p.phase === "underlay").length,
+    ),
   };
 }
 

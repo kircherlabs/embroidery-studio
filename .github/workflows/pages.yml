@@ -30,6 +30,7 @@ jobs:
           node scripts/serve.mjs > /tmp/studio-preview.log 2>&1 &
           STUDIO_PID=$!
           trap 'kill "$STUDIO_PID"' EXIT
+          node tests/stitch-quality-browser.mjs
           node tests/closed-curve-browser.mjs
           node tests/node-ui-browser.mjs
           node tests/multi-hoop-browser.mjs

@@ -81,6 +81,24 @@ export function routeFill(
   }
   let at = null,
     position = from;
+  const neighbors = quality
+    ? rows.map((r, i) =>
+        [
+          ...new Set(
+            r.nodeIds.flatMap((n) => edges[n].map((e) => nodes[e.to].row)),
+          ),
+        ].filter((j) => j !== i),
+      )
+    : null;
+  function targets() {
+    if (!quality) return todo;
+    // A middle-row entry strands the first half once completed rows cannot be
+    // retraced. Prefer an end of an unsewn row chain in the existing graph.
+    const ends = [...todo].filter(
+      (i) => neighbors[i].filter((j) => todo.has(j)).length <= 1,
+    );
+    return ends.length ? ends : [...todo];
+  }
   function nearest() {
     if (to && todo.size === 1) {
       const ids = rows[[...todo][0]].nodeIds,
@@ -100,7 +118,7 @@ export function routeFill(
     }
     let best = null,
       cost = Infinity;
-    for (const i of todo)
+    for (const i of targets())
       for (const n of rows[i].nodeIds) {
         const d = distance(position, nodes[n].p);
         if (d < cost) {
@@ -180,9 +198,12 @@ export function routeFill(
     return best;
   }
   while (todo.size) {
+    let entering = false;
     if (at === null && connectFrom) {
       let cost = Infinity;
-      for (let i = 0; i < nodes.length; i++) {
+      for (const i of quality
+        ? targets().flatMap((i) => rows[i].nodeIds)
+        : nodes.keys()) {
         const d = distance(position, nodes[i].p);
         if (d < cost && safe(position, nodes[i].p)) {
           at = i;
@@ -190,6 +211,7 @@ export function routeFill(
         }
       }
       connectFrom = false;
+      entering = quality && at !== null;
     }
     const adjacent =
       at === null
@@ -199,8 +221,13 @@ export function routeFill(
           : edges[at]
               .filter((e) => todo.has(nodes[e.to].row))
               .sort((a, b) => a.d - b.d || a.to - b.to);
-    let path =
-        at === null ? null : adjacent.length ? [at, adjacent[0].to] : route(at),
+    let path = entering
+        ? [at]
+        : at === null
+          ? null
+          : adjacent.length
+            ? [at, adjacent[0].to]
+            : route(at),
       target = path?.at(-1) ?? nearest();
     if (target === null) break;
     const n = nodes[target],
@@ -234,6 +261,11 @@ export function routeFill(
         p: travel,
         phase: phase === "underlay" ? "underlay-travel" : "travel",
         continuous: true,
+        ...(phase === "top" &&
+        path.slice(1, -1).some((id) => !todo.has(nodes[id].row)) &&
+        travel.slice(1).reduce((n, p, i) => n + distance(travel[i], p), 0) > 3
+          ? { routingRisk: "fill-return" }
+          : {}),
       });
     }
     out.push({ p, phase, continuous: !!path });

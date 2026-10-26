@@ -5,12 +5,23 @@ import { readFileSync } from "node:fs";
 import { generate, fillRows } from "../src/engine.js";
 import { routeFill } from "../src/fill-routing.js";
 import { preparePlan } from "../src/planning.js";
-import { qualityFixtures } from "./helpers/quality-fixtures.mjs";
-import { validateProject } from "../src/model.js";
+import { qualityFixtures, rect, project } from "./helpers/quality-fixtures.mjs";
+import { validateProject, object } from "../src/model.js";
 import { completedRetrace } from "./helpers/quality-metrics.mjs";
 const baseline = JSON.parse(
   readFileSync(new URL("./fixtures/quality-legacy.json", import.meta.url)),
 );
+test("quality routing starts at a row-chain end instead of adding a restart to a simple fill", () => {
+  for (const underlay of [false, true])
+    for (const x of [-20, 0, 20]) {
+      const o = object("Simple fill", [rect(x, -10, 20, 20)], {
+        angle: 0,
+        compensation: 0,
+        underlay,
+      });
+      assert.equal(generate(project([o], true)).stats.jumps, 1);
+    }
+});
 test("pre-audit legacy event snapshots remain exact with absent or disabled quality safeguards", () => {
   for (const [name, p] of Object.entries(qualityFixtures())) {
     for (const setting of [false, undefined]) {
@@ -75,6 +86,27 @@ test("quality preference validates, persists and leaves intentional running stit
   );
   p.planning.qualitySafeguards = "yes";
   assert.throws(() => validateProject(p), /digitizing/);
+});
+test("quality safeguards do not repair or rewrite imported manual needle commands", () => {
+  const o = object("Imported commands", [], {
+    id: "manual",
+    type: "manual",
+    commands: [
+      { cmd: "jump", x: -5, y: 0 },
+      { cmd: "stitch", x: -5, y: 0 },
+      { cmd: "stitch", x: 0, y: 0 },
+      { cmd: "stitch", x: -5, y: 0 },
+      { cmd: "trim", x: -5, y: 0 },
+      { cmd: "jump", x: 5, y: 0 },
+      { cmd: "stitch", x: 5, y: 0 },
+    ],
+  });
+  const p = project([o]),
+    before = JSON.stringify(o),
+    old = generate(p).events;
+  p.planning.qualitySafeguards = true;
+  assert.deepEqual(generate(p).events, old);
+  assert.equal(JSON.stringify(o), before);
 });
 test("quality routing must not retrace completed top rows at a narrow neck", () => {
   const p = qualityFixtures().narrowNeck,

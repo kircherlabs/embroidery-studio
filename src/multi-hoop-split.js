@@ -22,6 +22,7 @@ import {
 } from "./multi-hoop-layout.js";
 import { preparePlan } from "./planning.js";
 import { generate, analyze } from "./engine.js";
+import { QUALITY_ISSUES } from "./stitch-quality.js";
 import { getMachine } from "./equipment.js";
 import { splitEligibility } from "./multi-hoop-inspection.js";
 import {
@@ -374,7 +375,8 @@ export function deriveSections(master) {
 }
 export function generateMultiHoop(master) {
   const result = deriveSections(master),
-    events = [];
+    events = [],
+    qualityIssues = [];
   result.sourceRevision = hoopingRevision(master);
   result.registration = registrationFor(master);
   result.problems.push(...result.registration.problems);
@@ -410,6 +412,17 @@ export function generateMultiHoop(master) {
         result.problems.push({
           hoopId: s.hoop.id,
           message: `Hooping ${s.number}: ${issue.message}`,
+        });
+    for (const issue of s.plan.issues || [])
+      if (QUALITY_ISSUES.has(issue.code))
+        qualityIssues.push({
+          ...issue,
+          hoopingId: s.hoop.id,
+          hoopingNumber: s.number,
+          message: `Hooping ${s.number}: ${issue.message}`,
+          ...(Number.isInteger(issue.eventIndex)
+            ? { eventIndex: events.length + issue.eventIndex }
+            : {}),
         });
     s.plan.events.forEach((e, i) =>
       events.push({
@@ -463,7 +476,7 @@ export function generateMultiHoop(master) {
     assembled: {
       events,
       stats,
-      issues,
+      issues: [...issues, ...qualityIssues],
       warnings: [],
       diagnostics: { multiHoop: true },
       order: result.sections.flatMap((s) => s.plan.order || []),

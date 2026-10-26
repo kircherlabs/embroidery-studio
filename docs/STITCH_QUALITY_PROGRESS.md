@@ -13,7 +13,7 @@ rows instead of taking arbitrary long polygon shortcuts. It keeps every original
 top span. Underlay already precedes Tatami/emboss top stitching; no global object
 or sewing-action reordering was needed.
 
-Measured narrow-neck output (mm): completed-row retrace 29.6 -> 0; generated
+Initial milestone-A narrow-neck output (mm), before final entry refinement: completed-row retrace 29.6 -> 0; generated
 running travel 128.70 -> 44.24; stitches 957 -> 933; jumps/trims 1/1 -> 3/3.
 Counter fill travel 44.95 -> 35.50, jumps/trims 1/1 -> 2/2; retained local inset-tip
 returns add 12 short stitches (18 -> 30). These are tradeoffs, not proof of physical
@@ -43,11 +43,11 @@ threads, registration gaps and irregular narrow outlines; they cannot identify
 command phases or distinguish jumps from running stitches by themselves.
 The three supplied PES files decode successfully through the existing bridge:
 
-| File | Stitches | Jumps | Encoded trims | Colors changes | Nonzero stitches <0.3 mm |
-|---|---:|---:|---:|---:|---:|
-| Nate-Overalls_Clifford2.pes | 19108 | 59 | 58 | 7 | 3906 |
-| Nate---Rocket2 (1).pes | 9080 | 48 | 47 | 5 | 656 |
-| HayDave (1).pes | 5660 | 54 | 53 | 0 | 821 |
+| File                        | Stitches | Jumps | Encoded trims | Color changes | Nonzero stitches <0.3 mm |
+| --------------------------- | -------: | ----: | ------------: | ------------: | -----------------------: |
+| Nate-Overalls_Clifford2.pes |    19108 |    59 |            58 |             7 |                     3906 |
+| Nate---Rocket2 (1).pes      |     9080 |    48 |            47 |             5 |                      656 |
+| HayDave (1).pes             |     5660 |    54 |            53 |             0 |                      821 |
 
 Short counts include construction/locks because PES does not preserve source
 operation/phase labels. Zero-distance placements mostly coincide with movement
@@ -88,13 +88,60 @@ border output, contour containment, exact top needles/sections and legacy hashes
 38 focused satin/routing tests passed; Chrome quality, manual-rails and satin
 workflows passed with independent PES decoding and desktop/mobile editing.
 
-## C — Diagnostics / final verification: pending
+## C — Diagnostics and verification: implemented; release checks pending
 
-Add focused, locatable diagnostics from proven construction cases; report tight
-turn/crowding risks rather than inventing broad satin replacements. Add before/
-after editable reference designs and stitch metrics, six-format decoding,
-Multi-Hoop/project/library compatibility and browser regressions. Run complete CI,
-commit validated milestones, then merge/deploy and verify live assets.
+Implemented diagnostic-only `stitch-quality.js`: long generated returns, fragmented
+manual underlay, and conservative measured needle-clustering warnings. Locks,
+anchors, manual commands and intentional running reinforcement are excluded.
+Inspect stitch synchronizes selection/action, timeline/playback and actual canvas
+needle marker. It leaves an unrelated Focus scope only when necessary to reveal
+the explicitly requested target; ordinary/nested Focus interactions are unchanged.
+Multi-Hoop quality warnings retain hoop labels and remapped assembled indices.
+
+A final regression test found quality-mode entry at a middle row could add an
+avoidable restart. The existing row graph now selects a chain end, and the chosen
+entry row is sewn before advancing. New quality rectangles retain one start with
+or without underlay; legacy routing stays byte-identical. Final narrow-neck result:
+957 -> 934 stitches, running travel 128.70 -> 56.14 mm, completed-span retrace
+29.6 -> 0 mm, jumps/trims 1/1 -> 2/2, same 185 underlay stitches. See
+STITCH_QUALITY.md for the full table and all retained limitations.
+
+Validation completed locally:
+
+- 418 Node tests; 10 Python codec/format-safety tests.
+- 48 additional actual encode/decode checks covering both modes of four quality
+  fixtures across PES/PEC/DST/EXP/JEF/VP3, with independent PES needle/origin
+  assertions. Existing format restrictions/writers are unchanged.
+- Twelve frozen legacy quality streams plus existing 120 Tatami snapshots exact.
+- My Artwork/save-reopen rail compatibility, nonrewritten manual commands,
+  source immutability, and correct Multi-Hoop warning navigation/field safety.
+- Chrome quality/travel/manual-rails/satin/Multi-Hoop/cleanup/fills/properties
+  browser workflows passed, including real canvas marker pixels, mouse/touch,
+  320/390/768 px layouts, Undo/Redo, saved settings and existing PES regressions.
+- A realistic 11-object SVG retains all 2,340 required fill positions; quality
+  jumps 13 -> 47, routing stitches 2,434 -> 2,080. One browser timing sample was
+  943 ms legacy / 569 ms quality; this is an observation, not a speed guarantee.
+- Diagnostic-only scan of 150,000 needles measured about 120–140 ms locally.
+- Before/after command plots and the actual in-app marker were visually inspected.
+  The three supplied PES streams were also rendered privately; no source phases
+  or new physical-sewout verification can be recovered from those files.
+
+`scripts/quality-reference-plans.mjs` generated six original PES reference samples,
+editable projects, event JSON, SVG plots, metrics and instructions in ignored
+`test-results/stitch-quality-reference.zip`. No supplied PES/photo data is bundled.
+All reference pairs have matching source-geometry hashes. Physical comparisons
+remain to be performed; small diagnostic satin samples retain narrow-band warnings.
+
+## Exact next steps
+
+Final Edge production quality/closed-curve checks passed, including Focus-scope
+inspection and unchanged source. Commit milestone C,
+push and open PR, require the complete existing CI (now 50 browser scripts), merge,
+wait for Pages and verify live source hashes and quality behavior. Update this
+record with exact commits/run IDs. Do not deploy if any critical regression remains.
+Local source server: 5173; production server: 5174. No critical product regressions
+are currently known. Existing severe corner/rail ambiguities remain documented
+manual-adjustment cases rather than unverified automatic repairs.
 
 Protected refs: BACKUP-V0.18.3 = 6c3a53b0aff43eac2d9006673d61b3e4d7e92113;
 BACKUP-V0.18.0 = 8aed6698c00a3b34485f0a778511f78e0302c32f;

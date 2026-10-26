@@ -416,6 +416,10 @@ export function strokeSatin(o, from = { x: 0, y: 0 }) {
       const route = strokeTravel(graph, position, centers[0], o.rings);
       if (route) {
         append(route, "travel", true, stroke.id);
+        if (
+          route.slice(1).reduce((n, p, i) => n + distance(route[i], p), 0) > 3
+        )
+          paths.at(-1).routingRisk = "satin-return";
         travel++;
       }
     }

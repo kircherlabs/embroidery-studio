@@ -10,6 +10,7 @@ import { inside, distance, safeConnector, simplifyPath } from "./geometry.js";
 import { preparePlan } from "./planning.js";
 import { routeFill } from "./fill-routing.js";
 import { duplicateArtwork } from "./artwork-diagnostics.js";
+import { stitchQuality } from "./stitch-quality.js";
 import { generateFill } from "./fills/registry.js";
 import "./fills/tatami.js";
 import "./fills/contour.js";
@@ -426,6 +427,8 @@ function pathsFor(o, from, to) {
   );
 }
 export function generate(project) {
+  const qualityUnits = [],
+    routingRisks = [];
   const prepared = preparePlan(project),
     diagnostics = prepared.diagnostics;
   project = prepared.project;
@@ -596,6 +599,7 @@ export function generate(project) {
       regionId: `${unit.id}:${regionIndex}`,
       qualitySafeguards: prepared.options.qualitySafeguards === true,
     };
+    qualityUnits.push(o);
     activeRegion = o.regionId;
     activeOperation = o.operationId || null;
     activeOperationName = o.operationName || null;
@@ -804,8 +808,10 @@ export function generate(project) {
       continue;
     }
     let first = true;
-    for (const { p, phase, continuous, travel, noLock } of paths) {
+    for (const { p, phase, continuous, travel, noLock, routingRisk } of paths) {
       if (!p.length) continue;
+      const eventStart = events.length,
+        startPosition = { x: last.x, y: last.y };
       const d = distance(last, p[0]);
       // Only connect nearby rows when the complete connector lies inside the fill.
       const safe =
@@ -834,6 +840,27 @@ export function generate(project) {
           lock(p, o, "tie");
       } else sew(p[0], o, phase);
       for (let i = 1; i < p.length; i++) sew(p[i], o, phase);
+      if (routingRisk) {
+        let at = startPosition,
+          length = 0,
+          eventIndex = null;
+        for (let i = eventStart; i < events.length; i++) {
+          const e = events[i];
+          if (e.cmd === "stitch" && e.phase === "travel") {
+            length += distance(at, e);
+            if (eventIndex === null) eventIndex = i;
+          }
+          if (e.cmd === "stitch" || e.cmd === "jump") at = e;
+        }
+        if (length > 3)
+          routingRisks.push({
+            objectId: o.id,
+            operationId: o.operationId,
+            kind: routingRisk,
+            length,
+            eventIndex,
+          });
+      }
       first = false;
     }
   }
@@ -842,6 +869,9 @@ export function generate(project) {
     emit("end", last, lastColor, null);
   }
   const stats = analyze(events, machine);
+  const quality = stitchQuality(events, qualityUnits, routingRisks);
+  diagnostics.stitchQuality = quality.summaries;
+  (diagnostics.operationIssues ||= []).push(...quality.issues);
   stats.sourceColorBlocks = diagnostics.sourceColorBlocks;
   stats.regions = prepared.units.filter((o) => o.type !== "command").length;
   diagnostics.duplicates = duplicateArtwork(project);
